@@ -1,0 +1,1 @@
+{"root":["./src/app.tsx","./src/main.tsx","./src/vite-env.d.ts","./src/components/auth/heropanel.tsx","./src/components/auth/loginform.tsx","./src/components/icons/googleicon.tsx","./src/components/ui/button.tsx","./src/components/ui/inputfield.tsx","./src/lib/cn.ts","./src/pages/loginpage.tsx"],"version":"5.9.3"}
