@@ -5,6 +5,7 @@ export interface AuthUser {
   email: string
   name: string
   role: string
+  avatarUrl: string | null
 }
 
 export interface AuthResponse {
@@ -36,4 +37,20 @@ export function login(email: string, password: string) {
 
 export function register(email: string, password: string, name: string) {
   return postCredentials('/auth/register', { email, password, name })
+}
+
+export const googleLoginUrl = `${API_URL}/auth/google`
+
+export async function getCurrentUser(token: string): Promise<AuthUser> {
+  const res = await fetch(`${API_URL}/auth/me`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+
+  const data = await res.json().catch(() => ({}))
+
+  if (!res.ok) {
+    throw new AuthError(data.error ?? 'No se pudo obtener la sesión')
+  }
+
+  return (data as { user: AuthUser }).user
 }

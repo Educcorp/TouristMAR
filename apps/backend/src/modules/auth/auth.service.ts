@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import { Prisma } from '@prisma/client'
+import type { Profile } from 'passport-google-oauth20'
 import { prisma } from '../../config/prisma'
 import { env } from '../../config/env'
 
@@ -37,6 +38,36 @@ export async function validateCredentials(email: string, password: string) {
     const valid = await bcrypt.compare(password, user.passwordHash)
     return valid ? user : null
   })
+}
+
+export async function findOrCreateGoogleUser(profile: Profile) {
+  return withDbGuard(async () => {
+    const existingByGoogleId = await prisma.user.findUnique({ where: { googleId: profile.id } })
+    if (existingByGoogleId) return existingByGoogleId
+
+    const email = profile.emails?.[0]?.value
+    if (!email) {
+      throw new Error('Google no devolvió un correo para esta cuenta')
+    }
+
+    const existingByEmail = await prisma.user.findUnique({ where: { email } })
+    if (existingByEmail) {
+      return prisma.user.update({ where: { id: existingByEmail.id }, data: { googleId: profile.id } })
+    }
+
+    return prisma.user.create({
+      data: {
+        email,
+        googleId: profile.id,
+        nombres: profile.displayName || email,
+        avatarUrl: profile.photos?.[0]?.value,
+      },
+    })
+  })
+}
+
+export async function findUserById(id: string) {
+  return withDbGuard(() => prisma.user.findUnique({ where: { id } }))
 }
 
 export function signToken(userId: string) {
