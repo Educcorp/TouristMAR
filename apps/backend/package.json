@@ -5,6 +5,7 @@
   "type": "commonjs",
   "main": "dist/index.js",
   "scripts": {
+    "postinstall": "prisma generate",
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "build": "tsc -b",
     "start": "prisma migrate deploy && node dist/index.js",
@@ -13,6 +14,7 @@
     "prisma:studio": "prisma studio"
   },
   "dependencies": {
+    "@prisma/client": "^6.19.3",
     "helmet": "^8.0.0",
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.0",
