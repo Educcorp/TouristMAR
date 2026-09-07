@@ -7,7 +7,8 @@
   "scripts": {
     "postinstall": "prisma generate",
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
-    "build": "tsc -b",
+    "build": "tsc -b && npm run build:web",
+    "build:web": "npm --prefix ../web ci && VITE_API_URL=/api npm --prefix ../web run build && rm -rf public && cp -r ../web/dist public",
     "start": "prisma migrate deploy && node dist/index.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
