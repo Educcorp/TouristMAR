@@ -1,0 +1,31 @@
+# Unity generado/caché — NUNCA se versiona (aquí es donde vive el peso de GBs)
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Uu]serSettings/
+[Mm]emoryCaptures/
+[Rr]ecordings/
+.vs/
+.vscode/
+.idea/
+*.tmp
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+sysinfo.txt
+crashlytics-build.properties
+
+# Exports nativos generados al integrar con React Native (se regeneran, no se versionan)
+android/
+ios/
+
+# Sí se versiona: Assets/, Packages/, ProjectSettings/, ProjectVersion.txt

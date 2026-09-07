@@ -7,6 +7,8 @@
   "scripts": {
     "postinstall": "prisma generate",
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "build": "tsc -b && npm run build:web",
     "build:web": "npm --prefix ../web ci && VITE_API_URL=/api npm --prefix ../web run build && rm -rf public && cp -r ../web/dist public",
     "start": "prisma migrate deploy && node dist/index.js",
@@ -46,8 +48,11 @@
     "@types/passport-jwt": "^4.0.1",
     "@types/passport-local": "^1.0.38",
     "@types/qrcode": "^1.5.5",
+    "@types/supertest": "^7.2.1",
     "prisma": "^6.5.0",
+    "supertest": "^7.2.2",
     "ts-node-dev": "^2.0.0",
-    "typescript": "^5.6.2"
+    "typescript": "^5.6.2",
+    "vitest": "^5.0.0"
   }
 }

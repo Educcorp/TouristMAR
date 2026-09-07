@@ -1,1 +1,11 @@
 node_modules
+
+# Contexto local de desarrollo (bitácora del proyecto, solo para el equipo/asistente)
+.cloud
+
+# Skills locales de programación (no se versionan)
+skills/
+
+# Notas/instrucciones locales de trabajo (no se versionan)
+notes.md
+apps/ar-module/README.md
