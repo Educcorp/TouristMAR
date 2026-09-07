@@ -1,11 +1,55 @@
 import { useState } from 'react'
+import type { FormEvent } from 'react'
 import { ChevronRight, Eye, EyeOff, Lock, Mail, MapPin, Waves } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { InputField } from '@/components/ui/InputField'
 import { GoogleIcon } from '@/components/icons/GoogleIcon'
+import { AuthError, login, type AuthUser } from '@/services/authService'
 
 export function LoginForm() {
   const [showPassword, setShowPassword] = useState(false)
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [user, setUser] = useState<AuthUser | null>(null)
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setError(null)
+    setIsSubmitting(true)
+
+    try {
+      const { token, user } = await login(email, password)
+      localStorage.setItem('touristmar_token', token)
+      setUser(user)
+    } catch (err) {
+      setError(err instanceof AuthError ? err.message : 'No se pudo conectar con el servidor')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  function handleLogout() {
+    localStorage.removeItem('touristmar_token')
+    setUser(null)
+    setEmail('')
+    setPassword('')
+  }
+
+  if (user) {
+    return (
+      <div className="flex w-full items-center justify-center px-6 py-12 sm:px-12 lg:w-[42%]">
+        <div className="w-full max-w-md space-y-6 text-center">
+          <h2 className="font-serif text-3xl text-white">Bienvenido, {user.name}</h2>
+          <p className="text-sm text-slate-400">Sesión iniciada como {user.email}</p>
+          <Button type="button" variant="ghost" onClick={handleLogout}>
+            Cerrar sesión
+          </Button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="flex w-full items-center justify-center px-6 py-12 sm:px-12 lg:w-[42%]">
@@ -24,7 +68,7 @@ export function LoginForm() {
           </p>
         </div>
 
-        <form className="space-y-5" onSubmit={(event) => event.preventDefault()}>
+        <form className="space-y-5" onSubmit={handleSubmit}>
           <InputField
             id="email"
             label="Correo electrónico"
@@ -32,6 +76,9 @@ export function LoginForm() {
             type="email"
             autoComplete="email"
             placeholder="tu@correo.com"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            required
           />
 
           <div>
@@ -42,6 +89,9 @@ export function LoginForm() {
               type={showPassword ? 'text' : 'password'}
               autoComplete="current-password"
               placeholder="••••••••"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              required
               trailing={
                 <button
                   type="button"
@@ -60,19 +110,21 @@ export function LoginForm() {
             </div>
           </div>
 
+          {error && <p className="text-sm text-red-400">{error}</p>}
+
           <div className="flex items-center gap-3 text-xs text-slate-500">
             <span className="h-px flex-1 bg-white/10" />
             o continúa con Google
             <span className="h-px flex-1 bg-white/10" />
           </div>
 
-          <Button type="button" variant="google">
+          <Button type="button" variant="google" disabled>
             <GoogleIcon />
             Continuar con Google
           </Button>
 
-          <Button type="submit" variant="primary">
-            Iniciar sesión
+          <Button type="submit" variant="primary" disabled={isSubmitting}>
+            {isSubmitting ? 'Iniciando sesión...' : 'Iniciar sesión'}
           </Button>
 
           <p className="text-center text-sm text-slate-400">
