@@ -6,6 +6,11 @@ node_modules
 # Skills locales de programación (no se versionan)
 skills/
 
+# Herramientas locales descargadas (Gradle, etc.), no se versionan
+.tools/
+
 # Notas/instrucciones locales de trabajo (no se versionan)
 notes.md
 apps/ar-module/README.md
+apps/mobile/README.md
+.env

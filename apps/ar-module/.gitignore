@@ -11,6 +11,10 @@
 .vs/
 .vscode/
 .idea/
+.vsconfig
+*.csproj
+*.sln
+*.slnx
 *.tmp
 *.user
 *.userprefs
@@ -24,8 +28,16 @@
 sysinfo.txt
 crashlytics-build.properties
 
-# Exports nativos generados al integrar con React Native (se regeneran, no se versionan)
+# Exports nativos generados al integrar con React Native (se regeneran, no se versionan).
+# Los proyectos exportados desde Unity (Build Profiles > Export Project) viven en
+# builds/android/<nombre-modulo>/ y NUNCA se suben a git — pesan cientos de MB/GB
+# por carpetas intermedias de compilación (Il2CppOutputProject, cachés de Burst).
+builds/
 android/
 ios/
+
+# Modelos 3D pesados (> límite de 100MB de GitHub) — compartir aparte
+# (Drive/WeTransfer) hasta que se configure Git LFS.
+Assets/single_color.obj
 
 # Sí se versiona: Assets/, Packages/, ProjectSettings/, ProjectVersion.txt

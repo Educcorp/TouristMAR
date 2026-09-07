@@ -1,13 +1,17 @@
 import { Request, Response } from 'express'
 import { z } from 'zod'
+import { OAuth2Client } from 'google-auth-library'
+import type { Profile } from 'passport-google-oauth20'
 import {
   registerUser,
   validateCredentials,
+  findOrCreateGoogleUser,
   signToken,
   findUserById,
   DatabaseNotReadyError,
 } from './auth.service'
 import type { AuthedRequest } from './auth.middleware'
+import { env } from '../../config/env'
 
 const credentialsSchema = z.object({
   email: z.string().email(),
@@ -58,6 +62,46 @@ export async function login(req: Request, res: Response) {
       return res.status(503).json({ error: err.message })
     }
     return res.status(500).json({ error: 'Error interno' })
+  }
+}
+
+const googleClient = new OAuth2Client(env.GOOGLE_CLIENT_ID)
+
+const googleMobileSchema = z.object({
+  idToken: z.string().min(1),
+})
+
+export async function googleMobileLogin(req: Request, res: Response) {
+  const parsed = googleMobileSchema.safeParse(req.body)
+  if (!parsed.success) {
+    return res.status(401).json({ error: 'Falta el idToken de Google' })
+  }
+
+  try {
+    const ticket = await googleClient.verifyIdToken({
+      idToken: parsed.data.idToken,
+      audience: env.GOOGLE_CLIENT_ID,
+    })
+    const payload = ticket.getPayload()
+    if (!payload?.sub || !payload.email) {
+      return res.status(401).json({ error: 'Token de Google inválido' })
+    }
+
+    const profile = {
+      id: payload.sub,
+      emails: [{ value: payload.email }],
+      displayName: payload.name,
+      photos: payload.picture ? [{ value: payload.picture }] : undefined,
+    } as unknown as Profile
+
+    const user = await findOrCreateGoogleUser(profile)
+    const token = signToken(user.id)
+    return res.json({ token, user: toPublicUser(user) })
+  } catch (err) {
+    if (err instanceof DatabaseNotReadyError) {
+      return res.status(503).json({ error: err.message })
+    }
+    return res.status(401).json({ error: 'No se pudo verificar el token de Google' })
   }
 }
 

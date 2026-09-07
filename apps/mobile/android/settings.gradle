@@ -1,0 +1,11 @@
+pluginManagement { includeBuild("../node_modules/@react-native/gradle-plugin") }
+plugins { id("com.facebook.react.settings") }
+extensions.configure(com.facebook.react.ReactSettingsExtension){ ex -> ex.autolinkLibrariesFromCommand() }
+rootProject.name = 'com.touristmar.mobile'
+include ':app'
+includeBuild('../node_modules/@react-native/gradle-plugin')
+
+include ':unityLibrary'
+project(':unityLibrary').projectDir = new File('../../ar-module/builds/android/ar-superposicion/unityLibrary')
+include ':unityLibrary:xrmanifest.androidlib'
+project(':unityLibrary:xrmanifest.androidlib').projectDir = new File('../../ar-module/builds/android/ar-superposicion/unityLibrary/xrmanifest.androidlib')

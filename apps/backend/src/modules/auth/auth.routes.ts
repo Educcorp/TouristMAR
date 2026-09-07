@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { register, login, me } from './auth.controller'
+import { register, login, me, googleMobileLogin } from './auth.controller'
 import { requireAuth } from './auth.middleware'
 import { passport } from '../../config/passport'
 import { env, isGoogleAuthEnabled } from '../../config/env'
@@ -24,8 +24,16 @@ if (isGoogleAuthEnabled) {
       res.redirect(`${env.CORS_ORIGIN}/?token=${token}`)
     },
   )
+
+  // Login nativo (Android/iOS) con @react-native-google-signin/google-signin:
+  // el cliente movil obtiene un idToken y aqui se verifica contra el mismo
+  // GOOGLE_CLIENT_ID (tipo "Web application") usado arriba.
+  authRouter.post('/google/mobile', googleMobileLogin)
 } else {
   authRouter.get('/google', (_req, res) => {
+    res.status(503).json({ error: 'El login con Google todavía no está configurado en el servidor' })
+  })
+  authRouter.post('/google/mobile', (_req, res) => {
     res.status(503).json({ error: 'El login con Google todavía no está configurado en el servidor' })
   })
 }
