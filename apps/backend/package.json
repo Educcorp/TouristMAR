@@ -10,7 +10,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "build": "tsc -b && npm run build:web",
-    "build:web": "npm --prefix ../web ci && VITE_API_URL=/api npm --prefix ../web run build && rm -rf public && cp -r ../web/dist public",
+    "build:web": "cd ../web && flutter pub get && flutter build web --dart-define=API_URL=/api && cd ../backend && rm -rf public && cp -r ../web/build/web public",
     "start": "prisma migrate deploy && node dist/index.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",

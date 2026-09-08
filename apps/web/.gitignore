@@ -1,4 +1,7 @@
-node_modules
-dist
-.env
-.env.local
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+build/
+web/

@@ -8,9 +8,9 @@ App móvil (Android) + panel web con mapa por categorías, fichas 360°, valorac
 |---|---|
 | Backend / API | Node.js + Express, Prisma (ORM) |
 | Base de datos | Supabase (PostgreSQL + PostGIS) |
-| App móvil | React Native |
-| Módulo AR | Unity (C#) + AR Foundation/ARCore, integrado como *Unity as a Library* dentro de RN |
-| Panel web | React + TypeScript |
+| App móvil | Flutter |
+| Módulo AR | Unity (C#) + AR Foundation/ARCore, integrado dentro de Flutter (Unity as a Library vía plugin/canal de plataforma) |
+| Panel web | Flutter Web |
 | Auth | Passport.js + JWT (correo/contraseña) y Google OAuth, o Supabase Auth |
 | Storage | Supabase Storage (fotos 360°, imágenes) |
 | Notificaciones | Push + SendGrid/Mailchimp (newsletter) |
@@ -22,9 +22,9 @@ App móvil (Android) + panel web con mapa por categorías, fichas 360°, valorac
 Ni la app móvil, ni Unity, ni el panel web hablan directo con Supabase: **todo pasa por el backend**. Esto centraliza permisos por rol, mantiene el mapa/AR/QR consistentes y evita duplicar lógica de negocio en cliente.
 
 ```
-Mobile (RN) ──┐
-Unity AR ─────┼──> API (Express) ──> Prisma ──> Supabase (Postgres+PostGIS / Storage)
-Web (React) ──┘
+Mobile (Flutter) ──┐
+Unity AR ──────────┼──> API (Express) ──> Prisma ──> Supabase (Postgres+PostGIS / Storage)
+Web (Flutter Web) ─┘
 ```
 
 Ciclo de vida de un lugar: `usuario propone → admin revisa → admin toma fotos 360°/genera AR → admin publica → visible para todos` (estados `draft → review → published` en backend).
@@ -44,13 +44,13 @@ apps/
       migrations/        migraciones versionadas (incluye setup de PostGIS)
       seed/               datos iniciales (mínimo 1 lugar por categoría)
 
-  mobile/             App React Native (Android) — mapa, login, fichas, comentarios, favoritos, form. de registro de lugar
-    src/
+  mobile/             App Flutter (Android) — mapa, login, fichas, comentarios, favoritos, form. de registro de lugar
+    lib/
       screens/
-      components/
+      widgets/
       navigation/
       services/          clientes HTTP hacia el backend
-      ar-bridge/          puente RN <-> Unity as a Library (abrir/cerrar módulo AR, pasar datos de QR/geo)
+      ar_bridge/          puente Flutter <-> Unity as a Library (abrir/cerrar módulo AR, pasar datos de QR/geo)
 
   ar-module/          Proyecto Unity (C#) — 100% del requisito C# del curso
     Assets/
@@ -58,12 +58,12 @@ apps/
       Prefabs/
       Scenes/
 
-  web/                Panel web (React + TS) — dashboard, gestión de solicitudes, estadísticas
-    src/
+  web/                Panel web (Flutter Web) — dashboard, gestión de solicitudes, estadísticas
+    lib/
       pages/
-      components/
-      dashboard/          gráficas, lugares más visitados, flags
+      widgets/
       services/
+      theme/
 
 packages/
   shared-types/        tipos/DTOs compartidos entre backend, web y mobile (lugar, usuario, rol, review, etc.)
