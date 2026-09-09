@@ -10,6 +10,12 @@ class AppColors {
   static const slate400 = Color(0xFF94A3B8);
   static const slate500 = Color(0xFF64748B);
   static const errorRed = Color(0xFFF87171);
+  static const orange = Color(0xFFFB923C);
+  static const amber = Color(0xFFFBBF24);
+
+  // Segundo perfil de marca: panel de empresa (naranja en vez de teal).
+  static const businessOrange = Color(0xFFF97316);
+  static const businessOrangeDark = Color(0xFFC2410C);
 }
 
 class AppTheme {

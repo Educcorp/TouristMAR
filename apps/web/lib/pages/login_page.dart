@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
+import '../theme/breakpoints.dart';
 import '../widgets/hero_panel.dart';
 import '../widgets/login_form.dart';
 
@@ -13,7 +14,7 @@ class LoginPage extends StatelessWidget {
       backgroundColor: AppColors.panelNavy,
       body: LayoutBuilder(
         builder: (context, constraints) {
-          final isWide = constraints.maxWidth >= 1024;
+          final isWide = Breakpoints.isExpanded(constraints.maxWidth);
 
           if (!isWide) {
             return LoginForm();

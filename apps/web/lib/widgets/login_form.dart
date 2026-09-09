@@ -2,13 +2,15 @@ import 'dart:html' as html;
 
 import 'package:flutter/material.dart';
 
+import '../pages/home_page.dart';
 import '../services/auth_service.dart';
+import '../services/session_storage.dart';
 import '../theme/app_theme.dart';
+import '../theme/breakpoints.dart';
 import 'app_button.dart';
 import 'app_text_field.dart';
 import 'google_logo.dart';
-
-const _tokenKey = 'touristmar_token';
+import 'register_place_banner.dart';
 
 enum _Mode { login, register }
 
@@ -32,7 +34,6 @@ class _LoginFormState extends State<LoginForm> {
   bool _isSubmitting = false;
   bool _isRestoringSession = true;
   String? _error;
-  AuthUser? _user;
 
   @override
   void initState() {
@@ -61,7 +62,7 @@ class _LoginFormState extends State<LoginForm> {
       setState(() => _error = 'No se pudo iniciar sesión con Google');
     }
 
-    final token = tokenFromRedirect ?? html.window.localStorage[_tokenKey];
+    final token = tokenFromRedirect ?? SessionStorage.token;
 
     if (token == null) {
       setState(() => _isRestoringSession = false);
@@ -70,14 +71,18 @@ class _LoginFormState extends State<LoginForm> {
 
     try {
       final restoredUser = await widget.authService.getCurrentUser(token);
-      html.window.localStorage[_tokenKey] = token;
+      SessionStorage.saveToken(token);
       if (!mounted) return;
-      setState(() => _user = restoredUser);
+      _goToHome(restoredUser);
     } catch (_) {
-      html.window.localStorage.remove(_tokenKey);
+      SessionStorage.clearToken();
     } finally {
       if (mounted) setState(() => _isRestoringSession = false);
     }
+  }
+
+  void _goToHome(AuthUser user) {
+    Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => HomePage(user: user)));
   }
 
   Future<void> _handleSubmit() async {
@@ -96,8 +101,8 @@ class _LoginFormState extends State<LoginForm> {
               _passwordController.text,
               _nameController.text,
             );
-      html.window.localStorage[_tokenKey] = response.token;
-      setState(() => _user = response.user);
+      SessionStorage.saveToken(response.token);
+      _goToHome(response.user);
     } catch (err) {
       setState(() {
         _error = err is AuthError ? err.message : 'No se pudo conectar con el servidor';
@@ -105,16 +110,6 @@ class _LoginFormState extends State<LoginForm> {
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
-  }
-
-  void _handleLogout() {
-    html.window.localStorage.remove(_tokenKey);
-    setState(() {
-      _user = null;
-      _nameController.clear();
-      _emailController.clear();
-      _passwordController.clear();
-    });
   }
 
   void _toggleMode() {
@@ -130,44 +125,11 @@ class _LoginFormState extends State<LoginForm> {
       return const SizedBox.expand();
     }
 
-    if (_user != null) {
-      return _buildWelcome(_user!);
-    }
-
     return _buildForm();
   }
 
-  Widget _buildWelcome(AuthUser user) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 420),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Bienvenido, ${user.name}',
-                style: Theme.of(context).textTheme.headlineMedium,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 8),
-              Text('Sesión iniciada como ${user.email}', style: const TextStyle(color: AppColors.slate400)),
-              const SizedBox(height: 24),
-              AppButton(
-                onPressed: _handleLogout,
-                variant: AppButtonVariant.ghost,
-                child: const Text('Cerrar sesión'),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildForm() {
-    final isNarrow = MediaQuery.of(context).size.width < 1024;
+    final isNarrow = !Breakpoints.isExpanded(MediaQuery.sizeOf(context).width);
 
     return Center(
       child: SingleChildScrollView(
@@ -315,54 +277,9 @@ class _LoginFormState extends State<LoginForm> {
                   ),
                 ),
                 const SizedBox(height: 24),
-                _buildRegisterPlaceCard(),
+                RegisterPlaceBanner(onTap: () {}),
               ],
             ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRegisterPlaceCard() {
-    return Material(
-      color: Colors.white.withOpacity(0.05),
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: () {},
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.white.withOpacity(0.1)),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(color: AppColors.brandTeal.withOpacity(0.15), shape: BoxShape.circle),
-                child: const Icon(Icons.location_on_outlined, size: 18, color: AppColors.brandTeal),
-              ),
-              const SizedBox(width: 12),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '¿Te gustaría registrar un lugar nuevo?',
-                      style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500),
-                    ),
-                    Text(
-                      'Propón tu negocio o sitio turístico',
-                      style: TextStyle(color: AppColors.slate400, fontSize: 12),
-                    ),
-                  ],
-                ),
-              ),
-              const Icon(Icons.chevron_right, color: AppColors.slate400),
-            ],
           ),
         ),
       ),

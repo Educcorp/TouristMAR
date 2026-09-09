@@ -81,9 +81,9 @@ class HeroPanel extends StatelessWidget {
               const SizedBox(height: 16),
               Text('Descubre el Pacífico\nMexicano', style: Theme.of(context).textTheme.headlineLarge),
               const SizedBox(height: 16),
-              const SizedBox(
-                width: 420,
-                child: Text(
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 420),
+                child: const Text(
                   'Playas, senderos de hiking, miradores y sabores locales — todo '
                   'centralizado para que explores Manzanillo como nunca antes.',
                   style: TextStyle(color: AppColors.slate300, fontSize: 15, height: 1.4),

@@ -34,7 +34,7 @@ void main() {
     await tester.tap(find.text('Iniciar sesión'));
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('Bienvenido, Ana'), findsOneWidget);
+    expect(find.textContaining('Ana'), findsWidgets);
   });
 
   testWidgets('muestra un error inline cuando el login falla', (tester) async {
@@ -75,10 +75,10 @@ void main() {
     await tester.tap(find.text('Crear cuenta'));
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('Bienvenido, Nueva'), findsOneWidget);
+    expect(find.textContaining('Nueva'), findsWidgets);
   });
 
-  testWidgets('cierra sesión y vuelve al formulario', (tester) async {
+  testWidgets('cierra sesión desde el menú del avatar y vuelve al formulario', (tester) async {
     final client = MockClient((request) async {
       return http.Response(jsonEncode({'token': 'jwt-token', 'user': _user()}), 200);
     });
@@ -91,6 +91,8 @@ void main() {
     await tester.tap(find.text('Iniciar sesión'));
     await tester.pumpAndSettle();
 
+    await tester.tap(find.byType(PopupMenuButton<String>));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Cerrar sesión'));
     await tester.pumpAndSettle();
 
