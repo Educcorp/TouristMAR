@@ -7,18 +7,27 @@ class AppButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final AppButtonVariant variant;
   final Widget child;
+  final Color? backgroundColor;
+  final Color? foregroundColor;
 
   const AppButton({
     super.key,
     required this.onPressed,
     required this.child,
     this.variant = AppButtonVariant.primary,
+    this.backgroundColor,
+    this.foregroundColor,
   });
 
   @override
   Widget build(BuildContext context) {
     final disabled = onPressed == null;
-    final colors = _colorsFor(variant, disabled);
+    final base = _colorsFor(variant, disabled);
+    final colors = _ButtonColors(
+      background: backgroundColor ?? base.background,
+      foreground: foregroundColor ?? base.foreground,
+      border: base.border,
+    );
 
     return SizedBox(
       width: double.infinity,

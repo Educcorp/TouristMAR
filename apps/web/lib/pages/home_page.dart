@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 
+import '../models/visitor_profile.dart';
 import '../services/auth_service.dart';
-import '../services/session_storage.dart';
 import '../theme/app_theme.dart';
 import '../theme/breakpoints.dart';
+import '../widgets/app_shell.dart';
 import '../widgets/place_card.dart';
 import '../widgets/quick_action_card.dart';
 import '../widgets/register_place_banner.dart';
-import 'login_page.dart';
 
 class _QuickAction {
   final IconData icon;
@@ -35,6 +35,8 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  late final VisitorProfile _profile = VisitorProfile.fromAuthUser(widget.user);
+
   final _quickActions = const [
     _QuickAction(Icons.map_outlined, 'Explorar mapa', AppColors.brandTeal),
     _QuickAction(Icons.favorite_border, 'Mis favoritos', AppColors.orange),
@@ -55,127 +57,70 @@ class _HomePageState extends State<HomePage> {
     return 'Buenas noches';
   }
 
-  void _logout() {
-    SessionStorage.clearToken();
-    Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const LoginPage()));
-  }
-
   @override
   Widget build(BuildContext context) {
     final firstName = widget.user.name.trim().isEmpty ? widget.user.name : widget.user.name.split(' ').first;
 
-    return Scaffold(
-      backgroundColor: AppColors.panelNavy,
-      body: Column(
-        children: [
-          _buildHeader(),
-          Expanded(
-            child: SingleChildScrollView(
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 960),
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildHeroCard(firstName),
-                        const SizedBox(height: 20),
-                        _buildSearchBar(),
-                        const SizedBox(height: 28),
-                        const Text(
-                          'Acciones rápidas',
-                          style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
-                        ),
-                        const SizedBox(height: 12),
-                        _buildQuickActions(),
-                        const SizedBox(height: 28),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text(
-                              'Lugares destacados',
-                              style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
-                            ),
-                            const Text(
-                              'Ver todos',
-                              style: TextStyle(color: AppColors.brandTeal, fontSize: 13, fontWeight: FontWeight.w500),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        _buildFeaturedPlaces(),
-                        const SizedBox(height: 24),
-                        RegisterPlaceBanner(onTap: () {}),
-                        const SizedBox(height: 24),
-                      ],
-                    ),
+    return AppShell(
+      accentColor: AppColors.brandTeal,
+      avatarIcon: CircleAvatar(
+        radius: 16,
+        backgroundColor: AppColors.brandTeal.withOpacity(0.2),
+        child: Text(
+          widget.user.name.isNotEmpty ? widget.user.name[0].toUpperCase() : '?',
+          style: const TextStyle(color: AppColors.brandTeal, fontWeight: FontWeight.w600),
+        ),
+      ),
+      drawerIdentity: VisitorIdentityCard(
+        name: widget.user.name,
+        email: widget.user.email,
+        visitedCount: _profile.visited.length,
+        reviewsCount: _profile.reviews.length,
+      ),
+      navItems: visitorNavItems(context, profile: _profile),
+      body: SingleChildScrollView(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 960),
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildHeroCard(firstName),
+                  const SizedBox(height: 20),
+                  _buildSearchBar(),
+                  const SizedBox(height: 28),
+                  const Text(
+                    'Acciones rápidas',
+                    style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
                   ),
-                ),
+                  const SizedBox(height: 12),
+                  _buildQuickActions(),
+                  const SizedBox(height: 28),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Lugares destacados',
+                        style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
+                      ),
+                      const Text(
+                        'Ver todos',
+                        style: TextStyle(color: AppColors.brandTeal, fontSize: 13, fontWeight: FontWeight.w500),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  _buildFeaturedPlaces(),
+                  const SizedBox(height: 24),
+                  RegisterPlaceBanner(onTap: () {}),
+                  const SizedBox(height: 24),
+                ],
               ),
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHeader() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-      decoration: BoxDecoration(
-        color: AppColors.panelNavy,
-        border: Border(bottom: BorderSide(color: Colors.white.withOpacity(0.08))),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 32,
-            height: 32,
-            decoration: const BoxDecoration(color: AppColors.brandTeal, shape: BoxShape.circle),
-            child: const Icon(Icons.waves, size: 18, color: AppColors.panelNavy),
-          ),
-          const SizedBox(width: 8),
-          const Text(
-            'TOURISMAR',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, letterSpacing: 2, fontSize: 13),
-          ),
-          const Spacer(),
-          Stack(
-            clipBehavior: Clip.none,
-            children: [
-              const Icon(Icons.notifications_none, color: AppColors.slate300),
-              Positioned(
-                right: -1,
-                top: -1,
-                child: Container(
-                  width: 8,
-                  height: 8,
-                  decoration: const BoxDecoration(color: AppColors.orange, shape: BoxShape.circle),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(width: 20),
-          PopupMenuButton<String>(
-            offset: const Offset(0, 44),
-            color: AppColors.panelNavySoft,
-            onSelected: (value) {
-              if (value == 'logout') _logout();
-            },
-            itemBuilder: (context) => const [
-              PopupMenuItem(value: 'logout', child: Text('Cerrar sesión', style: TextStyle(color: Colors.white))),
-            ],
-            child: CircleAvatar(
-              radius: 16,
-              backgroundColor: AppColors.brandTeal.withOpacity(0.2),
-              child: Text(
-                widget.user.name.isNotEmpty ? widget.user.name[0].toUpperCase() : '?',
-                style: const TextStyle(color: AppColors.brandTeal, fontWeight: FontWeight.w600),
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
