@@ -1,0 +1,9 @@
+**/node_modules
+**/dist
+**/build
+**/.git
+**/.dart_tool
+**/.env
+**/.env.*
+!**/.env.example
+apps/backend/prisma/migrations/.gitkeep
