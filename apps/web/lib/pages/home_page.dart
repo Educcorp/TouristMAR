@@ -8,6 +8,7 @@ import '../widgets/app_shell.dart';
 import '../widgets/place_card.dart';
 import '../widgets/quick_action_card.dart';
 import '../widgets/register_place_banner.dart';
+import '../widgets/user_avatar.dart';
 
 class _QuickAction {
   final IconData icon;
@@ -63,17 +64,11 @@ class _HomePageState extends State<HomePage> {
 
     return AppShell(
       accentColor: AppColors.brandTeal,
-      avatarIcon: CircleAvatar(
-        radius: 16,
-        backgroundColor: AppColors.brandTeal.withOpacity(0.2),
-        child: Text(
-          widget.user.name.isNotEmpty ? widget.user.name[0].toUpperCase() : '?',
-          style: const TextStyle(color: AppColors.brandTeal, fontWeight: FontWeight.w600),
-        ),
-      ),
+      avatarIcon: UserAvatar(imageUrl: widget.user.avatarUrl, fallbackLetter: widget.user.name),
       drawerIdentity: VisitorIdentityCard(
         name: widget.user.name,
         email: widget.user.email,
+        avatarUrl: widget.user.avatarUrl,
         visitedCount: _profile.visited.length,
         reviewsCount: _profile.reviews.length,
       ),

@@ -1,8 +1,12 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
 import '../models/visitor_profile.dart';
+import '../services/auth_service.dart';
+import '../services/session_storage.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_button.dart';
+import '../widgets/user_avatar.dart';
 
 class EditProfilePage extends StatefulWidget {
   final VisitorProfile profile;
@@ -16,13 +20,10 @@ class EditProfilePage extends StatefulWidget {
 class _EditProfilePageState extends State<EditProfilePage> {
   late final _nameController = TextEditingController(text: widget.profile.name);
   late final _bioController = TextEditingController(text: widget.profile.bio);
-  int _avatarSeed = 0;
-
-  static const _avatarColors = [
-    AppColors.brandTeal,
-    AppColors.orange,
-    AppColors.amber,
-  ];
+  final _authService = AuthService();
+  bool _isSaving = false;
+  bool _isUploadingPhoto = false;
+  String? _error;
 
   @override
   void dispose() {
@@ -31,16 +32,64 @@ class _EditProfilePageState extends State<EditProfilePage> {
     super.dispose();
   }
 
-  void _save() {
-    widget.profile.name = _nameController.text.trim();
-    widget.profile.bio = _bioController.text.trim();
-    Navigator.of(context).pop(true);
+  Future<void> _changePhoto() async {
+    final token = SessionStorage.token;
+    if (token == null) {
+      setState(() => _error = 'Tu sesión expiró, vuelve a iniciar sesión');
+      return;
+    }
+
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.image,
+      withData: true,
+    );
+    final file = result?.files.single;
+    if (file == null || file.bytes == null) return;
+
+    setState(() {
+      _isUploadingPhoto = true;
+      _error = null;
+    });
+
+    try {
+      final updated = await _authService.uploadAvatar(token, file.bytes!, file.name);
+      setState(() => widget.profile.avatarUrl = updated.avatarUrl);
+    } catch (err) {
+      setState(() => _error = err is AuthError ? err.message : 'No se pudo subir la foto');
+    } finally {
+      if (mounted) setState(() => _isUploadingPhoto = false);
+    }
+  }
+
+  Future<void> _save() async {
+    final token = SessionStorage.token;
+    if (token == null) {
+      setState(() => _error = 'Tu sesión expiró, vuelve a iniciar sesión');
+      return;
+    }
+
+    setState(() {
+      _isSaving = true;
+      _error = null;
+    });
+
+    try {
+      final updated = await _authService.updateProfile(token, {
+        'nombres': _nameController.text.trim(),
+        'bio': _bioController.text.trim(),
+      });
+      widget.profile.name = updated.name;
+      widget.profile.bio = updated.bio ?? '';
+      if (mounted) Navigator.of(context).pop(true);
+    } catch (err) {
+      setState(() => _error = err is AuthError ? err.message : 'No se pudo guardar el perfil');
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final avatarColor = _avatarColors[_avatarSeed % _avatarColors.length];
-
     return Scaffold(
       backgroundColor: AppColors.panelNavy,
       body: SafeArea(
@@ -72,19 +121,23 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     child: Column(
                       children: [
                         GestureDetector(
-                          onTap: () => setState(() => _avatarSeed++),
-                          child: CircleAvatar(
-                            radius: 48,
-                            backgroundColor: avatarColor.withOpacity(0.2),
-                            child: Text(
-                              _nameController.text.isNotEmpty ? _nameController.text[0].toUpperCase() : '?',
-                              style: TextStyle(color: avatarColor, fontWeight: FontWeight.w700, fontSize: 34),
-                            ),
+                          onTap: _isUploadingPhoto ? null : _changePhoto,
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              UserAvatar(
+                                imageUrl: widget.profile.avatarUrl,
+                                fallbackLetter: _nameController.text,
+                                radius: 48,
+                              ),
+                              if (_isUploadingPhoto)
+                                const CircularProgressIndicator(color: AppColors.brandTeal),
+                            ],
                           ),
                         ),
                         const SizedBox(height: 10),
                         TextButton.icon(
-                          onPressed: () => setState(() => _avatarSeed++),
+                          onPressed: _isUploadingPhoto ? null : _changePhoto,
                           icon: const Icon(Icons.camera_alt_outlined, size: 13, color: AppColors.brandTeal),
                           label: const Text('Cambiar foto', style: TextStyle(color: AppColors.brandTeal, fontSize: 12)),
                         ),
@@ -111,6 +164,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     style: const TextStyle(color: Colors.white, fontSize: 14),
                     decoration: _inputDecoration(hint: 'Cuéntanos un poco sobre ti…'),
                   ),
+                  if (_error != null) ...[
+                    const SizedBox(height: 12),
+                    Text(_error!, style: const TextStyle(color: AppColors.errorRed, fontSize: 13)),
+                  ],
                   const SizedBox(height: 12),
                   Row(
                     children: [
@@ -123,7 +180,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       ),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: AppButton(onPressed: _save, child: const Text('Guardar cambios')),
+                        child: AppButton(
+                          onPressed: _isSaving ? null : _save,
+                          child: Text(_isSaving ? 'Guardando...' : 'Guardar cambios'),
+                        ),
                       ),
                     ],
                   ),

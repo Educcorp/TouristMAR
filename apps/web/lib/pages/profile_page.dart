@@ -5,6 +5,7 @@ import '../theme/app_theme.dart';
 import '../theme/breakpoints.dart';
 import '../widgets/app_button.dart';
 import '../widgets/app_shell.dart';
+import '../widgets/user_avatar.dart';
 import 'edit_profile_page.dart';
 
 class ProfilePage extends StatefulWidget {
@@ -30,17 +31,11 @@ class _ProfilePageState extends State<ProfilePage> {
 
     return AppShell(
       accentColor: AppColors.brandTeal,
-      avatarIcon: CircleAvatar(
-        radius: 16,
-        backgroundColor: AppColors.brandTeal.withOpacity(0.2),
-        child: Text(
-          profile.name.isNotEmpty ? profile.name[0].toUpperCase() : '?',
-          style: const TextStyle(color: AppColors.brandTeal, fontWeight: FontWeight.w600),
-        ),
-      ),
+      avatarIcon: UserAvatar(imageUrl: profile.avatarUrl, fallbackLetter: profile.name),
       drawerIdentity: VisitorIdentityCard(
         name: profile.name,
         email: profile.email,
+        avatarUrl: profile.avatarUrl,
         visitedCount: profile.visited.length,
         reviewsCount: profile.reviews.length,
       ),
@@ -108,14 +103,7 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
       child: Column(
         children: [
-          CircleAvatar(
-            radius: 44,
-            backgroundColor: AppColors.brandTeal.withOpacity(0.2),
-            child: Text(
-              profile.name.isNotEmpty ? profile.name[0].toUpperCase() : '?',
-              style: const TextStyle(color: AppColors.brandTeal, fontWeight: FontWeight.w700, fontSize: 32),
-            ),
-          ),
+          UserAvatar(imageUrl: profile.avatarUrl, fallbackLetter: profile.name, radius: 44),
           const SizedBox(height: 14),
           Text(profile.name, style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 22)),
           const SizedBox(height: 4),

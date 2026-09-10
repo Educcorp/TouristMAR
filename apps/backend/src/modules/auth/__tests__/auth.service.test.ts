@@ -34,7 +34,7 @@ describe('registerUser', () => {
     findUnique.mockResolvedValue(null)
     create.mockImplementation(({ data }: any) => Promise.resolve({ id: 'user-1', ...data }) as any)
 
-    const user = await registerUser('ana@correo.com', 'password123', 'Ana')
+    const user = await registerUser({ email: 'ana@correo.com', password: 'password123', nombres: 'Ana', rol: 'turista' })
 
     expect(create).toHaveBeenCalledTimes(1)
     const createdData = create.mock.calls[0][0].data as { passwordHash: string }
@@ -46,9 +46,9 @@ describe('registerUser', () => {
   it('rechaza el registro si ya existe una cuenta con ese correo', async () => {
     findUnique.mockResolvedValue({ id: 'existing' } as any)
 
-    await expect(registerUser('ana@correo.com', 'password123', 'Ana')).rejects.toThrow(
-      'Ya existe una cuenta con ese correo',
-    )
+    await expect(
+      registerUser({ email: 'ana@correo.com', password: 'password123', nombres: 'Ana', rol: 'turista' }),
+    ).rejects.toThrow('Ya existe una cuenta con ese correo')
     expect(create).not.toHaveBeenCalled()
   })
 })
@@ -115,7 +115,11 @@ describe('findOrCreateGoogleUser', () => {
 
     const user = await findOrCreateGoogleUser(profile)
 
-    expect(update).toHaveBeenCalledWith({ where: { id: 'user-1' }, data: { googleId: 'google-123' } })
+    expect(update).toHaveBeenCalledWith({
+      where: { id: 'user-1' },
+      data: { googleId: 'google-123' },
+      include: { negocio: true },
+    })
     expect(user).toMatchObject({ googleId: 'google-123' })
   })
 
@@ -129,9 +133,11 @@ describe('findOrCreateGoogleUser', () => {
       data: {
         email: 'ana@correo.com',
         googleId: 'google-123',
+        rol: 'turista',
         nombres: 'Ana Google',
         avatarUrl: 'http://avatar.jpg',
       },
+      include: { negocio: true },
     })
     expect(user).toMatchObject({ email: 'ana@correo.com' })
   })

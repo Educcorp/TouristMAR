@@ -1,9 +1,13 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
 import '../models/business_profile.dart';
+import '../services/auth_service.dart';
+import '../services/session_storage.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_button.dart';
 import '../widgets/app_text_field.dart';
+import '../widgets/cover_image.dart';
 
 class BusinessEditPage extends StatefulWidget {
   final BusinessProfile business;
@@ -22,13 +26,38 @@ class _BusinessEditPageState extends State<BusinessEditPage> {
   late final _phoneController = TextEditingController(text: widget.business.phone);
   late final _websiteController = TextEditingController(text: widget.business.website);
   late final _hoursController = TextEditingController(text: widget.business.hours);
-  int _coverSeed = 0;
+  final _authService = AuthService();
+  bool _isSaving = false;
+  bool _isUploadingCover = false;
+  String? _error;
 
-  static const _covers = [
-    'assets/images/place-playa-audiencia.jpg',
-    'assets/images/place-cerro-vigia.jpg',
-    'assets/images/place-laguna-cuyutlan.jpg',
-  ];
+  Future<void> _changeCover() async {
+    final token = SessionStorage.token;
+    if (token == null) {
+      setState(() => _error = 'Tu sesión expiró, vuelve a iniciar sesión');
+      return;
+    }
+
+    final result = await FilePicker.platform.pickFiles(type: FileType.image, withData: true);
+    final file = result?.files.single;
+    if (file == null || file.bytes == null) return;
+
+    setState(() {
+      _isUploadingCover = true;
+      _error = null;
+    });
+
+    try {
+      final updated = await _authService.uploadAvatar(token, file.bytes!, file.name);
+      if (updated.negocio?.portada != null) {
+        setState(() => widget.business.coverImage = updated.negocio!.portada!);
+      }
+    } catch (err) {
+      setState(() => _error = err is AuthError ? err.message : 'No se pudo subir la portada');
+    } finally {
+      if (mounted) setState(() => _isUploadingCover = false);
+    }
+  }
 
   @override
   void dispose() {
@@ -42,25 +71,48 @@ class _BusinessEditPageState extends State<BusinessEditPage> {
     super.dispose();
   }
 
-  void _save() {
-    final business = widget.business;
-    business.businessName = _nameController.text.trim();
-    business.category = _categoryController.text.trim();
-    business.description = _descriptionController.text.trim();
-    business.address = _addressController.text.trim();
-    business.phone = _phoneController.text.trim();
-    business.website = _websiteController.text.trim();
-    business.hours = _hoursController.text.trim();
-    if (_coverSeed > 0) {
-      business.coverImage = _covers[_coverSeed % _covers.length];
+  Future<void> _save() async {
+    final token = SessionStorage.token;
+    if (token == null) {
+      setState(() => _error = 'Tu sesión expiró, vuelve a iniciar sesión');
+      return;
     }
-    Navigator.of(context).pop(true);
+
+    setState(() {
+      _isSaving = true;
+      _error = null;
+    });
+
+    try {
+      final updated = await _authService.updateProfile(token, {
+        'nombre': _nameController.text.trim(),
+        'categoria': _categoryController.text.trim(),
+        'descripcion': _descriptionController.text.trim(),
+        'direccion': _addressController.text.trim(),
+        'telefono': _phoneController.text.trim(),
+        'sitioWeb': _websiteController.text.trim(),
+        'horario': _hoursController.text.trim(),
+      });
+
+      final business = widget.business;
+      final negocio = updated.negocio;
+      business.businessName = negocio?.nombre ?? _nameController.text.trim();
+      business.category = negocio?.categoria ?? '';
+      business.description = negocio?.descripcion ?? '';
+      business.address = negocio?.direccion ?? '';
+      business.phone = negocio?.telefono ?? '';
+      business.website = negocio?.sitioWeb ?? '';
+      business.hours = negocio?.horario ?? '';
+      if (mounted) Navigator.of(context).pop(true);
+    } catch (err) {
+      setState(() => _error = err is AuthError ? err.message : 'No se pudo guardar el negocio');
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final coverImage = _coverSeed == 0 ? widget.business.coverImage : _covers[_coverSeed % _covers.length];
-
     return Scaffold(
       backgroundColor: AppColors.panelNavy,
       body: SafeArea(
@@ -89,7 +141,7 @@ class _BusinessEditPageState extends State<BusinessEditPage> {
                   ),
                   const SizedBox(height: 24),
                   GestureDetector(
-                    onTap: () => setState(() => _coverSeed++),
+                    onTap: _isUploadingCover ? null : _changeCover,
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(18),
                       child: SizedBox(
@@ -98,17 +150,20 @@ class _BusinessEditPageState extends State<BusinessEditPage> {
                         child: Stack(
                           fit: StackFit.expand,
                           children: [
-                            Image.asset(coverImage, fit: BoxFit.cover),
+                            CoverImage(source: widget.business.coverImage),
                             DecoratedBox(decoration: BoxDecoration(color: Colors.black.withOpacity(0.25))),
-                            const Center(
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.camera_alt_outlined, color: Colors.white, size: 22),
-                                  SizedBox(height: 6),
-                                  Text('Cambiar foto de portada', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
-                                ],
-                              ),
+                            Center(
+                              child: _isUploadingCover
+                                  ? const CircularProgressIndicator(color: Colors.white)
+                                  : const Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Icons.camera_alt_outlined, color: Colors.white, size: 22),
+                                        SizedBox(height: 6),
+                                        Text('Cambiar foto de portada',
+                                            style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
+                                      ],
+                                    ),
                             ),
                           ],
                         ),
@@ -219,6 +274,10 @@ class _BusinessEditPageState extends State<BusinessEditPage> {
                       ],
                     ),
                   ),
+                  if (_error != null) ...[
+                    const SizedBox(height: 12),
+                    Text(_error!, style: const TextStyle(color: AppColors.errorRed, fontSize: 13)),
+                  ],
                   const SizedBox(height: 20),
                   Row(
                     children: [
@@ -234,8 +293,8 @@ class _BusinessEditPageState extends State<BusinessEditPage> {
                         child: AppButton(
                           backgroundColor: AppColors.businessOrange,
                           foregroundColor: Colors.white,
-                          onPressed: _save,
-                          child: const Text('Guardar cambios'),
+                          onPressed: _isSaving ? null : _save,
+                          child: Text(_isSaving ? 'Guardando...' : 'Guardar cambios'),
                         ),
                       ),
                     ],

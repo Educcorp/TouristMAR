@@ -14,6 +14,8 @@ const envSchema = z.object({
   GOOGLE_CLIENT_ID: z.string().trim().optional(),
   GOOGLE_CLIENT_SECRET: z.string().trim().optional(),
   GOOGLE_CALLBACK_URL: z.string().trim().optional(),
+  SUPABASE_URL: z.string().trim().min(1, 'SUPABASE_URL es requerido'),
+  SUPABASE_SERVICE_ROLE_KEY: z.string().trim().min(1, 'SUPABASE_SERVICE_ROLE_KEY es requerido'),
 })
 
 const parsed = envSchema.safeParse(process.env)

@@ -18,7 +18,7 @@ enum _Mode { login, register }
 
 enum _LoginType { visitor, business }
 
-enum _Screen { credentials, forgot, forgotSent }
+enum _Screen { credentials, forgot, forgotSent, negocioEstado }
 
 class LoginForm extends StatefulWidget {
   final AuthService authService;
@@ -43,6 +43,7 @@ class _LoginFormState extends State<LoginForm> {
   bool _isSubmitting = false;
   bool _isRestoringSession = true;
   String? _error;
+  NegocioInfo? _negocioEstado;
 
   bool get _isBusiness => _loginType == _LoginType.business;
 
@@ -65,13 +66,14 @@ class _LoginFormState extends State<LoginForm> {
     final uri = Uri.base;
     final tokenFromRedirect = uri.queryParameters['token'];
     final googleError = uri.queryParameters['error'];
+    final googleMessage = uri.queryParameters['message'];
 
     if (tokenFromRedirect != null || googleError != null) {
       html.window.history.replaceState(null, '', uri.path);
     }
 
     if (googleError != null) {
-      setState(() => _error = 'No se pudo iniciar sesión con Google');
+      setState(() => _error = googleMessage ?? 'No se pudo iniciar sesión con Google');
     }
 
     final token = tokenFromRedirect ?? SessionStorage.token;
@@ -85,7 +87,7 @@ class _LoginFormState extends State<LoginForm> {
       final restoredUser = await widget.authService.getCurrentUser(token);
       SessionStorage.saveToken(token);
       if (!mounted) return;
-      _goToHome(restoredUser);
+      _routeUser(restoredUser);
     } catch (_) {
       SessionStorage.clearToken();
     } finally {
@@ -93,37 +95,32 @@ class _LoginFormState extends State<LoginForm> {
     }
   }
 
-  void _goToHome(AuthUser user) {
+  /// Decide a dónde mandar al usuario según su rol y, si es negocio, su
+  /// estado de aprobación. Un negocio pendiente/rechazado nunca llega al
+  /// panel — se queda en esta misma pantalla mostrando su estado.
+  void _routeUser(AuthUser user) {
+    if (user.isNegocio) {
+      if (user.negocio != null && user.negocio!.aprobado) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => BusinessDashboardPage(business: BusinessProfile.fromAuthUser(user))),
+        );
+        return;
+      }
+      setState(() {
+        _negocioEstado = user.negocio;
+        _screen = _Screen.negocioEstado;
+      });
+      return;
+    }
     Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => HomePage(user: user)));
   }
 
-  void _goToBusinessDashboard(BusinessProfile business) {
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => BusinessDashboardPage(business: business)),
-    );
-  }
-
   void _handleGoogleOrBusinessClick() {
-    if (_isBusiness) {
-      _goToBusinessDashboard(BusinessProfile.mock());
-      return;
-    }
     html.window.location.href = widget.authService.googleLoginUrl;
   }
 
   Future<void> _handleSubmit() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
-
-    if (_isBusiness) {
-      _goToBusinessDashboard(
-        BusinessProfile.mock(
-          businessName: _mode == _Mode.register ? _nameController.text : null,
-          email: _mode == _Mode.register ? _emailController.text : null,
-          category: _mode == _Mode.register ? _categoryController.text : null,
-        ),
-      );
-      return;
-    }
 
     setState(() {
       _error = null;
@@ -137,9 +134,11 @@ class _LoginFormState extends State<LoginForm> {
               _emailController.text,
               _passwordController.text,
               _nameController.text,
+              rol: _isBusiness ? 'negocio' : 'turista',
+              categoria: _isBusiness ? _categoryController.text : null,
             );
       SessionStorage.saveToken(response.token);
-      _goToHome(response.user);
+      _routeUser(response.user);
     } catch (err) {
       setState(() {
         _error = err is AuthError ? err.message : 'No se pudo conectar con el servidor';
@@ -147,6 +146,15 @@ class _LoginFormState extends State<LoginForm> {
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
+  }
+
+  void _logout() {
+    SessionStorage.clearToken();
+    setState(() {
+      _negocioEstado = null;
+      _screen = _Screen.credentials;
+      _mode = _Mode.login;
+    });
   }
 
   void _setLoginType(_LoginType type) {
@@ -174,13 +182,88 @@ class _LoginFormState extends State<LoginForm> {
         return _buildForgot();
       case _Screen.forgotSent:
         return _buildForgotSent();
+      case _Screen.negocioEstado:
+        return _buildNegocioEstado();
       case _Screen.credentials:
         return _buildForm();
     }
   }
 
+  Widget _buildNegocioEstado() {
+    final isNarrow = !Breakpoints.isExpanded(MediaQuery.sizeOf(context).width);
+    final rechazado = _negocioEstado?.rechazado ?? false;
+    final icon = rechazado ? Icons.cancel_outlined : Icons.hourglass_top_outlined;
+    final color = rechazado ? AppColors.errorRed : AppColors.businessOrange;
+    final title = rechazado ? 'Registro no aprobado' : 'Tu negocio está en revisión';
+    final message = rechazado
+        ? 'Un administrador de TourisMAR revisó tu solicitud y no fue aprobada. Si crees que es un error, contáctanos.'
+        : 'Un administrador de TourisMAR todavía tiene que revisar y aprobar tu cuenta antes de que puedas acceder a tu panel de negocio.';
+
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 48),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (isNarrow) ...[
+                Center(child: _buildLogo()),
+                const SizedBox(height: 32),
+              ],
+              Center(
+                child: Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: color.withOpacity(0.25)),
+                  ),
+                  child: Icon(icon, color: color, size: 28),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Text(title, style: Theme.of(context).textTheme.headlineMedium, textAlign: TextAlign.center),
+              const SizedBox(height: 12),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: AppColors.slate400, fontSize: 14, height: 1.4),
+              ),
+              if (_negocioEstado != null) ...[
+                const SizedBox(height: 20),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.04),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.white.withOpacity(0.1)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(_negocioEstado!.nombre,
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14)),
+                      if (_negocioEstado!.categoria != null)
+                        Text(_negocioEstado!.categoria!, style: const TextStyle(color: AppColors.slate400, fontSize: 12)),
+                    ],
+                  ),
+                ),
+              ],
+              const SizedBox(height: 28),
+              AppButton(variant: AppButtonVariant.ghost, onPressed: _logout, child: const Text('Cerrar sesión')),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildLogo() {
     return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
         Container(
           width: 36,
@@ -189,9 +272,12 @@ class _LoginFormState extends State<LoginForm> {
           child: const Icon(Icons.waves, size: 20, color: AppColors.panelNavy),
         ),
         const SizedBox(width: 8),
-        const Text(
-          'TOURISMAR',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, letterSpacing: 3),
+        const Flexible(
+          child: Text(
+            'TOURISMAR',
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, letterSpacing: 3),
+          ),
         ),
       ],
     );

@@ -1,3 +1,5 @@
+import '../services/auth_service.dart';
+
 class BusinessReview {
   final String author;
   final String initials;
@@ -80,42 +82,30 @@ class BusinessProfile {
     required this.verified,
   });
 
-  factory BusinessProfile.mock({
-    String? businessName,
-    String? email,
-    String? category,
-  }) {
+  /// Perfil real de negocio devuelto por el backend. Las estadísticas
+  /// (calificación, visitas, reseñas, favoritos) aún no existen como feature
+  /// en el backend, así que se muestran en cero en vez de datos inventados.
+  factory BusinessProfile.fromAuthUser(AuthUser user) {
+    final negocio = user.negocio;
     return BusinessProfile(
-      businessName: (businessName == null || businessName.trim().isEmpty)
-          ? 'Playa Audiencia Resort & Bar'
-          : businessName,
-      ownerName: 'Sofía Mendoza',
-      email: (email == null || email.trim().isEmpty)
-          ? 'contacto@playaaudiencia.mx'
-          : email,
-      category: (category == null || category.trim().isEmpty)
-          ? 'Playa · Bar · Restaurante'
-          : category,
-      description: 'Un oasis frente al Pacífico. Ofrecemos snorkel, kayak, '
-          'sillas de playa, bar de mariscos y acceso directo al mar más azul '
-          'de Manzanillo. Reservaciones y eventos especiales disponibles '
-          'todo el año.',
-      coverImage: 'assets/images/place-playa-audiencia.jpg',
-      gallery: const [
-        'assets/images/place-playa-audiencia.jpg',
-        'assets/images/place-cerro-vigia.jpg',
-        'assets/images/place-laguna-cuyutlan.jpg',
-      ],
-      rating: 4.9,
-      totalReviews: 124,
-      monthlyVisits: 1243,
-      newReviews: 23,
-      favorites: 89,
-      phone: '+52 314 123 4567',
-      website: 'playaaudiencia.com.mx',
-      address: 'Av. de los Cocoteros 42, Manzanillo, Col. 28219',
-      hours: 'Lun – Dom: 8:00 am – 8:00 pm',
-      verified: true,
+      businessName: negocio?.nombre ?? user.name,
+      ownerName: user.name,
+      email: user.email,
+      category: negocio?.categoria ?? '',
+      description: negocio?.descripcion ?? '',
+      coverImage: negocio?.portada ?? 'assets/images/place-playa-audiencia.jpg',
+      gallery: const [],
+      rating: 0,
+      totalReviews: 0,
+      monthlyVisits: 0,
+      newReviews: 0,
+      favorites: 0,
+      phone: negocio?.telefono ?? '',
+      website: negocio?.sitioWeb ?? '',
+      address: negocio?.direccion ?? '',
+      hours: negocio?.horario ?? '',
+      verified: negocio?.aprobado ?? false,
     );
   }
+
 }

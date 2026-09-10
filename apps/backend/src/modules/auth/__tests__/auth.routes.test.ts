@@ -34,7 +34,7 @@ describe('POST /api/auth/register', () => {
   it('crea la cuenta y devuelve token + usuario público (sin passwordHash)', async () => {
     findUnique.mockResolvedValue(null)
     create.mockImplementation(({ data }: any) =>
-      Promise.resolve({ id: 'user-1', rol: 'usuario', avatarUrl: null, ...data }) as any,
+      Promise.resolve({ id: 'user-1', avatarUrl: null, bio: null, negocio: null, ...data }) as any,
     )
 
     const res = await request(buildApp()).post('/api/auth/register').send({
@@ -48,8 +48,10 @@ describe('POST /api/auth/register', () => {
       id: 'user-1',
       email: 'ana@correo.com',
       name: 'Ana',
-      role: 'usuario',
+      role: 'turista',
       avatarUrl: null,
+      bio: null,
+      negocio: null,
     })
     expect(res.body.user.passwordHash).toBeUndefined()
     expect(typeof res.body.token).toBe('string')
@@ -86,7 +88,7 @@ describe('POST /api/auth/login', () => {
       email: 'ana@correo.com',
       passwordHash,
       nombres: 'Ana',
-      rol: 'usuario',
+      rol: 'turista',
       avatarUrl: null,
     } as any)
 

@@ -34,6 +34,7 @@ class VisitorProfile {
   String name;
   String email;
   String bio;
+  String? avatarUrl;
   final List<VisitedPlace> visited;
   final List<UserReview> reviews;
 
@@ -41,6 +42,7 @@ class VisitorProfile {
     required this.name,
     required this.email,
     this.bio = '',
+    this.avatarUrl,
     List<VisitedPlace>? visited,
     List<UserReview>? reviews,
   })  : visited = visited ?? [],
@@ -50,8 +52,10 @@ class VisitorProfile {
     return VisitorProfile(
       name: user.name,
       email: user.email,
-      bio: 'Apasionada del mar y la gastronomía local. Explorando Manzanillo '
-          'un lugar a la vez 🌊',
+      bio: user.bio ?? '',
+      avatarUrl: user.avatarUrl,
+      // TODO: "visitados" y "reseñas" todavía no tienen backend — placeholder
+      // hasta que exista el sistema de lugares/reseñas.
       visited: const [
         VisitedPlace(
           image: 'assets/images/place-playa-audiencia.jpg',

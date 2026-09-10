@@ -8,6 +8,7 @@ import '../pages/login_page.dart';
 import '../pages/profile_page.dart';
 import '../services/session_storage.dart';
 import '../theme/app_theme.dart';
+import 'user_avatar.dart';
 
 class NavItem {
   final IconData icon;
@@ -109,6 +110,7 @@ class _DrawerStat extends StatelessWidget {
 class VisitorIdentityCard extends StatelessWidget {
   final String name;
   final String email;
+  final String? avatarUrl;
   final int visitedCount;
   final int reviewsCount;
 
@@ -116,6 +118,7 @@ class VisitorIdentityCard extends StatelessWidget {
     super.key,
     required this.name,
     required this.email,
+    this.avatarUrl,
     required this.visitedCount,
     required this.reviewsCount,
   });
@@ -127,14 +130,7 @@ class VisitorIdentityCard extends StatelessWidget {
       children: [
         Row(
           children: [
-            CircleAvatar(
-              radius: 24,
-              backgroundColor: AppColors.brandTeal.withOpacity(0.2),
-              child: Text(
-                name.isNotEmpty ? name[0].toUpperCase() : '?',
-                style: const TextStyle(color: AppColors.brandTeal, fontWeight: FontWeight.w600, fontSize: 18),
-              ),
-            ),
+            UserAvatar(imageUrl: avatarUrl, fallbackLetter: name, radius: 24),
             const SizedBox(width: 14),
             Expanded(
               child: Column(

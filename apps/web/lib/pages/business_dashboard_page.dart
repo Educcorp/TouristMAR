@@ -4,6 +4,7 @@ import '../models/business_profile.dart';
 import '../theme/app_theme.dart';
 import '../theme/breakpoints.dart';
 import '../widgets/app_shell.dart';
+import '../widgets/cover_image.dart';
 import 'business_edit_page.dart';
 import 'business_reviews_page.dart';
 
@@ -108,7 +109,7 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            Image.asset(business.coverImage, fit: BoxFit.cover),
+            CoverImage(source: business.coverImage),
             DecoratedBox(
               decoration: BoxDecoration(
                 gradient: LinearGradient(

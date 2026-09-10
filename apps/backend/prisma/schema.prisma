@@ -16,9 +16,16 @@ enum sexo_enum {
 }
 
 enum rol_enum {
-  usuario
+  turista
+  negocio
   admin
   super_admin
+}
+
+enum estado_negocio_enum {
+  pendiente
+  aprobado
+  rechazado
 }
 
 model User {
@@ -30,11 +37,35 @@ model User {
   username        String?    @unique
   fechaNacimiento DateTime?  @map("fecha_nacimiento") @db.Date
   sexo            sexo_enum?
-  rol             rol_enum   @default(usuario)
+  rol             rol_enum   @default(turista)
+  bio             String?
   avatarUrl       String?    @map("avatar_url")
   googleId        String?    @unique @map("google_id")
   createdAt       DateTime   @default(now()) @map("created_at")
   updatedAt       DateTime   @updatedAt @map("updated_at")
 
+  negocio NegocioProfile?
+
   @@map("users")
+}
+
+model NegocioProfile {
+  id          String              @id @default(uuid()) @db.Uuid
+  userId      String              @unique @map("user_id") @db.Uuid
+  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  nombre      String
+  categoria   String?
+  descripcion String?
+  direccion   String?
+  telefono    String?
+  sitioWeb    String?             @map("sitio_web")
+  horario     String?
+  portada     String?
+  estado      estado_negocio_enum @default(pendiente)
+  revisadoPor String?             @map("revisado_por") @db.Uuid
+  revisadoEn  DateTime?           @map("revisado_en")
+  createdAt   DateTime            @default(now()) @map("created_at")
+  updatedAt   DateTime            @updatedAt @map("updated_at")
+
+  @@map("negocio_profiles")
 }
