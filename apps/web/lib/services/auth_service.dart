@@ -53,6 +53,7 @@ class AuthUser {
   final String email;
   final String name;
   final String role;
+  final bool activo;
   final String? avatarUrl;
   final String? bio;
   final NegocioInfo? negocio;
@@ -62,21 +63,106 @@ class AuthUser {
     required this.email,
     required this.name,
     required this.role,
+    this.activo = true,
     this.avatarUrl,
     this.bio,
     this.negocio,
   });
 
   bool get isNegocio => role == 'negocio';
+  bool get isAdmin => role == 'admin' || role == 'super_admin';
+  bool get isSuperAdmin => role == 'super_admin';
 
   factory AuthUser.fromJson(Map<String, dynamic> json) => AuthUser(
         id: json['id'] as String,
         email: json['email'] as String,
         name: json['name'] as String,
         role: json['role'] as String,
+        activo: json['activo'] as bool? ?? true,
         avatarUrl: json['avatarUrl'] as String?,
         bio: json['bio'] as String?,
         negocio: json['negocio'] != null ? NegocioInfo.fromJson(json['negocio'] as Map<String, dynamic>) : null,
+      );
+}
+
+class AdminAccount {
+  final String id;
+  final String email;
+  final String name;
+  final String role;
+  final DateTime createdAt;
+
+  const AdminAccount({
+    required this.id,
+    required this.email,
+    required this.name,
+    required this.role,
+    required this.createdAt,
+  });
+
+  bool get isSuperAdmin => role == 'super_admin';
+
+  factory AdminAccount.fromJson(Map<String, dynamic> json) => AdminAccount(
+        id: json['id'] as String,
+        email: json['email'] as String,
+        name: json['name'] as String,
+        role: json['role'] as String,
+        createdAt: DateTime.parse(json['createdAt'] as String),
+      );
+}
+
+class NegocioSummary {
+  final String id;
+  final String nombre;
+  final String? categoria;
+  final String estado;
+  final String email;
+  final String contacto;
+  final DateTime solicitadoEn;
+
+  const NegocioSummary({
+    required this.id,
+    required this.nombre,
+    this.categoria,
+    required this.estado,
+    required this.email,
+    required this.contacto,
+    required this.solicitadoEn,
+  });
+
+  bool get pendiente => estado == 'pendiente';
+  bool get aprobado => estado == 'aprobado';
+  bool get rechazado => estado == 'rechazado';
+
+  factory NegocioSummary.fromJson(Map<String, dynamic> json) => NegocioSummary(
+        id: json['id'] as String,
+        nombre: json['nombre'] as String,
+        categoria: json['categoria'] as String?,
+        estado: json['estado'] as String? ?? 'pendiente',
+        email: json['email'] as String,
+        contacto: json['contacto'] as String,
+        solicitadoEn: DateTime.parse(json['solicitadoEn'] as String),
+      );
+}
+
+class AdminStats {
+  final int turistas;
+  final int negociosActivos;
+  final int negociosPendientes;
+  final int negociosTotal;
+
+  const AdminStats({
+    required this.turistas,
+    required this.negociosActivos,
+    required this.negociosPendientes,
+    required this.negociosTotal,
+  });
+
+  factory AdminStats.fromJson(Map<String, dynamic> json) => AdminStats(
+        turistas: json['turistas'] as int,
+        negociosActivos: json['negociosActivos'] as int,
+        negociosPendientes: json['negociosPendientes'] as int,
+        negociosTotal: json['negociosTotal'] as int,
       );
 }
 
@@ -183,6 +269,113 @@ class AuthService {
     }
 
     return AuthUser.fromJson(data['user'] as Map<String, dynamic>);
+  }
+
+  Future<AdminStats> adminGetStats(String token) async {
+    final data = await _get('/admin/dashboard', token);
+    return AdminStats.fromJson(data['stats'] as Map<String, dynamic>);
+  }
+
+  Future<List<AuthUser>> adminListUsers(String token) async {
+    final data = await _get('/admin/users', token);
+    return (data['users'] as List).map((u) => AuthUser.fromJson(u as Map<String, dynamic>)).toList();
+  }
+
+  Future<AuthUser> adminSetUserActive(String token, String userId, bool activo) async {
+    final data = await _patch('/admin/users/$userId/activo', token, {'activo': activo});
+    return AuthUser.fromJson(data['user'] as Map<String, dynamic>);
+  }
+
+  Future<List<NegocioSummary>> adminListNegocios(String token) async {
+    final data = await _get('/admin/negocios', token);
+    return (data['negocios'] as List).map((n) => NegocioSummary.fromJson(n as Map<String, dynamic>)).toList();
+  }
+
+  Future<List<NegocioSummary>> adminListNegociosPendientes(String token) async {
+    final data = await _get('/admin/negocios/pendientes', token);
+    return (data['negocios'] as List).map((n) => NegocioSummary.fromJson(n as Map<String, dynamic>)).toList();
+  }
+
+  Future<void> adminApproveNegocio(String token, String userId) {
+    return _post('/admin/negocios/$userId/aprobar', token);
+  }
+
+  Future<void> adminRejectNegocio(String token, String userId) {
+    return _post('/admin/negocios/$userId/rechazar', token);
+  }
+
+  Future<List<AdminAccount>> adminListAdmins(String token) async {
+    final data = await _get('/admin/admins', token);
+    return (data['admins'] as List).map((a) => AdminAccount.fromJson(a as Map<String, dynamic>)).toList();
+  }
+
+  Future<AdminAccount> adminCreateAdmin(String token, {required String email, required String password, required String nombres}) async {
+    final data = await _postJson('/admin/admins', token, {
+      'email': email,
+      'password': password,
+      'nombres': nombres,
+    });
+    return AdminAccount.fromJson(data['admin'] as Map<String, dynamic>);
+  }
+
+  Future<void> adminDeleteAdmin(String token, String adminId) async {
+    final res = await _client.delete(
+      Uri.parse('$apiUrl/admin/admins/$adminId'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      final data = _decode(res.body);
+      throw AuthError((data['error'] as String?) ?? 'No se pudo eliminar al administrador');
+    }
+  }
+
+  Future<Map<String, dynamic>> _get(String path, String token) async {
+    final res = await _client.get(
+      Uri.parse('$apiUrl$path'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+    final data = _decode(res.body);
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      throw AuthError((data['error'] as String?) ?? 'No se pudo completar la solicitud');
+    }
+    return data;
+  }
+
+  Future<Map<String, dynamic>> _patch(String path, String token, Map<String, dynamic> body) async {
+    final res = await _client.patch(
+      Uri.parse('$apiUrl$path'),
+      headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+      body: jsonEncode(body),
+    );
+    final data = _decode(res.body);
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      throw AuthError((data['error'] as String?) ?? 'No se pudo completar la solicitud');
+    }
+    return data;
+  }
+
+  Future<void> _post(String path, String token) async {
+    final res = await _client.post(
+      Uri.parse('$apiUrl$path'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      final data = _decode(res.body);
+      throw AuthError((data['error'] as String?) ?? 'No se pudo completar la solicitud');
+    }
+  }
+
+  Future<Map<String, dynamic>> _postJson(String path, String token, Map<String, dynamic> body) async {
+    final res = await _client.post(
+      Uri.parse('$apiUrl$path'),
+      headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+      body: jsonEncode(body),
+    );
+    final data = _decode(res.body);
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      throw AuthError((data['error'] as String?) ?? 'No se pudo completar la solicitud');
+    }
+    return data;
   }
 
   Future<AuthResponse> _postCredentials(String path, Map<String, String> body) async {

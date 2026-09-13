@@ -3,6 +3,7 @@ import 'dart:html' as html;
 import 'package:flutter/material.dart';
 
 import '../models/business_profile.dart';
+import '../pages/admin/admin_dashboard_page.dart';
 import '../pages/business_dashboard_page.dart';
 import '../pages/home_page.dart';
 import '../services/auth_service.dart';
@@ -99,6 +100,12 @@ class _LoginFormState extends State<LoginForm> {
   /// estado de aprobación. Un negocio pendiente/rechazado nunca llega al
   /// panel — se queda en esta misma pantalla mostrando su estado.
   void _routeUser(AuthUser user) {
+    if (user.isAdmin) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => AdminDashboardPage(admin: user)),
+      );
+      return;
+    }
     if (user.isNegocio) {
       if (user.negocio != null && user.negocio!.aprobado) {
         Navigator.of(context).pushReplacement(

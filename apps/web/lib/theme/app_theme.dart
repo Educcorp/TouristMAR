@@ -16,6 +16,10 @@ class AppColors {
   // Segundo perfil de marca: panel de empresa (naranja en vez de teal).
   static const businessOrange = Color(0xFFF97316);
   static const businessOrangeDark = Color(0xFFC2410C);
+
+  // Tercer perfil de marca: panel de administración (violeta).
+  static const adminViolet = Color(0xFFA78BFA);
+  static const adminVioletDark = Color(0xFF7C3AED);
 }
 
 class AppTheme {

@@ -38,6 +38,7 @@ model User {
   fechaNacimiento DateTime?  @map("fecha_nacimiento") @db.Date
   sexo            sexo_enum?
   rol             rol_enum   @default(turista)
+  activo          Boolean    @default(true)
   bio             String?
   avatarUrl       String?    @map("avatar_url")
   googleId        String?    @unique @map("google_id")

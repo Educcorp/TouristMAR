@@ -12,6 +12,7 @@ import {
   findOrCreateGoogleUserFromMobileToken,
   DatabaseNotReadyError,
   GoogleLoginNotAllowedError,
+  AccountBlockedError,
 } from './auth.service'
 import type { AuthedRequest } from './auth.middleware'
 
@@ -56,6 +57,8 @@ export function toPublicUser(user: UserWithNegocio) {
     email: user.email,
     name: user.nombres,
     role: user.rol,
+    activo: user.activo,
+    createdAt: user.createdAt,
     avatarUrl: user.avatarUrl ?? null,
     bio: user.bio ?? null,
     negocio: user.negocio
@@ -116,6 +119,9 @@ export async function login(req: Request, res: Response) {
     if (err instanceof DatabaseNotReadyError) {
       return res.status(503).json({ error: err.message })
     }
+    if (err instanceof AccountBlockedError) {
+      return res.status(403).json({ error: err.message })
+    }
     return res.status(500).json({ error: 'Error interno' })
   }
 }
@@ -134,7 +140,7 @@ export async function googleMobileLogin(req: Request, res: Response) {
     if (err instanceof DatabaseNotReadyError) {
       return res.status(503).json({ error: err.message })
     }
-    if (err instanceof GoogleLoginNotAllowedError) {
+    if (err instanceof GoogleLoginNotAllowedError || err instanceof AccountBlockedError) {
       return res.status(403).json({ error: err.message })
     }
     return res.status(401).json({ error: (err as Error).message })

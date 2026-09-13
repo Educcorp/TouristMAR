@@ -11,6 +11,7 @@ const googleClient = isGoogleAuthEnabled ? new OAuth2Client(env.GOOGLE_CLIENT_ID
 
 export class DatabaseNotReadyError extends Error {}
 export class GoogleLoginNotAllowedError extends Error {}
+export class AccountBlockedError extends Error {}
 
 async function withDbGuard<T>(fn: () => Promise<T>): Promise<T> {
   try {
@@ -65,15 +66,28 @@ export async function validateCredentials(email: string, password: string) {
     const user = await prisma.user.findUnique({ where: { email }, include: { negocio: true } })
     if (!user || !user.passwordHash) return null
     const valid = await bcrypt.compare(password, user.passwordHash)
-    return valid ? user : null
+    if (!valid) return null
+    if (user.activo === false) {
+      throw new AccountBlockedError('Tu cuenta ha sido bloqueada por un administrador')
+    }
+    return user
   })
 }
 
 async function resolveGoogleAccount(email: string, googleId: string, profile: { displayName?: string; photo?: string }) {
   const existingByGoogleId = await prisma.user.findUnique({ where: { googleId }, include: { negocio: true } })
-  if (existingByGoogleId) return existingByGoogleId
+  if (existingByGoogleId) {
+    if (existingByGoogleId.activo === false) {
+      throw new AccountBlockedError('Tu cuenta ha sido bloqueada por un administrador')
+    }
+    return existingByGoogleId
+  }
 
   const existingByEmail = await prisma.user.findUnique({ where: { email }, include: { negocio: true } })
+
+  if (existingByEmail && existingByEmail.activo === false) {
+    throw new AccountBlockedError('Tu cuenta ha sido bloqueada por un administrador')
+  }
 
   if (!existingByEmail) {
     // Cuenta nueva vía Google: solo se crean turistas. Los negocios deben
@@ -252,4 +266,100 @@ export async function reviewNegocio(negocioUserId: string, decision: 'aprobado' 
       data: { estado: decision, revisadoPor: adminId, revisadoEn: new Date() },
     }),
   )
+}
+
+export class CannotModifyAdminError extends Error {}
+export class SuperAdminAlreadyExistsError extends Error {}
+
+export async function getAdminStats() {
+  return withDbGuard(async () => {
+    const [turistas, negociosActivos, negociosPendientes, negociosTotal] = await Promise.all([
+      prisma.user.count({ where: { rol: 'turista' } }),
+      prisma.negocioProfile.count({ where: { estado: 'aprobado' } }),
+      prisma.negocioProfile.count({ where: { estado: 'pendiente' } }),
+      prisma.negocioProfile.count(),
+    ])
+    return { turistas, negociosActivos, negociosPendientes, negociosTotal }
+  })
+}
+
+export async function listGestionableUsers() {
+  return withDbGuard(() =>
+    prisma.user.findMany({
+      where: { rol: { in: ['turista', 'negocio'] } },
+      include: { negocio: true },
+      orderBy: { createdAt: 'desc' },
+    }),
+  )
+}
+
+export async function setUserActive(userId: string, activo: boolean) {
+  return withDbGuard(async () => {
+    const user = await prisma.user.findUnique({ where: { id: userId } })
+    if (!user) {
+      throw new Error('Usuario no encontrado')
+    }
+    if (user.rol === 'admin' || user.rol === 'super_admin') {
+      throw new CannotModifyAdminError('No puedes bloquear a un administrador')
+    }
+    return prisma.user.update({ where: { id: userId }, data: { activo }, include: { negocio: true } })
+  })
+}
+
+export async function listNegociosAll() {
+  return withDbGuard(() =>
+    prisma.negocioProfile.findMany({
+      include: { user: { select: { id: true, email: true, nombres: true, createdAt: true } } },
+      orderBy: { createdAt: 'desc' },
+    }),
+  )
+}
+
+export async function listAdmins() {
+  return withDbGuard(() =>
+    prisma.user.findMany({
+      where: { rol: { in: ['admin', 'super_admin'] } },
+      orderBy: { createdAt: 'asc' },
+    }),
+  )
+}
+
+export interface CreateAdminInput {
+  email: string
+  password: string
+  nombres: string
+}
+
+export async function createAdmin(input: CreateAdminInput) {
+  return withDbGuard(async () => {
+    const existing = await prisma.user.findUnique({ where: { email: input.email } })
+    if (existing) {
+      throw new Error('Ya existe una cuenta con ese correo')
+    }
+    const passwordHash = await bcrypt.hash(input.password, 10)
+    return prisma.user.create({
+      data: {
+        email: input.email,
+        passwordHash,
+        nombres: input.nombres,
+        rol: 'admin',
+      },
+    })
+  })
+}
+
+export async function deleteAdmin(adminId: string, requestedBy: string) {
+  return withDbGuard(async () => {
+    const target = await prisma.user.findUnique({ where: { id: adminId } })
+    if (!target || target.rol === 'turista' || target.rol === 'negocio') {
+      throw new Error('No se encontró ese administrador')
+    }
+    if (target.rol === 'super_admin') {
+      throw new CannotModifyAdminError('No se puede eliminar al super administrador')
+    }
+    if (target.id === requestedBy) {
+      throw new CannotModifyAdminError('No puedes eliminar tu propia cuenta de administrador')
+    }
+    await prisma.user.delete({ where: { id: adminId } })
+  })
 }
