@@ -24,6 +24,7 @@ ON CONFLICT ("email") DO UPDATE SET
     "password_hash" = EXCLUDED."password_hash",
     "nombres" = EXCLUDED."nombres",
     "rol" = 'super_admin',
+    
     "activo" = true,
     "google_id" = NULL,
     "updated_at" = CURRENT_TIMESTAMP;

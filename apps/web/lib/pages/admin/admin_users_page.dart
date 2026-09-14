@@ -3,8 +3,15 @@ import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
 import '../../services/session_storage.dart';
 import '../../theme/app_theme.dart';
-import '../../widgets/app_button.dart';
+import '../../theme/breakpoints.dart';
+import '../../widgets/admin/ds_badge.dart';
+import '../../widgets/admin/ds_button.dart';
+import '../../widgets/admin/ds_card.dart';
+import '../../widgets/admin/ds_states.dart';
+import '../../widgets/admin/ds_table.dart';
+import '../../widgets/user_avatar.dart';
 
+/// Contenido de la sección "Usuarios" embebido en [AdminShell].
 class AdminUsersPage extends StatefulWidget {
   final AuthService authService;
 
@@ -82,186 +89,211 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.panelNavy,
-      appBar: AppBar(
-        backgroundColor: AppColors.panelNavy,
-        foregroundColor: Colors.white,
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
+    return RefreshIndicator(
+      onRefresh: _load,
+      color: AppColors.adminViolet,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(AppSpacing.xl),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Gestión de usuarios'),
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(
-                color: AppColors.brandTeal.withOpacity(0.12),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: AppColors.brandTeal.withOpacity(0.3)),
-              ),
-              child: Text('${_users.length}', style: const TextStyle(color: AppColors.brandTeal, fontSize: 12, fontWeight: FontWeight.w700)),
+            Row(
+              children: [
+                Text('Usuarios', style: AppTypography.h1),
+                const SizedBox(width: AppSpacing.sm),
+                DsBadge(text: '${_users.length}', tone: BadgeTone.info),
+              ],
             ),
+            const SizedBox(height: 4),
+            Text('Administra los usuarios del sistema.', style: AppTypography.body),
+            const SizedBox(height: AppSpacing.lg),
+            _SearchField(controller: _searchController),
+            const SizedBox(height: AppSpacing.xl),
+            _buildContent(),
           ],
-        ),
-      ),
-      body: RefreshIndicator(
-        onRefresh: _load,
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 760),
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  TextField(
-                    controller: _searchController,
-                    style: const TextStyle(color: Colors.white, fontSize: 14),
-                    decoration: InputDecoration(
-                      hintText: 'Buscar por nombre o correo…',
-                      hintStyle: const TextStyle(color: AppColors.slate500),
-                      prefixIcon: const Icon(Icons.search, size: 18, color: AppColors.slate500),
-                      filled: true,
-                      fillColor: AppColors.panelNavySoft,
-                      contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: AppColors.brandTeal),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Expanded(child: _buildContent()),
-                ],
-              ),
-            ),
-          ),
         ),
       ),
     );
   }
 
   Widget _buildContent() {
-    if (_loading) {
-      return const Center(child: CircularProgressIndicator(color: AppColors.brandTeal));
-    }
-    if (_error != null) {
-      return Center(child: Text(_error!, style: const TextStyle(color: AppColors.errorRed)));
-    }
+    if (_loading) return const DsLoadingState();
+    if (_error != null) return DsErrorState(message: _error!, onRetry: _load);
     final filtered = _filtered;
     if (filtered.isEmpty) {
-      return const Center(
-        child: Text('No hay usuarios que coincidan con tu búsqueda.', style: TextStyle(color: AppColors.slate400)),
+      return const DsEmptyState(
+        icon: Icons.person_search_outlined,
+        title: 'Sin coincidencias',
+        subtitle: 'Ningún usuario coincide con tu búsqueda.',
       );
     }
-    return ListView.separated(
-      physics: const AlwaysScrollableScrollPhysics(),
-      itemCount: filtered.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 8),
-      itemBuilder: (context, i) => _UserTile(
-        user: filtered[i],
-        isUpdating: _updating.contains(filtered[i].id),
-        onToggleActive: () => _toggleActive(filtered[i]),
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Umbral bajo a propósito: este ancho ya es el del área de contenido
+        // (con el sidebar de 260px y el padding ya descontados), no el de la
+        // ventana completa — un desktop normal cae por debajo de
+        // `Breakpoints.expanded` una vez restado el sidebar.
+        if (constraints.maxWidth >= Breakpoints.compact) {
+          return DsTable(
+            headers: const ['Usuario', 'Rol', 'Estado', 'Acciones'],
+            columnFlex: const [4, 2, 2, 2],
+            rows: filtered
+                .map((u) => DsTableRow(
+                      columnFlex: const [4, 2, 2, 2],
+                      cells: [
+                        _IdentityCell(user: u),
+                        DsBadge(
+                          text: u.isNegocio ? 'Empresa' : 'Visitante',
+                          tone: u.isNegocio ? BadgeTone.warning : BadgeTone.info,
+                        ),
+                        DsBadge(
+                          text: u.activo ? 'Activo' : 'Bloqueado',
+                          tone: u.activo ? BadgeTone.success : BadgeTone.danger,
+                        ),
+                        _ActionCell(
+                          blocked: !u.activo,
+                          isUpdating: _updating.contains(u.id),
+                          onToggleActive: () => _toggleActive(u),
+                        ),
+                      ],
+                    ))
+                .toList(),
+          );
+        }
+
+        return Column(
+          children: filtered
+              .map((u) => Padding(
+                    padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                    child: _UserCard(
+                      user: u,
+                      isUpdating: _updating.contains(u.id),
+                      onToggleActive: () => _toggleActive(u),
+                    ),
+                  ))
+              .toList(),
+        );
+      },
+    );
+  }
+}
+
+class _SearchField extends StatelessWidget {
+  final TextEditingController controller;
+  const _SearchField({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 360),
+      child: TextField(
+        controller: controller,
+        style: const TextStyle(color: Colors.white, fontSize: 14),
+        decoration: InputDecoration(
+          hintText: 'Buscar por nombre o correo…',
+          hintStyle: AppTypography.bodySmall,
+          prefixIcon: const Icon(Icons.search, size: 18, color: AppColors.slate500),
+          filled: true,
+          fillColor: AppColors.surface,
+          contentPadding: const EdgeInsets.symmetric(vertical: 12),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppRadius.buttonLg),
+            borderSide: const BorderSide(color: AppColors.borderSubtle),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppRadius.buttonLg),
+            borderSide: const BorderSide(color: AppColors.borderSubtle),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppRadius.buttonLg),
+            borderSide: const BorderSide(color: AppColors.adminViolet),
+          ),
+        ),
       ),
     );
   }
 }
 
-class _UserTile extends StatelessWidget {
+class _IdentityCell extends StatelessWidget {
+  final AuthUser user;
+  const _IdentityCell({required this.user});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        UserAvatar(fallbackLetter: user.name, imageUrl: user.avatarUrl, radius: 16, color: AppColors.brandTeal),
+        const SizedBox(width: AppSpacing.sm),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(user.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
+              Text(user.email, maxLines: 1, overflow: TextOverflow.ellipsis, style: AppTypography.bodySmall),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ActionCell extends StatelessWidget {
+  final bool blocked;
+  final bool isUpdating;
+  final VoidCallback onToggleActive;
+
+  const _ActionCell({required this.blocked, required this.isUpdating, required this.onToggleActive});
+
+  @override
+  Widget build(BuildContext context) {
+    if (isUpdating) {
+      return const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.slate400));
+    }
+    return DsButton(
+      label: blocked ? 'Desbloquear' : 'Bloquear',
+      variant: blocked ? DsButtonVariant.secondary : DsButtonVariant.danger,
+      accent: blocked ? AppColors.emerald : null,
+      size: DsButtonSize.sm,
+      onPressed: onToggleActive,
+    );
+  }
+}
+
+class _UserCard extends StatelessWidget {
   final AuthUser user;
   final bool isUpdating;
   final VoidCallback onToggleActive;
 
-  const _UserTile({required this.user, required this.isUpdating, required this.onToggleActive});
+  const _UserCard({required this.user, required this.isUpdating, required this.onToggleActive});
 
   @override
   Widget build(BuildContext context) {
     final blocked = !user.activo;
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.03),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
-      ),
+    return DsCard(
       child: Row(
         children: [
-          CircleAvatar(
-            radius: 20,
-            backgroundColor: AppColors.brandTeal.withOpacity(0.15),
-            child: Text(
-              user.name.isNotEmpty ? user.name[0].toUpperCase() : '?',
-              style: const TextStyle(color: AppColors.brandTeal, fontWeight: FontWeight.w700),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(user.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
-                Text(user.email, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AppColors.slate400, fontSize: 12)),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            crossAxisAlignment: WrapCrossAlignment.center,
+          _IdentityCell(user: user),
+          const SizedBox(width: AppSpacing.sm),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              _Badge(
-                text: user.isNegocio ? 'Empresa' : 'Visitante',
-                color: user.isNegocio ? AppColors.businessOrange : AppColors.brandTeal,
+              Wrap(
+                spacing: 6,
+                children: [
+                  DsBadge(text: user.isNegocio ? 'Empresa' : 'Visitante', tone: user.isNegocio ? BadgeTone.warning : BadgeTone.info),
+                  DsBadge(text: blocked ? 'Bloqueado' : 'Activo', tone: blocked ? BadgeTone.danger : BadgeTone.success),
+                ],
               ),
-              _Badge(text: blocked ? 'Bloqueado' : 'Activo', color: blocked ? AppColors.errorRed : Colors.greenAccent),
-              SizedBox(
-                width: 108,
-                child: isUpdating
-                    ? const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 8),
-                        child: Center(child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.slate400))),
-                      )
-                    : AppButton(
-                        variant: AppButtonVariant.ghost,
-                        backgroundColor: blocked ? Colors.greenAccent.withOpacity(0.1) : AppColors.errorRed.withOpacity(0.1),
-                        foregroundColor: blocked ? Colors.greenAccent : AppColors.errorRed,
-                        onPressed: onToggleActive,
-                        child: Text(blocked ? 'Desbloquear' : 'Bloquear', style: const TextStyle(fontSize: 12)),
-                      ),
-              ),
+              const SizedBox(height: AppSpacing.sm),
+              _ActionCell(blocked: blocked, isUpdating: isUpdating, onToggleActive: onToggleActive),
             ],
           ),
         ],
       ),
-    );
-  }
-}
-
-class _Badge extends StatelessWidget {
-  final String text;
-  final Color color;
-
-  const _Badge({required this.text, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.12),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(0.3)),
-      ),
-      child: Text(text, style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w700)),
     );
   }
 }

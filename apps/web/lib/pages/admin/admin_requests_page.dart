@@ -3,8 +3,16 @@ import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
 import '../../services/session_storage.dart';
 import '../../theme/app_theme.dart';
-import '../../widgets/app_button.dart';
+import '../../theme/breakpoints.dart';
+import '../../utils/date_format_es.dart';
+import '../../widgets/admin/ds_badge.dart';
+import '../../widgets/admin/ds_button.dart';
+import '../../widgets/admin/ds_card.dart';
+import '../../widgets/admin/ds_icon_badge.dart';
+import '../../widgets/admin/ds_states.dart';
 
+/// Contenido de la sección "Solicitudes" embebido en [AdminShell] — sin
+/// Scaffold/AppBar propio, ya que el sidebar/topbar los provee el shell.
 class AdminRequestsPage extends StatefulWidget {
   final AuthService authService;
 
@@ -72,186 +80,152 @@ class _AdminRequestsPageState extends State<AdminRequestsPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.panelNavy,
-      appBar: AppBar(
-        backgroundColor: AppColors.panelNavy,
-        foregroundColor: Colors.white,
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
+    return RefreshIndicator(
+      onRefresh: _load,
+      color: AppColors.adminViolet,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(AppSpacing.xl),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Solicitudes de negocio'),
-            if (_requests.isNotEmpty) ...[
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.amber.withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.amber.withOpacity(0.3)),
-                ),
-                child: Text('${_requests.length}', style: const TextStyle(color: Colors.amber, fontSize: 12, fontWeight: FontWeight.w700)),
-              ),
-            ],
-          ],
-        ),
-      ),
-      body: RefreshIndicator(
-        onRefresh: _load,
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 640),
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: _buildContent(),
+            Row(
+              children: [
+                Text('Solicitudes', style: AppTypography.h1),
+                if (_requests.isNotEmpty) ...[
+                  const SizedBox(width: AppSpacing.sm),
+                  DsBadge(text: '${_requests.length}', tone: BadgeTone.warning),
+                ],
+              ],
             ),
-          ),
+            const SizedBox(height: 4),
+            Text('Gestiona y da seguimiento a las solicitudes del sistema.', style: AppTypography.body),
+            const SizedBox(height: AppSpacing.xl),
+            _buildContent(),
+          ],
         ),
       ),
     );
   }
 
   Widget _buildContent() {
-    if (_loading) {
-      return const Center(child: CircularProgressIndicator(color: AppColors.brandTeal));
-    }
-    if (_error != null) {
-      return Center(child: Text(_error!, style: const TextStyle(color: AppColors.errorRed)));
-    }
+    if (_loading) return const DsLoadingState();
+    if (_error != null) return DsErrorState(message: _error!, onRetry: _load);
     if (_requests.isEmpty) {
-      return ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        children: const [
-          SizedBox(height: 80),
-          Icon(Icons.check_circle_outline, color: Colors.greenAccent, size: 40),
-          SizedBox(height: 12),
-          Center(child: Text('Sin solicitudes pendientes', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600))),
-          SizedBox(height: 4),
-          Center(child: Text('Todas han sido procesadas.', style: TextStyle(color: AppColors.slate400))),
-        ],
+      return const DsEmptyState(
+        icon: Icons.mark_email_read_outlined,
+        title: 'No hay solicitudes pendientes',
+        subtitle: 'Cuando recibas nuevas solicitudes, aparecerán aquí.',
       );
     }
-    return ListView.separated(
-      physics: const AlwaysScrollableScrollPhysics(),
-      itemCount: _requests.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
-      itemBuilder: (context, i) {
-        final r = _requests[i];
-        return _RequestCard(
-          negocio: r,
-          isDeciding: _deciding.contains(r.id),
-          onApprove: () => _decide(r, true),
-          onReject: () => _decide(r, false),
-        );
-      },
+    return Column(
+      children: _requests
+          .map((r) => Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                child: _RequestRow(
+                  negocio: r,
+                  isDeciding: _deciding.contains(r.id),
+                  onApprove: () => _decide(r, true),
+                  onReject: () => _decide(r, false),
+                ),
+              ))
+          .toList(),
     );
   }
 }
 
-class _RequestCard extends StatelessWidget {
+class _RequestRow extends StatelessWidget {
   final NegocioSummary negocio;
   final bool isDeciding;
   final VoidCallback onApprove;
   final VoidCallback onReject;
 
-  const _RequestCard({required this.negocio, required this.isDeciding, required this.onApprove, required this.onReject});
+  const _RequestRow({required this.negocio, required this.isDeciding, required this.onApprove, required this.onReject});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.03),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+    final date = formatDateEs(negocio.solicitadoEn);
+
+    return DsCard(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = Breakpoints.isCompact(constraints.maxWidth);
+          final identity = Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: AppColors.businessOrange.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.businessOrange.withOpacity(0.2)),
-                ),
-                child: const Icon(Icons.apartment, color: AppColors.businessOrange, size: 20),
-              ),
-              const SizedBox(width: 12),
+              const DsIconBadgeCircle(icon: Icons.apartment, color: AppColors.businessOrange),
+              const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(negocio.nombre, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14)),
                     const SizedBox(height: 2),
-                    Text(negocio.categoria ?? 'Sin categoría', style: const TextStyle(color: AppColors.slate400, fontSize: 12)),
+                    Text(negocio.categoria ?? 'Sin categoría', style: AppTypography.bodySmall),
                   ],
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: Colors.amber.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.amber.withOpacity(0.25)),
-                ),
-                child: const Text('Pendiente', style: TextStyle(color: Colors.amber, fontSize: 10, fontWeight: FontWeight.w700)),
-              ),
+              const DsBadge(text: 'Pendiente', tone: BadgeTone.warning),
             ],
-          ),
-          const SizedBox(height: 14),
-          _InfoRow(icon: Icons.person_outline, text: negocio.contacto),
-          const SizedBox(height: 6),
-          _InfoRow(icon: Icons.mail_outline, text: negocio.email),
-          const SizedBox(height: 14),
-          if (isDeciding)
-            const Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.slate400)))
-          else
-            Row(
+          );
+
+          final meta = Padding(
+            padding: EdgeInsets.only(top: AppSpacing.md, left: compact ? 0 : 56),
+            child: Wrap(
+              spacing: AppSpacing.lg,
+              runSpacing: 6,
               children: [
-                Expanded(
-                  child: AppButton(
-                    variant: AppButtonVariant.ghost,
-                    backgroundColor: AppColors.errorRed.withOpacity(0.08),
-                    foregroundColor: AppColors.errorRed,
-                    onPressed: onReject,
-                    child: const Text('Rechazar'),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: AppButton(
-                    backgroundColor: Colors.greenAccent.withOpacity(0.15),
-                    foregroundColor: Colors.greenAccent,
-                    onPressed: onApprove,
-                    child: const Text('Aprobar'),
-                  ),
-                ),
+                _InfoChip(icon: Icons.person_outline, text: negocio.contacto),
+                _InfoChip(icon: Icons.mail_outline, text: negocio.email),
+                _InfoChip(icon: Icons.event_outlined, text: date),
               ],
             ),
-        ],
+          );
+
+          final actions = Padding(
+            padding: EdgeInsets.only(top: AppSpacing.md, left: compact ? 0 : 56),
+            child: isDeciding
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.slate400),
+                  )
+                : Row(
+                    children: [
+                      DsButton(label: 'Rechazar', variant: DsButtonVariant.danger, size: DsButtonSize.sm, onPressed: onReject),
+                      const SizedBox(width: AppSpacing.sm),
+                      DsButton(
+                        label: 'Aprobar',
+                        variant: DsButtonVariant.secondary,
+                        accent: AppColors.emerald,
+                        size: DsButtonSize.sm,
+                        onPressed: onApprove,
+                      ),
+                    ],
+                  ),
+          );
+
+          return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [identity, meta, actions]);
+        },
       ),
     );
   }
 }
 
-class _InfoRow extends StatelessWidget {
+class _InfoChip extends StatelessWidget {
   final IconData icon;
   final String text;
 
-  const _InfoRow({required this.icon, required this.text});
+  const _InfoChip({required this.icon, required this.text});
 
   @override
   Widget build(BuildContext context) {
     return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
         Icon(icon, size: 13, color: AppColors.slate500),
-        const SizedBox(width: 8),
-        Expanded(child: Text(text, style: const TextStyle(color: AppColors.slate300, fontSize: 12))),
+        const SizedBox(width: 6),
+        Text(text, style: AppTypography.bodySmall),
       ],
     );
   }

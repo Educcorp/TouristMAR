@@ -2,15 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../models/business_profile.dart';
 import '../models/visitor_profile.dart';
-import '../pages/admin/admin_admins_page.dart';
-import '../pages/admin/admin_businesses_page.dart';
-import '../pages/admin/admin_requests_page.dart';
-import '../pages/admin/admin_users_page.dart';
 import '../pages/business_profile_page.dart';
 import '../pages/business_reviews_page.dart';
 import '../pages/login_page.dart';
 import '../pages/profile_page.dart';
-import '../services/auth_service.dart';
 import '../services/session_storage.dart';
 import '../theme/app_theme.dart';
 import 'user_avatar.dart';
@@ -89,45 +84,6 @@ List<NavItem> businessNavItems(BuildContext context, {required BusinessProfile b
     ),
     NavItem(icon: Icons.trending_up, label: 'Estadísticas', onTap: () => _comingSoon(context)),
     NavItem(icon: Icons.settings_outlined, label: 'Configuración', onTap: () => _comingSoon(context)),
-  ];
-}
-
-List<NavItem> adminNavItems(BuildContext context, {required AuthUser admin}) {
-  return [
-    NavItem(
-      icon: Icons.bar_chart,
-      label: 'Dashboard',
-      onTap: () => Navigator.of(context).popUntil((r) => r.isFirst),
-    ),
-    NavItem(
-      icon: Icons.report_gmailerrorred_outlined,
-      label: 'Solicitudes',
-      highlight: true,
-      onTap: () => Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => AdminRequestsPage()),
-      ),
-    ),
-    NavItem(
-      icon: Icons.group_outlined,
-      label: 'Usuarios',
-      onTap: () => Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => AdminUsersPage()),
-      ),
-    ),
-    NavItem(
-      icon: Icons.apartment,
-      label: 'Negocios',
-      onTap: () => Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => AdminBusinessesPage()),
-      ),
-    ),
-    NavItem(
-      icon: Icons.shield_outlined,
-      label: 'Administradores',
-      onTap: () => Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => AdminAdminsPage(currentAdmin: admin)),
-      ),
-    ),
   ];
 }
 
@@ -268,48 +224,6 @@ class BusinessIdentityCard extends StatelessWidget {
             const SizedBox(width: 20),
             _DrawerStat(value: '${business.monthlyVisits}', label: 'Visitas/mes'),
           ],
-        ),
-      ],
-    );
-  }
-}
-
-/// Bloque de identidad del administrador mostrado arriba del menú de
-/// navegación en el drawer del panel de administración.
-class AdminIdentityCard extends StatelessWidget {
-  final AuthUser admin;
-
-  const AdminIdentityCard({super.key, required this.admin});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Container(
-          width: 44,
-          height: 44,
-          decoration: BoxDecoration(
-            color: AppColors.adminViolet.withOpacity(0.12),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.adminViolet.withOpacity(0.3)),
-          ),
-          child: const Icon(Icons.shield_outlined, color: AppColors.adminViolet, size: 20),
-        ),
-        const SizedBox(width: 14),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(admin.isSuperAdmin ? 'Super administrador' : 'Administrador',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14)),
-              Text(admin.email,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: AppColors.slate400, fontSize: 12)),
-            ],
-          ),
         ),
       ],
     );

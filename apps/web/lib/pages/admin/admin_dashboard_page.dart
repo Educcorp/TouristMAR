@@ -4,12 +4,22 @@ import '../../services/auth_service.dart';
 import '../../services/session_storage.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/breakpoints.dart';
-import '../../widgets/app_shell.dart';
+import '../../utils/date_format_es.dart';
+import '../../widgets/admin/admin_shell.dart';
+import '../../widgets/admin/ds_states.dart';
+import '../../widgets/admin/ds_section_card.dart';
+import '../../widgets/admin/ds_stat_card.dart';
 import 'admin_admins_page.dart';
 import 'admin_businesses_page.dart';
+import 'admin_help_page.dart';
+import 'admin_reports_page.dart';
 import 'admin_requests_page.dart';
+import 'admin_settings_page.dart';
 import 'admin_users_page.dart';
 
+/// Host del panel admin: aloja [AdminShell] y decide qué contenido mostrar en
+/// el área central según la sección elegida en el sidebar. El sidebar/topbar
+/// nunca se remonta al cambiar de sección — solo el contenido central.
 class AdminDashboardPage extends StatefulWidget {
   final AuthUser admin;
   final AuthService authService;
@@ -22,6 +32,52 @@ class AdminDashboardPage extends StatefulWidget {
 }
 
 class _AdminDashboardPageState extends State<AdminDashboardPage> {
+  AdminSection _selected = AdminSection.inicio;
+
+  @override
+  Widget build(BuildContext context) {
+    return AdminShell(
+      admin: widget.admin,
+      selected: _selected,
+      onSelect: (s) => setState(() => _selected = s),
+      body: _buildBody(),
+    );
+  }
+
+  Widget _buildBody() {
+    switch (_selected) {
+      case AdminSection.inicio:
+        return _InicioContent(admin: widget.admin, authService: widget.authService, onNavigate: (s) => setState(() => _selected = s));
+      case AdminSection.solicitudes:
+        return AdminRequestsPage(authService: widget.authService);
+      case AdminSection.usuarios:
+        return AdminUsersPage(authService: widget.authService);
+      case AdminSection.negocios:
+        return AdminBusinessesPage(authService: widget.authService);
+      case AdminSection.admins:
+        return AdminAdminsPage(currentAdmin: widget.admin, authService: widget.authService);
+      case AdminSection.reportes:
+        return AdminReportsPage(authService: widget.authService);
+      case AdminSection.configuracion:
+        return AdminSettingsPage(admin: widget.admin);
+      case AdminSection.ayuda:
+        return const AdminHelpPage();
+    }
+  }
+}
+
+class _InicioContent extends StatefulWidget {
+  final AuthUser admin;
+  final AuthService authService;
+  final ValueChanged<AdminSection> onNavigate;
+
+  const _InicioContent({required this.admin, required this.authService, required this.onNavigate});
+
+  @override
+  State<_InicioContent> createState() => _InicioContentState();
+}
+
+class _InicioContentState extends State<_InicioContent> {
   AdminStats? _stats;
   String? _error;
   bool _loading = true;
@@ -53,209 +109,218 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
 
   @override
   Widget build(BuildContext context) {
-    return AppShell(
-      accentColor: AppColors.adminViolet,
-      badgeText: 'ADMIN',
-      avatarIcon: Container(
-        width: 32,
-        height: 32,
-        decoration: BoxDecoration(
-          color: AppColors.adminViolet.withOpacity(0.12),
-          shape: BoxShape.circle,
-          border: Border.all(color: AppColors.adminViolet.withOpacity(0.4)),
+    return RefreshIndicator(
+      onRefresh: _load,
+      color: AppColors.adminViolet,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(AppSpacing.xl),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _Hero(),
+            const SizedBox(height: AppSpacing.xl),
+            if (_loading)
+              const DsLoadingState()
+            else if (_error != null)
+              DsErrorState(message: _error!, onRetry: _load)
+            else if (_stats != null)
+              _StatsGrid(stats: _stats!),
+            const SizedBox(height: AppSpacing.xxl),
+            Text('Secciones del sistema', style: AppTypography.h2),
+            const SizedBox(height: 2),
+            Text('Accede rápidamente a los módulos principales', style: AppTypography.body),
+            const SizedBox(height: AppSpacing.lg),
+            _SectionsGrid(onNavigate: widget.onNavigate),
+          ],
         ),
-        child: const Icon(Icons.shield_outlined, size: 16, color: AppColors.adminViolet),
       ),
-      drawerIdentity: AdminIdentityCard(admin: widget.admin),
-      navItems: adminNavItems(context, admin: widget.admin),
-      body: RefreshIndicator(
-        onRefresh: _load,
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 960),
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildHero(),
-                    const SizedBox(height: 20),
-                    if (_loading)
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 32),
-                        child: Center(child: CircularProgressIndicator(color: AppColors.adminViolet)),
-                      )
-                    else if (_error != null)
-                      _buildErrorBanner()
-                    else if (_stats != null)
-                      _buildStatsGrid(_stats!),
-                    const SizedBox(height: 28),
-                    const Text(
-                      'Secciones del sistema',
-                      style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(height: 12),
-                    _buildQuickNav(),
-                    const SizedBox(height: 24),
-                  ],
-                ),
-              ),
+    );
+  }
+}
+
+class _Hero extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now();
+    return SizedBox(
+      height: 220,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(AppRadius.hero),
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: Image.asset('assets/images/hero-manzanillo.jpg', fit: BoxFit.cover),
             ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHero() {
-    return Container(
-      width: double.infinity,
-      height: 130,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF2E1065), Color(0xFF081824)],
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Row(
-            children: const [
-              Icon(Icons.shield_outlined, size: 14, color: AppColors.adminViolet),
-              SizedBox(width: 6),
-              Text('PANEL DE ADMINISTRACIÓN',
-                  style: TextStyle(color: AppColors.adminViolet, fontWeight: FontWeight.w700, fontSize: 11, letterSpacing: 2)),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Text('TourisMAR — Admin', style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 22)),
-          const SizedBox(height: 2),
-          const Text('Gestión central del sistema turístico', style: TextStyle(color: AppColors.slate300, fontSize: 13)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildErrorBanner() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.errorRed.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.errorRed.withOpacity(0.25)),
-      ),
-      child: Text(_error!, style: const TextStyle(color: AppColors.errorRed, fontSize: 13)),
-    );
-  }
-
-  Widget _buildStatsGrid(AdminStats stats) {
-    final items = [
-      (Icons.groups_outlined, '${stats.turistas}', 'Visitantes registrados', AppColors.brandTeal),
-      (Icons.apartment, '${stats.negociosActivos}', 'Negocios activos', AppColors.businessOrange),
-      (Icons.report_gmailerrorred_outlined, '${stats.negociosPendientes}', 'Solicitudes pendientes', Colors.amber),
-      (Icons.store_outlined, '${stats.negociosTotal}', 'Negocios totales', Colors.greenAccent),
-    ];
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final columns = Breakpoints.isCompact(constraints.maxWidth) ? 2 : 4;
-        return GridView.count(
-          crossAxisCount: columns,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          mainAxisSpacing: 12,
-          crossAxisSpacing: 12,
-          childAspectRatio: 1.3,
-          children: items.map((s) {
-            final (icon, value, label, color) = s;
-            return Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.08),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: color.withOpacity(0.2)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(icon, size: 16, color: color),
-                  const SizedBox(height: 8),
-                  Text(value, style: TextStyle(color: color, fontSize: 22, fontWeight: FontWeight.w700)),
-                  const SizedBox(height: 2),
-                  Text(label, style: const TextStyle(color: AppColors.slate400, fontSize: 11)),
-                ],
-              ),
-            );
-          }).toList(),
-        );
-      },
-    );
-  }
-
-  Widget _buildQuickNav() {
-    final items = [
-      (Icons.report_gmailerrorred_outlined, 'Solicitudes', Colors.amber, () => _push(AdminRequestsPage())),
-      (Icons.group_outlined, 'Usuarios', AppColors.brandTeal, () => _push(AdminUsersPage())),
-      (Icons.apartment, 'Negocios', AppColors.businessOrange, () => _push(AdminBusinessesPage())),
-      (Icons.shield_outlined, 'Admins', AppColors.adminViolet, () => _push(AdminAdminsPage(currentAdmin: widget.admin))),
-    ];
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final columns = Breakpoints.isCompact(constraints.maxWidth) ? 2 : 4;
-        return GridView.count(
-          crossAxisCount: columns,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          mainAxisSpacing: 12,
-          crossAxisSpacing: 12,
-          childAspectRatio: 1.05,
-          children: items.map((a) {
-            final (icon, label, color, onTap) = a;
-            return Material(
-              color: Colors.white.withOpacity(0.03),
-              borderRadius: BorderRadius.circular(16),
-              child: InkWell(
-                onTap: onTap,
-                borderRadius: BorderRadius.circular(16),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 12),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.white.withOpacity(0.08)),
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(color: color.withOpacity(0.15), shape: BoxShape.circle),
-                        child: Icon(icon, color: color, size: 18),
-                      ),
-                      const SizedBox(height: 10),
-                      Text(label, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500)),
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                    colors: [
+                      AppColors.bgDeep.withOpacity(0.92),
+                      AppColors.bgDeep.withOpacity(0.55),
                     ],
                   ),
                 ),
               ),
-            );
+            ),
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [AppColors.bgDeep.withOpacity(0.3), Colors.transparent],
+                  ),
+                ),
+              ),
+            ),
+            Positioned.fill(
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.xl),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final compact = Breakpoints.isCompact(constraints.maxWidth);
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(width: 18, height: 1, color: AppColors.adminViolet),
+                            const SizedBox(width: AppSpacing.sm),
+                            Text('PANEL DE ADMINISTRACIÓN',
+                                style: AppTypography.caption.copyWith(color: AppColors.adminViolet, letterSpacing: 2)),
+                            const SizedBox(width: AppSpacing.sm),
+                            Container(width: 18, height: 1, color: AppColors.adminViolet),
+                          ],
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        Text('TourisMAR — Admin', style: compact ? AppTypography.h1 : AppTypography.display.copyWith(fontSize: 34)),
+                        const SizedBox(height: 4),
+                        Text('Gestión central del sistema turístico', style: AppTypography.body.copyWith(fontSize: 15)),
+                        const SizedBox(height: AppSpacing.md),
+                        Wrap(
+                          spacing: AppSpacing.lg,
+                          runSpacing: 4,
+                          children: [
+                            _MetaChip(icon: Icons.location_on_outlined, text: 'Manzanillo, Colima'),
+                            _MetaChip(icon: Icons.calendar_today_outlined, text: formatDateEs(now)),
+                          ],
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+            ),
+            Positioned(
+              top: AppSpacing.lg,
+              right: AppSpacing.xl,
+              child: Text(
+                'Descubre\nManzanillo',
+                textAlign: TextAlign.right,
+                style: TextStyle(
+                  fontFamily: AppTypography.h1.fontFamily,
+                  fontStyle: FontStyle.italic,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white.withOpacity(0.85),
+                  height: 1.2,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MetaChip extends StatelessWidget {
+  final IconData icon;
+  final String text;
+  const _MetaChip({required this.icon, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 13, color: Colors.white.withOpacity(0.8)),
+        const SizedBox(width: 6),
+        Text(text, style: TextStyle(color: Colors.white.withOpacity(0.85), fontSize: 12, fontWeight: FontWeight.w500)),
+      ],
+    );
+  }
+}
+
+class _StatsGrid extends StatelessWidget {
+  final AdminStats stats;
+  const _StatsGrid({required this.stats});
+
+  @override
+  Widget build(BuildContext context) {
+    final items = [
+      (Icons.groups_outlined, stats.turistas, 'Visitantes registrados', AppColors.brandTeal),
+      (Icons.apartment, stats.negociosActivos, 'Negocios activos', AppColors.businessOrange),
+      (Icons.report_gmailerrorred_outlined, stats.negociosPendientes, 'Solicitudes pendientes', AppColors.amber),
+      (Icons.store_outlined, stats.negociosTotal, 'Negocios totales', AppColors.emerald),
+    ];
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = Breakpoints.isCompact(constraints.maxWidth);
+        return GridView.count(
+          crossAxisCount: compact ? 2 : 4,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          mainAxisSpacing: AppSpacing.md,
+          crossAxisSpacing: AppSpacing.md,
+          childAspectRatio: compact ? 1.05 : 1.5,
+          children: items.map((s) {
+            final (icon, value, label, color) = s;
+            return DsStatCard(icon: icon, value: value, label: label, accent: color);
           }).toList(),
         );
       },
     );
   }
+}
 
-  void _push(Widget page) {
-    Navigator.of(context).push(MaterialPageRoute(builder: (_) => page));
+class _SectionsGrid extends StatelessWidget {
+  final ValueChanged<AdminSection> onNavigate;
+  const _SectionsGrid({required this.onNavigate});
+
+  @override
+  Widget build(BuildContext context) {
+    final items = [
+      (Icons.report_gmailerrorred_outlined, 'Solicitudes', 'Gestiona y da seguimiento a las solicitudes del sistema.', AppColors.amber, AdminSection.solicitudes),
+      (Icons.group_outlined, 'Usuarios', 'Administra los usuarios del sistema.', AppColors.brandTeal, AdminSection.usuarios),
+      (Icons.apartment_outlined, 'Negocios', 'Registra y administra los negocios turísticos.', AppColors.businessOrange, AdminSection.negocios),
+      (Icons.shield_outlined, 'Admins', 'Configuración y control de administradores.', AppColors.adminViolet, AdminSection.admins),
+    ];
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = Breakpoints.isCompact(constraints.maxWidth) ? 2 : 4;
+        return GridView.count(
+          crossAxisCount: columns,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          mainAxisSpacing: AppSpacing.md,
+          crossAxisSpacing: AppSpacing.md,
+          childAspectRatio: 0.95,
+          children: items.map((s) {
+            final (icon, title, desc, color, section) = s;
+            return DsSectionCard(icon: icon, title: title, description: desc, accent: color, onTap: () => onNavigate(section));
+          }).toList(),
+        );
+      },
+    );
   }
 }

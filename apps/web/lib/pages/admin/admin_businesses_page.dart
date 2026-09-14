@@ -3,7 +3,15 @@ import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
 import '../../services/session_storage.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/admin/ds_badge.dart';
+import '../../widgets/admin/ds_card.dart';
+import '../../widgets/admin/ds_icon_badge.dart';
+import '../../widgets/admin/ds_states.dart';
 
+const _estadoFiltros = ['Todos', 'aprobado', 'pendiente', 'rechazado'];
+const _estadoLabels = {'aprobado': 'Activo', 'pendiente': 'Pendiente', 'rechazado': 'Rechazado'};
+
+/// Contenido de la sección "Negocios" embebido en [AdminShell].
 class AdminBusinessesPage extends StatefulWidget {
   final AuthService authService;
 
@@ -14,14 +22,24 @@ class AdminBusinessesPage extends StatefulWidget {
 }
 
 class _AdminBusinessesPageState extends State<AdminBusinessesPage> {
+  final _searchController = TextEditingController();
   List<NegocioSummary> _negocios = [];
   bool _loading = true;
   String? _error;
+  String _estadoFiltro = 'Todos';
+  String? _categoriaFiltro;
 
   @override
   void initState() {
     super.initState();
     _load();
+    _searchController.addListener(() => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _load() async {
@@ -43,115 +61,200 @@ class _AdminBusinessesPageState extends State<AdminBusinessesPage> {
     }
   }
 
+  List<String> get _categorias =>
+      _negocios.map((n) => n.categoria).whereType<String>().toSet().toList()..sort();
+
+  List<NegocioSummary> get _filtered {
+    final query = _searchController.text.trim().toLowerCase();
+    return _negocios.where((n) {
+      if (_estadoFiltro != 'Todos' && n.estado != _estadoFiltro) return false;
+      if (_categoriaFiltro != null && n.categoria != _categoriaFiltro) return false;
+      if (query.isNotEmpty && !n.nombre.toLowerCase().contains(query)) return false;
+      return true;
+    }).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.panelNavy,
-      appBar: AppBar(
-        backgroundColor: AppColors.panelNavy,
-        foregroundColor: Colors.white,
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
+    return RefreshIndicator(
+      onRefresh: _load,
+      color: AppColors.adminViolet,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(AppSpacing.xl),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Gestión de negocios'),
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(
-                color: AppColors.businessOrange.withOpacity(0.12),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: AppColors.businessOrange.withOpacity(0.3)),
-              ),
-              child: Text('${_negocios.length}', style: const TextStyle(color: AppColors.businessOrange, fontSize: 12, fontWeight: FontWeight.w700)),
+            Row(
+              children: [
+                Text('Negocios', style: AppTypography.h1),
+                const SizedBox(width: AppSpacing.sm),
+                DsBadge(text: '${_negocios.length}', tone: BadgeTone.warning),
+              ],
             ),
+            const SizedBox(height: 4),
+            Text('Registra y administra los negocios turísticos.', style: AppTypography.body),
+            const SizedBox(height: AppSpacing.lg),
+            _buildFilters(),
+            const SizedBox(height: AppSpacing.xl),
+            _buildContent(),
           ],
         ),
       ),
-      body: RefreshIndicator(
-        onRefresh: _load,
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 760),
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: _buildContent(),
+    );
+  }
+
+  Widget _buildFilters() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 360),
+          child: TextField(
+            controller: _searchController,
+            style: const TextStyle(color: Colors.white, fontSize: 14),
+            decoration: InputDecoration(
+              hintText: 'Buscar negocio…',
+              hintStyle: AppTypography.bodySmall,
+              prefixIcon: const Icon(Icons.search, size: 18, color: AppColors.slate500),
+              filled: true,
+              fillColor: AppColors.surface,
+              contentPadding: const EdgeInsets.symmetric(vertical: 12),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppRadius.buttonLg),
+                borderSide: const BorderSide(color: AppColors.borderSubtle),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppRadius.buttonLg),
+                borderSide: const BorderSide(color: AppColors.borderSubtle),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppRadius.buttonLg),
+                borderSide: const BorderSide(color: AppColors.adminViolet),
+              ),
             ),
           ),
         ),
-      ),
+        const SizedBox(height: AppSpacing.md),
+        Wrap(
+          spacing: AppSpacing.sm,
+          runSpacing: AppSpacing.sm,
+          children: [
+            for (final e in _estadoFiltros)
+              _FilterChip(
+                label: e == 'Todos' ? 'Todos' : (_estadoLabels[e] ?? e),
+                selected: _estadoFiltro == e,
+                onTap: () => setState(() => _estadoFiltro = e),
+              ),
+            if (_categorias.isNotEmpty) ...[
+              const SizedBox(width: AppSpacing.sm, height: 1),
+              for (final c in _categorias)
+                _FilterChip(
+                  label: c,
+                  selected: _categoriaFiltro == c,
+                  onTap: () => setState(() => _categoriaFiltro = _categoriaFiltro == c ? null : c),
+                ),
+            ],
+          ],
+        ),
+      ],
     );
   }
 
   Widget _buildContent() {
-    if (_loading) {
-      return const Center(child: CircularProgressIndicator(color: AppColors.businessOrange));
+    if (_loading) return const DsLoadingState();
+    if (_error != null) return DsErrorState(message: _error!, onRetry: _load);
+    final filtered = _filtered;
+    if (filtered.isEmpty) {
+      return const DsEmptyState(
+        icon: Icons.storefront_outlined,
+        title: 'Sin negocios que coincidan',
+        subtitle: 'Ajusta los filtros o espera nuevos registros.',
+      );
     }
-    if (_error != null) {
-      return Center(child: Text(_error!, style: const TextStyle(color: AppColors.errorRed)));
-    }
-    if (_negocios.isEmpty) {
-      return const Center(child: Text('Todavía no hay negocios registrados.', style: TextStyle(color: AppColors.slate400)));
-    }
-    return ListView.separated(
-      physics: const AlwaysScrollableScrollPhysics(),
-      itemCount: _negocios.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 8),
-      itemBuilder: (context, i) => _BusinessTile(negocio: _negocios[i]),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = constraints.maxWidth >= 900 ? 2 : 1;
+        return Wrap(
+          spacing: AppSpacing.md,
+          runSpacing: AppSpacing.md,
+          children: filtered.map((n) {
+            final width = columns == 1 ? constraints.maxWidth : (constraints.maxWidth - AppSpacing.md) / 2;
+            return SizedBox(width: width, child: _BusinessCard(negocio: n));
+          }).toList(),
+        );
+      },
     );
   }
 }
 
-class _BusinessTile extends StatelessWidget {
-  final NegocioSummary negocio;
+class _FilterChip extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
 
-  const _BusinessTile({required this.negocio});
+  const _FilterChip({required this.label, required this.selected, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    final (label, color) = switch (negocio.estado) {
-      'aprobado' => ('Activo', Colors.greenAccent),
-      'rechazado' => ('Rechazado', AppColors.errorRed),
-      _ => ('Pendiente', Colors.amber),
-    };
-
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.03),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(999),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(999),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: BoxDecoration(
+            color: selected ? AppColors.adminViolet.withOpacity(0.16) : AppColors.surface,
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: selected ? AppColors.adminViolet.withOpacity(0.4) : AppColors.borderSubtle),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              color: selected ? AppColors.adminViolet : AppColors.slate300,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
       ),
+    );
+  }
+}
+
+class _BusinessCard extends StatelessWidget {
+  final NegocioSummary negocio;
+
+  const _BusinessCard({required this.negocio});
+
+  @override
+  Widget build(BuildContext context) {
+    final tone = switch (negocio.estado) {
+      'aprobado' => BadgeTone.success,
+      'rechazado' => BadgeTone.danger,
+      _ => BadgeTone.warning,
+    };
+    final label = _estadoLabels[negocio.estado] ?? 'Pendiente';
+
+    return DsCard(
       child: Row(
         children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: AppColors.businessOrange.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: AppColors.businessOrange.withOpacity(0.2)),
-            ),
-            child: const Icon(Icons.apartment, size: 18, color: AppColors.businessOrange),
-          ),
-          const SizedBox(width: 12),
+          const DsIconBadgeCircle(icon: Icons.apartment, color: AppColors.businessOrange, size: 40),
+          const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(negocio.nombre, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
-                Text(negocio.categoria ?? 'Sin categoría', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AppColors.slate400, fontSize: 12)),
+                const SizedBox(height: 2),
+                Text(negocio.categoria ?? 'Sin categoría', maxLines: 1, overflow: TextOverflow.ellipsis, style: AppTypography.bodySmall),
               ],
             ),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.12),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: color.withOpacity(0.3)),
-            ),
-            child: Text(label, style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w700)),
-          ),
+          DsBadge(text: label, tone: tone),
         ],
       ),
     );

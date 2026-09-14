@@ -3,9 +3,13 @@ import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
 import '../../services/session_storage.dart';
 import '../../theme/app_theme.dart';
-import '../../widgets/app_button.dart';
+import '../../widgets/admin/ds_badge.dart';
+import '../../widgets/admin/ds_button.dart';
+import '../../widgets/admin/ds_card.dart';
+import '../../widgets/admin/ds_states.dart';
 import '../../widgets/app_text_field.dart';
 
+/// Contenido de la sección "Admins" embebido en [AdminShell].
 class AdminAdminsPage extends StatefulWidget {
   final AuthUser currentAdmin;
   final AuthService authService;
@@ -118,41 +122,47 @@ class _AdminAdminsPageState extends State<AdminAdminsPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.panelNavy,
-      appBar: AppBar(
-        backgroundColor: AppColors.panelNavy,
-        foregroundColor: Colors.white,
-        title: const Text('Administradores'),
-      ),
-      body: Center(
+    return RefreshIndicator(
+      onRefresh: _load,
+      color: AppColors.adminViolet,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(AppSpacing.xl),
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 640),
-          child: RefreshIndicator(
-            onRefresh: _load,
-            child: ListView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.all(20),
-              children: [
-                if (_canManage) ...[
-                  if (!_showForm)
-                    AppButton(
-                      backgroundColor: AppColors.adminViolet.withOpacity(0.15),
-                      foregroundColor: AppColors.adminViolet,
+          constraints: const BoxConstraints(maxWidth: 760),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Administradores', style: AppTypography.h1),
+                        const SizedBox(height: 4),
+                        Text('Configuración y control de administradores.', style: AppTypography.body),
+                      ],
+                    ),
+                  ),
+                  if (_canManage && !_showForm)
+                    DsButton(
+                      label: 'Añadir administrador',
+                      icon: Icons.add,
+                      variant: DsButtonVariant.primary,
+                      accent: AppColors.adminViolet,
                       onPressed: () => setState(() => _showForm = true),
-                      child: const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [Icon(Icons.add, size: 16), SizedBox(width: 6), Text('Añadir administrador')],
-                      ),
-                    )
-                  else
-                    _buildForm(),
-                  const SizedBox(height: 20),
+                    ),
                 ],
-                _buildList(),
+              ),
+              if (_canManage && _showForm) ...[
+                const SizedBox(height: AppSpacing.xl),
+                _buildForm(),
               ],
-            ),
+              const SizedBox(height: AppSpacing.xl),
+              _buildList(),
+            ],
           ),
         ),
       ),
@@ -160,20 +170,15 @@ class _AdminAdminsPageState extends State<AdminAdminsPage> {
   }
 
   Widget _buildForm() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.adminViolet.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.adminViolet.withOpacity(0.2)),
-      ),
+    return DsCard(
+      background: AppColors.adminViolet.withOpacity(0.05),
       child: Form(
         key: _formKey,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text('NUEVO ADMINISTRADOR', style: TextStyle(color: AppColors.adminViolet, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.5)),
-            const SizedBox(height: 14),
+            Text('NUEVO ADMINISTRADOR', style: AppTypography.caption.copyWith(color: AppColors.adminViolet, letterSpacing: 1.5)),
+            const SizedBox(height: AppSpacing.md),
             AppTextField(
               label: 'Nombre',
               icon: Icons.person_outline,
@@ -182,7 +187,7 @@ class _AdminAdminsPageState extends State<AdminAdminsPage> {
               accentColor: AppColors.adminViolet,
               validator: (v) => (v == null || v.trim().isEmpty) ? 'Ingresa un nombre' : null,
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: AppSpacing.md),
             AppTextField(
               label: 'Correo electrónico',
               icon: Icons.mail_outline,
@@ -192,7 +197,7 @@ class _AdminAdminsPageState extends State<AdminAdminsPage> {
               accentColor: AppColors.adminViolet,
               validator: (v) => (v == null || !v.contains('@')) ? 'Ingresa un correo válido' : null,
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: AppSpacing.md),
             AppTextField(
               label: 'Contraseña temporal',
               icon: Icons.lock_outline,
@@ -203,27 +208,24 @@ class _AdminAdminsPageState extends State<AdminAdminsPage> {
               validator: (v) => (v == null || v.length < 8) ? 'Mínimo 8 caracteres' : null,
             ),
             if (_formError != null) ...[
-              const SizedBox(height: 10),
+              const SizedBox(height: AppSpacing.sm),
               Text(_formError!, style: const TextStyle(color: AppColors.errorRed, fontSize: 13)),
             ],
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.lg),
             Row(
+              mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                Expanded(
-                  child: AppButton(
-                    variant: AppButtonVariant.ghost,
-                    onPressed: _creating ? null : () => setState(() => _showForm = false),
-                    child: const Text('Cancelar'),
-                  ),
+                DsButton(
+                  label: 'Cancelar',
+                  variant: DsButtonVariant.ghost,
+                  onPressed: _creating ? null : () => setState(() => _showForm = false),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: AppButton(
-                    backgroundColor: AppColors.adminViolet,
-                    foregroundColor: Colors.white,
-                    onPressed: _creating ? null : _createAdmin,
-                    child: Text(_creating ? 'Creando...' : 'Crear administrador'),
-                  ),
+                const SizedBox(width: AppSpacing.sm),
+                DsButton(
+                  label: _creating ? 'Creando...' : 'Crear administrador',
+                  variant: DsButtonVariant.primary,
+                  accent: AppColors.adminViolet,
+                  onPressed: _creating ? null : _createAdmin,
                 ),
               ],
             ),
@@ -234,21 +236,20 @@ class _AdminAdminsPageState extends State<AdminAdminsPage> {
   }
 
   Widget _buildList() {
-    if (_loading) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 40),
-        child: Center(child: CircularProgressIndicator(color: AppColors.adminViolet)),
+    if (_loading) return const DsLoadingState();
+    if (_error != null) return DsErrorState(message: _error!, onRetry: _load);
+    if (_admins.isEmpty) {
+      return const DsEmptyState(
+        icon: Icons.shield_outlined,
+        title: 'Sin administradores',
+        subtitle: 'Aún no se ha registrado ningún administrador.',
       );
     }
-    if (_error != null) {
-      return Center(child: Text(_error!, style: const TextStyle(color: AppColors.errorRed)));
-    }
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: _admins
           .map((a) => Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: _AdminTile(
+                padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                child: _AdminRow(
                   admin: a,
                   canDelete: _canManage && !a.isSuperAdmin && a.id != widget.currentAdmin.id,
                   isDeleting: _deleting.contains(a.id),
@@ -260,23 +261,17 @@ class _AdminAdminsPageState extends State<AdminAdminsPage> {
   }
 }
 
-class _AdminTile extends StatelessWidget {
+class _AdminRow extends StatelessWidget {
   final AdminAccount admin;
   final bool canDelete;
   final bool isDeleting;
   final VoidCallback onDelete;
 
-  const _AdminTile({required this.admin, required this.canDelete, required this.isDeleting, required this.onDelete});
+  const _AdminRow({required this.admin, required this.canDelete, required this.isDeleting, required this.onDelete});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.03),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
-      ),
+    return DsCard(
       child: Row(
         children: [
           Expanded(
@@ -284,24 +279,16 @@ class _AdminTile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(admin.name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
-                Text(admin.email, style: const TextStyle(color: AppColors.slate400, fontSize: 12)),
+                Text(admin.email, style: AppTypography.bodySmall),
               ],
             ),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-            decoration: BoxDecoration(
-              color: (admin.isSuperAdmin ? AppColors.adminViolet : AppColors.brandTeal).withOpacity(0.12),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: (admin.isSuperAdmin ? AppColors.adminViolet : AppColors.brandTeal).withOpacity(0.3)),
-            ),
-            child: Text(
-              admin.isSuperAdmin ? 'Super Admin' : 'Administrador',
-              style: TextStyle(color: admin.isSuperAdmin ? AppColors.adminViolet : AppColors.brandTeal, fontSize: 10, fontWeight: FontWeight.w700),
-            ),
+          DsBadge(
+            text: admin.isSuperAdmin ? 'Super Admin' : 'Administrador',
+            tone: admin.isSuperAdmin ? BadgeTone.info : BadgeTone.neutral,
           ),
           if (canDelete) ...[
-            const SizedBox(width: 8),
+            const SizedBox(width: AppSpacing.sm),
             isDeleting
                 ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.errorRed))
                 : IconButton(
