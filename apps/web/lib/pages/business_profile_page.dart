@@ -6,6 +6,7 @@ import '../widgets/app_button.dart';
 import '../widgets/app_shell.dart';
 import '../widgets/cover_image.dart';
 import 'business_edit_page.dart';
+import 'business_gallery_page.dart';
 import 'business_reviews_page.dart';
 
 class BusinessProfilePage extends StatefulWidget {
@@ -29,6 +30,13 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
     Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => BusinessReviewsPage(business: widget.business)),
     );
+  }
+
+  Future<void> _openGallery() async {
+    final changed = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => BusinessGalleryPage(business: widget.business)),
+    );
+    if (changed == true && mounted) setState(() {});
   }
 
   @override
@@ -201,7 +209,7 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
                         children: [
                           Text('Galería de fotos', style: TextStyle(color: AppColors.textPrimary, fontSize: 14, fontWeight: FontWeight.w600)),
                           GestureDetector(
-                            onTap: _openEdit,
+                            onTap: _openGallery,
                             child: Text('Gestionar', style: TextStyle(color: AppColors.businessOrange, fontSize: 12, fontWeight: FontWeight.w600)),
                           ),
                         ],
@@ -275,11 +283,11 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
                 child: SizedBox(
                   width: tileSize,
                   height: tileSize,
-                  child: Image.asset(img, fit: BoxFit.cover),
+                  child: CoverImage(source: img),
                 ),
               )),
           GestureDetector(
-            onTap: _openEdit,
+            onTap: _openGallery,
             child: Container(
               width: tileSize,
               height: tileSize,

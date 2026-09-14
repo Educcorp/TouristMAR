@@ -9,6 +9,8 @@ import {
   updateTuristaProfile,
   updateNegocioProfile,
   uploadProfilePhoto,
+  addNegocioGaleriaImage,
+  removeNegocioGaleriaImage,
   findOrCreateGoogleUserFromMobileToken,
   DatabaseNotReadyError,
   GoogleLoginNotAllowedError,
@@ -71,6 +73,7 @@ export function toPublicUser(user: UserWithNegocio) {
           sitioWeb: user.negocio.sitioWeb,
           horario: user.negocio.horario,
           portada: user.negocio.portada,
+          galeria: user.negocio.galeria,
           archivo360: user.negocio.archivo360,
           arMarcador: user.negocio.arMarcador,
           arGeo: user.negocio.arGeo,
@@ -164,6 +167,66 @@ export async function uploadAvatar(req: AuthedRequest & { file?: Express.Multer.
       return res.status(404).json({ error: 'Usuario no encontrado' })
     }
     return res.json({ user: toPublicUser(updated) })
+  } catch (err) {
+    if (err instanceof DatabaseNotReadyError) {
+      return res.status(503).json({ error: err.message })
+    }
+    return res.status(400).json({ error: (err as Error).message })
+  }
+}
+
+async function requireNegocio(userId: string, res: Response) {
+  const current = await findUserById(userId)
+  if (!current) {
+    res.status(404).json({ error: 'Usuario no encontrado' })
+    return null
+  }
+  if (current.rol !== 'negocio' || !current.negocio) {
+    res.status(403).json({ error: 'Solo las cuentas de negocio tienen galería' })
+    return null
+  }
+  return current
+}
+
+export async function uploadGaleriaImage(req: AuthedRequest & { file?: Express.Multer.File }, res: Response) {
+  if (!req.file) {
+    return res.status(400).json({ error: 'No se recibió ningún archivo' })
+  }
+
+  try {
+    const current = await requireNegocio(req.userId!, res)
+    if (!current) return
+
+    await addNegocioGaleriaImage(req.userId!, {
+      buffer: req.file.buffer,
+      mimetype: req.file.mimetype,
+      originalname: req.file.originalname,
+    })
+    const updated = await findUserById(req.userId!)
+    return res.json({ user: toPublicUser(updated!) })
+  } catch (err) {
+    if (err instanceof DatabaseNotReadyError) {
+      return res.status(503).json({ error: err.message })
+    }
+    return res.status(400).json({ error: (err as Error).message })
+  }
+}
+
+const deleteGaleriaSchema = z.object({ url: z.string().min(1) })
+
+export async function deleteGaleriaImage(req: AuthedRequest, res: Response) {
+  const parsed = deleteGaleriaSchema.safeParse(req.body)
+  if (!parsed.success) {
+    return res.status(400).json({ error: 'Datos inválidos', details: parsed.error.flatten().fieldErrors })
+  }
+
+  try {
+    const current = await requireNegocio(req.userId!, res)
+    if (!current) return
+
+    await removeNegocioGaleriaImage(req.userId!, parsed.data.url)
+    const updated = await findUserById(req.userId!)
+    return res.json({ user: toPublicUser(updated!) })
   } catch (err) {
     if (err instanceof DatabaseNotReadyError) {
       return res.status(503).json({ error: err.message })

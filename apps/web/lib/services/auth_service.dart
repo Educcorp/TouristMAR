@@ -17,6 +17,7 @@ class NegocioInfo {
   final String? sitioWeb;
   final String? horario;
   final String? portada;
+  final List<String> galeria;
   final String? archivo360;
   final String? arMarcador;
   final String? arGeo;
@@ -31,6 +32,7 @@ class NegocioInfo {
     this.sitioWeb,
     this.horario,
     this.portada,
+    this.galeria = const [],
     this.archivo360,
     this.arMarcador,
     this.arGeo,
@@ -50,6 +52,7 @@ class NegocioInfo {
         sitioWeb: json['sitioWeb'] as String?,
         horario: json['horario'] as String?,
         portada: json['portada'] as String?,
+        galeria: (json['galeria'] as List?)?.cast<String>() ?? const [],
         archivo360: json['archivo360'] as String?,
         arMarcador: json['arMarcador'] as String?,
         arGeo: json['arGeo'] as String?,
@@ -268,6 +271,47 @@ class AuthService {
 
     if (res.statusCode < 200 || res.statusCode >= 300) {
       throw AuthError((data['error'] as String?) ?? 'No se pudo subir la imagen');
+    }
+
+    return AuthUser.fromJson(data['user'] as Map<String, dynamic>);
+  }
+
+  Future<AuthUser> uploadGaleriaImage(String token, Uint8List bytes, String filename) async {
+    final ext = filename.contains('.') ? filename.split('.').last.toLowerCase() : 'jpg';
+    final subtype = ext == 'jpg' ? 'jpeg' : ext;
+
+    final request = http.MultipartRequest('POST', Uri.parse('$apiUrl/auth/profile/galeria'))
+      ..headers['Authorization'] = 'Bearer $token'
+      ..files.add(http.MultipartFile.fromBytes(
+        'file',
+        bytes,
+        filename: filename,
+        contentType: MediaType('image', subtype),
+      ));
+
+    final streamed = await _client.send(request);
+    final res = await http.Response.fromStream(streamed);
+    final data = _decode(res.body);
+
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      throw AuthError((data['error'] as String?) ?? 'No se pudo subir la imagen');
+    }
+
+    return AuthUser.fromJson(data['user'] as Map<String, dynamic>);
+  }
+
+  Future<AuthUser> deleteGaleriaImage(String token, String url) async {
+    final request = http.Request('DELETE', Uri.parse('$apiUrl/auth/profile/galeria'))
+      ..headers['Authorization'] = 'Bearer $token'
+      ..headers['Content-Type'] = 'application/json'
+      ..body = jsonEncode({'url': url});
+
+    final streamed = await _client.send(request);
+    final res = await http.Response.fromStream(streamed);
+    final data = _decode(res.body);
+
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      throw AuthError((data['error'] as String?) ?? 'No se pudo eliminar la imagen');
     }
 
     return AuthUser.fromJson(data['user'] as Map<String, dynamic>);

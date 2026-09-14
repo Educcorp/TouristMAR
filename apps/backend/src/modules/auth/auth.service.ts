@@ -4,7 +4,7 @@ import { OAuth2Client } from 'google-auth-library'
 import { Prisma } from '@prisma/client'
 import type { Profile } from 'passport-google-oauth20'
 import { prisma } from '../../config/prisma'
-import { supabase, AVATARS_BUCKET } from '../../config/supabase'
+import { supabase, AVATARS_BUCKET, NEGOCIO_ASSETS_BUCKET } from '../../config/supabase'
 import { env, isGoogleAuthEnabled } from '../../config/env'
 
 const googleClient = isGoogleAuthEnabled ? new OAuth2Client(env.GOOGLE_CLIENT_ID) : null
@@ -246,6 +246,53 @@ export async function uploadProfilePhoto(userId: string, file: { buffer: Buffer;
     }
 
     return prisma.user.findUnique({ where: { id: userId }, include: { negocio: true } })
+  })
+}
+
+export async function addNegocioGaleriaImage(userId: string, file: { buffer: Buffer; mimetype: string; originalname: string }) {
+  if (!ALLOWED_IMAGE_TYPES[file.mimetype]) {
+    throw new Error('Formato de imagen no soportado (usa PNG, JPG, WEBP o GIF)')
+  }
+
+  return withDbGuard(async () => {
+    const negocio = await prisma.negocioProfile.findUnique({ where: { userId } })
+    if (!negocio) {
+      throw new Error('Este usuario no tiene un perfil de negocio')
+    }
+
+    const ext = ALLOWED_IMAGE_TYPES[file.mimetype]
+    // Ruta única por subida (a diferencia de portada/avatar): la galería
+    // acumula varias fotos en vez de reemplazar una sola.
+    const path = `${userId}/galeria/${Date.now()}.${ext}`
+
+    const { error: uploadError } = await supabase.storage
+      .from(NEGOCIO_ASSETS_BUCKET)
+      .upload(path, file.buffer, { contentType: file.mimetype })
+
+    if (uploadError) {
+      throw new Error(`No se pudo subir la imagen: ${uploadError.message}`)
+    }
+
+    const { data } = supabase.storage.from(NEGOCIO_ASSETS_BUCKET).getPublicUrl(path)
+
+    return prisma.negocioProfile.update({
+      where: { userId },
+      data: { galeria: { push: data.publicUrl } },
+    })
+  })
+}
+
+export async function removeNegocioGaleriaImage(userId: string, url: string) {
+  return withDbGuard(async () => {
+    const negocio = await prisma.negocioProfile.findUnique({ where: { userId } })
+    if (!negocio) {
+      throw new Error('Este usuario no tiene un perfil de negocio')
+    }
+
+    return prisma.negocioProfile.update({
+      where: { userId },
+      data: { galeria: negocio.galeria.filter((img) => img !== url) },
+    })
   })
 }
 

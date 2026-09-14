@@ -32,6 +32,17 @@ void _comingSoon(BuildContext context) {
   );
 }
 
+/// Ruta sin animación de transición: la navegación entre secciones del
+/// sidebar (Dashboard, Mi negocio, Reseñas...) debe sentirse como cambiar de
+/// pestaña, no como abrir una pantalla nueva encima de la anterior.
+Route<T> _instantRoute<T>(WidgetBuilder builder) {
+  return PageRouteBuilder<T>(
+    pageBuilder: (context, animation, secondaryAnimation) => builder(context),
+    transitionDuration: Duration.zero,
+    reverseTransitionDuration: Duration.zero,
+  );
+}
+
 void _logout(BuildContext context) {
   SessionStorage.clearToken();
   Navigator.of(context).pushAndRemoveUntil(
@@ -67,7 +78,7 @@ List<NavItem> visitorNavItems(
       label: 'Mi perfil',
       highlight: current == VisitorSection.profile,
       onTap: () => Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => ProfilePage(profile: profile)),
+        _instantRoute((_) => ProfilePage(profile: profile)),
       ),
     ),
     NavItem(icon: Icons.notifications_outlined, label: 'Notificaciones', onTap: () => _comingSoon(context)),
@@ -92,7 +103,7 @@ List<NavItem> businessNavItems(
       label: 'Mi negocio',
       highlight: current == BusinessSection.profile,
       onTap: () => Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => BusinessProfilePage(business: business)),
+        _instantRoute((_) => BusinessProfilePage(business: business)),
       ),
     ),
     NavItem(
@@ -100,7 +111,7 @@ List<NavItem> businessNavItems(
       label: 'Reseñas',
       highlight: current == BusinessSection.reviews,
       onTap: () => Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => BusinessReviewsPage(business: business)),
+        _instantRoute((_) => BusinessReviewsPage(business: business)),
       ),
     ),
     NavItem(icon: Icons.trending_up, label: 'Estadísticas', onTap: () => _comingSoon(context)),

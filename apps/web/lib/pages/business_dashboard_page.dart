@@ -6,6 +6,7 @@ import '../theme/breakpoints.dart';
 import '../widgets/app_shell.dart';
 import '../widgets/cover_image.dart';
 import 'business_edit_page.dart';
+import 'business_gallery_page.dart';
 import 'business_reviews_page.dart';
 
 class BusinessDashboardPage extends StatefulWidget {
@@ -29,6 +30,13 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
     Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => BusinessReviewsPage(business: widget.business)),
     );
+  }
+
+  Future<void> _openGallery() async {
+    final changed = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => BusinessGalleryPage(business: widget.business)),
+    );
+    if (changed == true && mounted) setState(() {});
   }
 
   @override
@@ -200,7 +208,7 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
   Widget _buildManageGrid() {
     final actions = [
       (Icons.edit_outlined, 'Editar información', AppColors.brandTeal, _openEdit),
-      (Icons.image_outlined, 'Gestionar fotos', AppColors.businessOrange, _openEdit),
+      (Icons.image_outlined, 'Gestionar fotos', AppColors.businessOrange, _openGallery),
       (Icons.forum_outlined, 'Ver reseñas', Colors.amber, _openReviews),
       (Icons.trending_up, 'Estadísticas', Colors.greenAccent, () {}),
     ];

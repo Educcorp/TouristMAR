@@ -100,7 +100,7 @@ class BusinessProfile {
       category: negocio?.categoria ?? '',
       description: negocio?.descripcion ?? '',
       coverImage: negocio?.portada ?? 'assets/images/place-playa-audiencia.jpg',
-      gallery: const [],
+      gallery: negocio?.galeria ?? const [],
       rating: 0,
       totalReviews: 0,
       monthlyVisits: 0,
