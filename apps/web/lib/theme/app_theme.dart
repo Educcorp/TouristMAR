@@ -21,13 +21,13 @@ class AppColors {
   static const adminViolet = Color(0xFFA78BFA);
   static const adminVioletDark = Color(0xFF7C3AED);
 
-  // Tokens del sistema de diseño "dark premium SaaS" del panel admin.
-  // Reutilizan los acentos de marca de arriba donde ya existe un color
-  // equivalente (adminViolet = primary, brandTeal = accent, amber = warning,
-  // errorRed = danger) y solo agregan lo que faltaba.
-  static const bgDeep = Color(0xFF070D1A);
-  static const surface = Color(0xFF101827);
-  static const surfaceAlt = Color(0xFF141D2D);
+  // Tokens del panel admin. Apuntan a los mismos colores/superficies que ya
+  // usan los paneles de visitante y empresa (panelNavy de fondo, overlays de
+  // blanco translúcido para tarjetas) en vez de un esquema propio, para que
+  // las tres experiencias se vean parte del mismo sistema.
+  static const bgDeep = panelNavy;
+  static const surface = Color(0x08FFFFFF); // rgba(255,255,255,.03), igual que las cards de negocio/visitante
+  static const surfaceAlt = Color(0x0DFFFFFF); // rgba(255,255,255,.05)
   static const borderSubtle = Color(0x14FFFFFF); // rgba(255,255,255,.08)
   static const oceanBlue = Color(0xFF3B82F6); // secondary
   static const emerald = Color(0xFF34D399); // success
@@ -51,7 +51,7 @@ class AppSpacing {
 class AppRadius {
   AppRadius._();
 
-  static const button = 10.0;
+  static const button = 8.0;
   static const buttonLg = 12.0;
   static const card = 16.0;
   static const cardLg = 20.0;
