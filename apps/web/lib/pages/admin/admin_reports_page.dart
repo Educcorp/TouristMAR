@@ -87,7 +87,7 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
             Text('Reportes', style: AppTypography.h1),
             const SizedBox(height: 4),
             Text('Métricas y distribución del sistema, calculadas en tiempo real.', style: AppTypography.body),
-            const SizedBox(height: AppSpacing.xl),
+            SizedBox(height: AppSpacing.xl),
             if (_loading)
               const DsLoadingState()
             else if (_error != null)
@@ -176,7 +176,7 @@ class _ChartShell extends StatelessWidget {
   final String title;
   final Widget child;
 
-  const _ChartShell({required this.title, required this.child});
+  _ChartShell({required this.title, required this.child});
 
   @override
   Widget build(BuildContext context) {
@@ -185,7 +185,7 @@ class _ChartShell extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(title, style: AppTypography.h3),
-          const SizedBox(height: AppSpacing.lg),
+          SizedBox(height: AppSpacing.lg),
           SizedBox(height: 200, child: child),
         ],
       ),
@@ -193,7 +193,7 @@ class _ChartShell extends StatelessWidget {
   }
 }
 
-const _chartPalette = [
+final _chartPalette = [
   AppColors.adminViolet,
   AppColors.brandTeal,
   AppColors.businessOrange,
@@ -214,7 +214,7 @@ class _CategoryDonutCard extends StatelessWidget {
       counts[key] = (counts[key] ?? 0) + 1;
     }
     if (counts.isEmpty) {
-      return const _ChartShell(
+      return _ChartShell(
         title: 'Negocios por categoría',
         child: Center(child: Text('Sin datos todavía', style: TextStyle(color: AppColors.slate400, fontSize: 12))),
       );
@@ -262,7 +262,7 @@ class _EstadoDonutCard extends StatelessWidget {
       counts[n.estado] = (counts[n.estado] ?? 0) + 1;
     }
     if (counts.isEmpty) {
-      return const _ChartShell(
+      return _ChartShell(
         title: 'Negocios por estado',
         child: Center(child: Text('Sin datos todavía', style: TextStyle(color: AppColors.slate400, fontSize: 12))),
       );
@@ -378,7 +378,7 @@ class _SolicitudesPorMesCard extends StatelessWidget {
           SizedBox(
             height: 200,
             child: entries.isEmpty
-                ? const Center(child: Text('Sin solicitudes en este rango', style: TextStyle(color: AppColors.slate400, fontSize: 12)))
+                ? Center(child: Text('Sin solicitudes en este rango', style: TextStyle(color: AppColors.slate400, fontSize: 12)))
                 : BarChart(
                     BarChartData(
                       maxY: maxY + 1,
@@ -478,7 +478,7 @@ class _UsuariosActivosCard extends StatelessWidget {
           SizedBox(
             height: 160,
             child: users.isEmpty
-                ? const Center(child: Text('Sin usuarios todavía', style: TextStyle(color: AppColors.slate400, fontSize: 12)))
+                ? Center(child: Text('Sin usuarios todavía', style: TextStyle(color: AppColors.slate400, fontSize: 12)))
                 : BarChart(
                     BarChartData(
                       maxY: maxY == 0 ? 1 : maxY + 1,

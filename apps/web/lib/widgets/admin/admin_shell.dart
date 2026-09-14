@@ -4,6 +4,8 @@ import '../../pages/login_page.dart';
 import '../../services/auth_service.dart';
 import '../../services/session_storage.dart';
 import '../../theme/app_theme.dart';
+import '../../theme/breakpoints.dart';
+import '../theme_toggle_tile.dart';
 
 /// Destinos disponibles en el panel admin.
 enum AdminSection { inicio, solicitudes, usuarios, negocios, admins, reportes, configuracion, ayuda }
@@ -34,12 +36,12 @@ const _adminNavItems = [
   _AdminNavLeaf(AdminSection.ayuda, Icons.help_outline, 'Ayuda'),
 ];
 
-/// Shell del panel admin: misma barra superior + drawer lateral que usan los
-/// paneles de visitante y empresa ([AppShell] en `app_shell.dart`), para que
-/// las tres experiencias se sientan parte del mismo producto. A diferencia de
-/// [AppShell], el contenido central se intercambia dentro del mismo Scaffold
-/// en vez de empujar una pantalla nueva — así la barra/drawer nunca se
-/// remontan al cambiar de sección.
+/// Shell del panel admin: sidebar izquierdo fijo (siempre visible, sin botón
+/// para abrirlo) en pantallas anchas, igual que [AppShell] de visitante y
+/// empresa; en pantallas angostas cae a un drawer con botón. El contenido
+/// central se intercambia dentro del mismo Scaffold en vez de empujar una
+/// pantalla nueva, así el sidebar/drawer nunca se remonta al cambiar de
+/// sección.
 class AdminShell extends StatelessWidget {
   final AuthUser admin;
   final AdminSection selected;
@@ -56,20 +58,108 @@ class AdminShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.panelNavy,
-      endDrawer: _AdminNavDrawer(admin: admin, selected: selected, onSelect: onSelect),
-      body: Column(
-        children: [
-          const _AdminTopBar(),
-          Expanded(
-            child: ClipRect(
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 200),
-                switchInCurve: Curves.easeOut,
-                child: KeyedSubtree(key: ValueKey(selected), child: body),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isWide = Breakpoints.isExpanded(constraints.maxWidth);
+        final content = ClipRect(
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 200),
+            switchInCurve: Curves.easeOut,
+            child: KeyedSubtree(key: ValueKey(selected), child: body),
+          ),
+        );
+
+        if (isWide) {
+          return Scaffold(
+            backgroundColor: AppColors.panelNavy,
+            body: Row(
+              children: [
+                SizedBox(
+                  width: 280,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: AppColors.panelNavySoft,
+                      border: Border(right: BorderSide(color: AppColors.overlay(0.08))),
+                    ),
+                    child: SafeArea(
+                      child: _AdminSidebarContent(
+                        admin: admin,
+                        selected: selected,
+                        onSelect: onSelect,
+                        closeDrawerOnTap: false,
+                        showCloseButton: false,
+                      ),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Column(
+                    children: [
+                      const _AdminCompactTopBar(),
+                      Expanded(child: content),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        return Scaffold(
+          backgroundColor: AppColors.panelNavy,
+          endDrawer: Drawer(
+            backgroundColor: AppColors.panelNavySoft,
+            width: 320,
+            child: SafeArea(
+              child: _AdminSidebarContent(
+                admin: admin,
+                selected: selected,
+                onSelect: onSelect,
+                closeDrawerOnTap: true,
+                showCloseButton: true,
               ),
             ),
+          ),
+          body: Column(
+            children: [
+              const _AdminTopBar(),
+              Expanded(child: content),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _AdminCompactTopBar extends StatelessWidget {
+  const _AdminCompactTopBar();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      decoration: BoxDecoration(
+        color: AppColors.panelNavy,
+        border: Border(bottom: BorderSide(color: AppColors.overlay(0.08))),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Icon(Icons.notifications_none, color: AppColors.slate300),
+              Positioned(
+                right: -1,
+                top: -1,
+                child: Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(color: AppColors.amber, shape: BoxShape.circle),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -86,20 +176,20 @@ class _AdminTopBar extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       decoration: BoxDecoration(
         color: AppColors.panelNavy,
-        border: Border(bottom: BorderSide(color: Colors.white.withOpacity(0.08))),
+        border: Border(bottom: BorderSide(color: AppColors.overlay(0.08))),
       ),
       child: Row(
         children: [
           Container(
             width: 32,
             height: 32,
-            decoration: const BoxDecoration(color: AppColors.adminViolet, shape: BoxShape.circle),
-            child: const Icon(Icons.waves, size: 18, color: AppColors.panelNavy),
+            decoration: BoxDecoration(color: AppColors.adminViolet, shape: BoxShape.circle),
+            child: Icon(Icons.waves, size: 18, color: AppColors.panelNavy),
           ),
           const SizedBox(width: 8),
-          const Text(
+          Text(
             'TOURISMAR',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, letterSpacing: 2, fontSize: 13),
+            style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, letterSpacing: 2, fontSize: 13),
           ),
           const SizedBox(width: 8),
           Container(
@@ -109,7 +199,7 @@ class _AdminTopBar extends StatelessWidget {
               borderRadius: BorderRadius.circular(4),
               border: Border.all(color: AppColors.adminViolet.withOpacity(0.3)),
             ),
-            child: const Text(
+            child: Text(
               'ADMIN',
               style: TextStyle(color: AppColors.adminViolet, fontWeight: FontWeight.w700, fontSize: 9, letterSpacing: 1),
             ),
@@ -118,14 +208,14 @@ class _AdminTopBar extends StatelessWidget {
           Stack(
             clipBehavior: Clip.none,
             children: [
-              const Icon(Icons.notifications_none, color: AppColors.slate300),
+              Icon(Icons.notifications_none, color: AppColors.slate300),
               Positioned(
                 right: -1,
                 top: -1,
                 child: Container(
                   width: 8,
                   height: 8,
-                  decoration: const BoxDecoration(color: AppColors.amber, shape: BoxShape.circle),
+                  decoration: BoxDecoration(color: AppColors.amber, shape: BoxShape.circle),
                 ),
               ),
             ],
@@ -142,7 +232,7 @@ class _AdminTopBar extends StatelessWidget {
                   shape: BoxShape.circle,
                   border: Border.all(color: AppColors.adminViolet.withOpacity(0.4)),
                 ),
-                child: const Icon(Icons.shield_outlined, size: 16, color: AppColors.adminViolet),
+                child: Icon(Icons.shield_outlined, size: 16, color: AppColors.adminViolet),
               ),
             ),
           ),
@@ -152,166 +242,180 @@ class _AdminTopBar extends StatelessWidget {
   }
 }
 
-class _AdminNavDrawer extends StatelessWidget {
+/// Contenido compartido entre el sidebar fijo y el drawer móvil del panel
+/// admin: logo, identidad, lista de secciones, toggle de tema y cerrar
+/// sesión.
+class _AdminSidebarContent extends StatelessWidget {
   final AuthUser admin;
   final AdminSection selected;
   final ValueChanged<AdminSection> onSelect;
+  final bool closeDrawerOnTap;
+  final bool showCloseButton;
 
-  const _AdminNavDrawer({required this.admin, required this.selected, required this.onSelect});
+  const _AdminSidebarContent({
+    required this.admin,
+    required this.selected,
+    required this.onSelect,
+    required this.closeDrawerOnTap,
+    required this.showCloseButton,
+  });
+
+  void _handleSelect(BuildContext context, AdminSection section) {
+    if (closeDrawerOnTap) Navigator.of(context).pop();
+    onSelect(section);
+  }
+
+  void _handleLogout(BuildContext context) {
+    if (closeDrawerOnTap) Navigator.of(context).pop();
+    adminLogout(context);
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Drawer(
-      backgroundColor: AppColors.panelNavySoft,
-      width: 320,
-      child: SafeArea(
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-              decoration: BoxDecoration(border: Border(bottom: BorderSide(color: Colors.white.withOpacity(0.08)))),
-              child: Row(
-                children: [
-                  Container(
-                    width: 24,
-                    height: 24,
-                    decoration: const BoxDecoration(color: AppColors.adminViolet, shape: BoxShape.circle),
-                    child: const Icon(Icons.waves, size: 12, color: AppColors.panelNavy),
-                  ),
-                  const SizedBox(width: 8),
-                  const Text(
-                    'TOURISMAR',
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 12, letterSpacing: 1.5),
-                  ),
-                  const SizedBox(width: 6),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                    decoration: BoxDecoration(
-                      color: AppColors.adminViolet.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: const Text(
-                      'ADMIN',
-                      style: TextStyle(color: AppColors.adminViolet, fontSize: 9, fontWeight: FontWeight.w700),
-                    ),
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.close, color: AppColors.slate300, size: 18),
-                  ),
-                ],
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          decoration: BoxDecoration(border: Border(bottom: BorderSide(color: AppColors.overlay(0.08)))),
+          child: Row(
+            children: [
+              Container(
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(color: AppColors.adminViolet, shape: BoxShape.circle),
+                child: Icon(Icons.waves, size: 12, color: AppColors.panelNavy),
               ),
-            ),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(border: Border(bottom: BorderSide(color: Colors.white.withOpacity(0.08)))),
-              child: Row(
-                children: [
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: AppColors.adminViolet.withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.adminViolet.withOpacity(0.3)),
-                    ),
-                    child: const Icon(Icons.shield_outlined, color: AppColors.adminViolet, size: 20),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          admin.isSuperAdmin ? 'Super administrador' : 'Administrador',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14),
-                        ),
-                        Text(
-                          admin.email,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(color: AppColors.slate400, fontSize: 12),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+              const SizedBox(width: 8),
+              Text(
+                'TOURISMAR',
+                style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700, fontSize: 12, letterSpacing: 1.5),
               ),
-            ),
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                children: _adminNavItems.map((item) {
-                  final active = selected == item.section;
-                  final color = active ? AppColors.adminViolet : AppColors.slate300;
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 4),
-                    child: Material(
-                      color: active ? AppColors.adminViolet.withOpacity(0.1) : Colors.transparent,
-                      borderRadius: BorderRadius.circular(12),
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(12),
-                        onTap: () {
-                          Navigator.of(context).pop();
-                          onSelect(item.section);
-                        },
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                          child: Row(
-                            children: [
-                              Icon(item.icon, size: 18, color: color),
-                              const SizedBox(width: 12),
-                              Text(
-                                item.label,
-                                style: TextStyle(
-                                  color: active ? color : Colors.white.withOpacity(0.85),
-                                  fontSize: 14,
-                                  fontWeight: active ? FontWeight.w600 : FontWeight.w500,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                }).toList(),
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                decoration: BoxDecoration(
+                  color: AppColors.adminViolet.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  'ADMIN',
+                  style: TextStyle(color: AppColors.adminViolet, fontSize: 9, fontWeight: FontWeight.w700),
+                ),
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-              child: Material(
-                color: Colors.transparent,
-                borderRadius: BorderRadius.circular(12),
-                child: InkWell(
+              const Spacer(),
+              if (showCloseButton)
+                IconButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: Icon(Icons.close, color: AppColors.slate300, size: 18),
+                ),
+            ],
+          ),
+        ),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(border: Border(bottom: BorderSide(color: AppColors.overlay(0.08)))),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: AppColors.adminViolet.withOpacity(0.12),
                   borderRadius: BorderRadius.circular(12),
-                  onTap: () {
-                    Navigator.of(context).pop();
-                    adminLogout(context);
-                  },
-                  child: const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                    child: Row(
-                      children: [
-                        Icon(Icons.logout, size: 18, color: AppColors.errorRed),
-                        SizedBox(width: 12),
-                        Text(
-                          'Cerrar sesión',
-                          style: TextStyle(color: AppColors.errorRed, fontSize: 14, fontWeight: FontWeight.w500),
-                        ),
-                      ],
+                  border: Border.all(color: AppColors.adminViolet.withOpacity(0.3)),
+                ),
+                child: Icon(Icons.shield_outlined, color: AppColors.adminViolet, size: 20),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      admin.isSuperAdmin ? 'Super administrador' : 'Administrador',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14),
+                    ),
+                    Text(
+                      admin.email,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: AppColors.slate400, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            children: _adminNavItems.map((item) {
+              final active = selected == item.section;
+              final color = active ? AppColors.adminViolet : AppColors.slate300;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Material(
+                  color: active ? AppColors.adminViolet.withOpacity(0.1) : Colors.transparent,
+                  borderRadius: BorderRadius.circular(12),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: () => _handleSelect(context, item.section),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      child: Row(
+                        children: [
+                          Icon(item.icon, size: 18, color: color),
+                          const SizedBox(width: 12),
+                          Text(
+                            item.label,
+                            style: TextStyle(
+                              color: active ? color : AppColors.overlay(0.85),
+                              fontSize: 14,
+                              fontWeight: active ? FontWeight.w600 : FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
+              );
+            }).toList(),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: const ThemeToggleTile(),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+          child: Material(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: () => _handleLogout(context),
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                child: Row(
+                  children: [
+                    Icon(Icons.logout, size: 18, color: AppColors.errorRed),
+                    SizedBox(width: 12),
+                    Text(
+                      'Cerrar sesión',
+                      style: TextStyle(color: AppColors.errorRed, fontSize: 14, fontWeight: FontWeight.w500),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ],
+          ),
         ),
-      ),
+      ],
     );
   }
 }

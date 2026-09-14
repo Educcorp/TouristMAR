@@ -17,6 +17,9 @@ class NegocioInfo {
   final String? sitioWeb;
   final String? horario;
   final String? portada;
+  final String? archivo360;
+  final String? arMarcador;
+  final String? arGeo;
   final String estado;
 
   const NegocioInfo({
@@ -28,6 +31,9 @@ class NegocioInfo {
     this.sitioWeb,
     this.horario,
     this.portada,
+    this.archivo360,
+    this.arMarcador,
+    this.arGeo,
     required this.estado,
   });
 
@@ -44,6 +50,9 @@ class NegocioInfo {
         sitioWeb: json['sitioWeb'] as String?,
         horario: json['horario'] as String?,
         portada: json['portada'] as String?,
+        archivo360: json['archivo360'] as String?,
+        arMarcador: json['arMarcador'] as String?,
+        arGeo: json['arGeo'] as String?,
         estado: json['estado'] as String,
       );
 }
@@ -119,6 +128,9 @@ class NegocioSummary {
   final String email;
   final String contacto;
   final DateTime solicitadoEn;
+  final String? archivo360;
+  final String? arMarcador;
+  final String? arGeo;
 
   const NegocioSummary({
     required this.id,
@@ -128,6 +140,9 @@ class NegocioSummary {
     required this.email,
     required this.contacto,
     required this.solicitadoEn,
+    this.archivo360,
+    this.arMarcador,
+    this.arGeo,
   });
 
   bool get pendiente => estado == 'pendiente';
@@ -142,6 +157,9 @@ class NegocioSummary {
         email: json['email'] as String,
         contacto: json['contacto'] as String,
         solicitadoEn: DateTime.parse(json['solicitadoEn'] as String),
+        archivo360: json['archivo360'] as String?,
+        arMarcador: json['arMarcador'] as String?,
+        arGeo: json['arGeo'] as String?,
       );
 }
 
@@ -250,6 +268,38 @@ class AuthService {
 
     if (res.statusCode < 200 || res.statusCode >= 300) {
       throw AuthError((data['error'] as String?) ?? 'No se pudo subir la imagen');
+    }
+
+    return AuthUser.fromJson(data['user'] as Map<String, dynamic>);
+  }
+
+  static final _extensionMediaTypes = {
+    'jpg': MediaType('image', 'jpeg'),
+    'jpeg': MediaType('image', 'jpeg'),
+    'png': MediaType('image', 'png'),
+    'webp': MediaType('image', 'webp'),
+    'mp4': MediaType('video', 'mp4'),
+    'glb': MediaType('model', 'gltf-binary'),
+    'gltf': MediaType('model', 'gltf+json'),
+  };
+
+  /// Sube un recurso AR/360 de un negocio (foto/video 360°, modelo AR de
+  /// marcador o de geolocalización). [kind] es 'archivo360' | 'arMarcador' |
+  /// 'arGeo', igual que las llaves del `negocio` en [AuthUser].
+  Future<AuthUser> uploadNegocioAsset(String token, String kind, Uint8List bytes, String filename) async {
+    final ext = filename.contains('.') ? filename.split('.').last.toLowerCase() : '';
+    final contentType = _extensionMediaTypes[ext] ?? MediaType('application', 'octet-stream');
+
+    final request = http.MultipartRequest('POST', Uri.parse('$apiUrl/auth/profile/negocio-asset/$kind'))
+      ..headers['Authorization'] = 'Bearer $token'
+      ..files.add(http.MultipartFile.fromBytes('file', bytes, filename: filename, contentType: contentType));
+
+    final streamed = await _client.send(request);
+    final res = await http.Response.fromStream(streamed);
+    final data = _decode(res.body);
+
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      throw AuthError((data['error'] as String?) ?? 'No se pudo subir el archivo');
     }
 
     return AuthUser.fromJson(data['user'] as Map<String, dynamic>);

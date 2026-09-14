@@ -236,7 +236,7 @@ class _LoginFormState extends State<LoginForm> {
               Text(
                 message,
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: AppColors.slate400, fontSize: 14, height: 1.4),
+                style: TextStyle(color: AppColors.slate400, fontSize: 14, height: 1.4),
               ),
               if (_negocioEstado != null) ...[
                 const SizedBox(height: 20),
@@ -244,17 +244,17 @@ class _LoginFormState extends State<LoginForm> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.04),
+                    color: AppColors.overlay(0.04),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.white.withOpacity(0.1)),
+                    border: Border.all(color: AppColors.overlay(0.1)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(_negocioEstado!.nombre,
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14)),
+                          style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
                       if (_negocioEstado!.categoria != null)
-                        Text(_negocioEstado!.categoria!, style: const TextStyle(color: AppColors.slate400, fontSize: 12)),
+                        Text(_negocioEstado!.categoria!, style: TextStyle(color: AppColors.slate400, fontSize: 12)),
                     ],
                   ),
                 ),
@@ -275,15 +275,15 @@ class _LoginFormState extends State<LoginForm> {
         Container(
           width: 36,
           height: 36,
-          decoration: const BoxDecoration(color: AppColors.brandTeal, shape: BoxShape.circle),
-          child: const Icon(Icons.waves, size: 20, color: AppColors.panelNavy),
+          decoration: BoxDecoration(color: AppColors.brandTeal, shape: BoxShape.circle),
+          child: Icon(Icons.waves, size: 20, color: AppColors.panelNavy),
         ),
         const SizedBox(width: 8),
-        const Flexible(
+        Flexible(
           child: Text(
             'TOURISMAR',
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, letterSpacing: 3),
+            style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, letterSpacing: 3),
           ),
         ),
       ],
@@ -296,7 +296,7 @@ class _LoginFormState extends State<LoginForm> {
       decoration: BoxDecoration(
         color: AppColors.panelNavySoft,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
+        border: Border.all(color: AppColors.overlay(0.08)),
       ),
       child: Row(
         children: _LoginType.values.map((type) {
@@ -369,7 +369,7 @@ class _LoginFormState extends State<LoginForm> {
                       : (_isBusiness
                           ? 'Gestiona tu negocio o lugar turístico'
                           : 'Inicia sesión para seguir explorando Manzanillo'),
-                  style: const TextStyle(color: AppColors.slate400, fontSize: 14),
+                  style: TextStyle(color: AppColors.slate400, fontSize: 14),
                 ),
                 const SizedBox(height: 24),
                 if (isRegister) ...[
@@ -428,7 +428,7 @@ class _LoginFormState extends State<LoginForm> {
                     alignment: Alignment.centerRight,
                     child: TextButton(
                       onPressed: () => setState(() => _screen = _Screen.forgot),
-                      child: const Text(
+                      child: Text(
                         '¿Olvidaste tu contraseña?',
                         style: TextStyle(color: AppColors.brandTeal, fontSize: 12),
                       ),
@@ -440,16 +440,16 @@ class _LoginFormState extends State<LoginForm> {
                   Container(
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.04),
+                      color: AppColors.overlay(0.04),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.white.withOpacity(0.1)),
+                      border: Border.all(color: AppColors.overlay(0.1)),
                     ),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Icon(Icons.info_outline, size: 15, color: accentColor),
                         const SizedBox(width: 10),
-                        const Expanded(
+                        Expanded(
                           child: Text(
                             'Tu registro será revisado por un administrador de TourisMAR antes de aparecer en el mapa.',
                             style: TextStyle(color: AppColors.slate400, fontSize: 12, height: 1.4),
@@ -461,17 +461,17 @@ class _LoginFormState extends State<LoginForm> {
                 ],
                 if (_error != null) ...[
                   const SizedBox(height: 12),
-                  Text(_error!, style: const TextStyle(color: AppColors.errorRed, fontSize: 14)),
+                  Text(_error!, style: TextStyle(color: AppColors.errorRed, fontSize: 14)),
                 ],
                 const SizedBox(height: 20),
                 Row(
                   children: [
-                    Expanded(child: Divider(color: Colors.white.withOpacity(0.1))),
+                    Expanded(child: Divider(color: AppColors.overlay(0.1))),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 12),
                       child: Text('o continúa con Google', style: TextStyle(color: AppColors.slate500, fontSize: 12)),
                     ),
-                    Expanded(child: Divider(color: Colors.white.withOpacity(0.1))),
+                    Expanded(child: Divider(color: AppColors.overlay(0.1))),
                   ],
                 ),
                 const SizedBox(height: 20),
@@ -509,7 +509,7 @@ class _LoginFormState extends State<LoginForm> {
                     children: [
                       Text(
                         isRegister ? '¿Ya tienes cuenta? ' : '¿No tienes cuenta? ',
-                        style: const TextStyle(color: AppColors.slate400, fontSize: 14),
+                        style: TextStyle(color: AppColors.slate400, fontSize: 14),
                       ),
                       GestureDetector(
                         onTap: _toggleMode,
@@ -554,8 +554,8 @@ class _LoginFormState extends State<LoginForm> {
                 alignment: Alignment.centerLeft,
                 child: TextButton.icon(
                   onPressed: () => setState(() => _screen = _Screen.credentials),
-                  icon: const Icon(Icons.arrow_back, size: 15, color: AppColors.slate400),
-                  label: const Text('Volver', style: TextStyle(color: AppColors.slate400, fontSize: 13)),
+                  icon: Icon(Icons.arrow_back, size: 15, color: AppColors.slate400),
+                  label: Text('Volver', style: TextStyle(color: AppColors.slate400, fontSize: 13)),
                 ),
               ),
               const SizedBox(height: 12),
@@ -567,12 +567,12 @@ class _LoginFormState extends State<LoginForm> {
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(color: AppColors.brandTeal.withOpacity(0.2)),
                 ),
-                child: const Icon(Icons.mail_outline, color: AppColors.brandTeal, size: 22),
+                child: Icon(Icons.mail_outline, color: AppColors.brandTeal, size: 22),
               ),
               const SizedBox(height: 20),
               Text('Recupera tu acceso', style: Theme.of(context).textTheme.headlineMedium),
               const SizedBox(height: 6),
-              const Text(
+              Text(
                 'Ingresa tu correo y te enviaremos un enlace para restablecer tu contraseña.',
                 style: TextStyle(color: AppColors.slate400, fontSize: 14, height: 1.4),
               ),
@@ -620,19 +620,19 @@ class _LoginFormState extends State<LoginForm> {
                   shape: BoxShape.circle,
                   border: Border.all(color: AppColors.brandTeal.withOpacity(0.25)),
                 ),
-                child: const Icon(Icons.mail_outline, color: AppColors.brandTeal, size: 28),
+                child: Icon(Icons.mail_outline, color: AppColors.brandTeal, size: 28),
               ),
               const SizedBox(height: 24),
               Text('Revisa tu correo', style: Theme.of(context).textTheme.headlineMedium, textAlign: TextAlign.center),
               const SizedBox(height: 12),
               Text.rich(
                 TextSpan(
-                  style: const TextStyle(color: AppColors.slate400, fontSize: 14, height: 1.4),
+                  style: TextStyle(color: AppColors.slate400, fontSize: 14, height: 1.4),
                   children: [
                     const TextSpan(text: 'Si existe una cuenta con '),
                     TextSpan(
                       text: email.isEmpty ? 'ese correo' : email,
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                      style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600),
                     ),
                     const TextSpan(text: ', recibirás un enlace en los próximos minutos.'),
                   ],
@@ -642,7 +642,7 @@ class _LoginFormState extends State<LoginForm> {
               const SizedBox(height: 28),
               GestureDetector(
                 onTap: () => setState(() => _screen = _Screen.credentials),
-                child: const Text(
+                child: Text(
                   'Volver al inicio de sesión',
                   style: TextStyle(color: AppColors.brandTeal, fontWeight: FontWeight.w600, fontSize: 14),
                 ),

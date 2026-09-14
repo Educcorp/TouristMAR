@@ -46,7 +46,7 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
           shape: BoxShape.circle,
           border: Border.all(color: AppColors.businessOrange.withOpacity(0.4)),
         ),
-        child: const Icon(Icons.apartment, size: 16, color: AppColors.businessOrange),
+        child: Icon(Icons.apartment, size: 16, color: AppColors.businessOrange),
       ),
       drawerIdentity: BusinessIdentityCard(business: business),
       navItems: businessNavItems(context, business: business),
@@ -65,7 +65,7 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
                       gradient: LinearGradient(
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
-                        colors: [Colors.transparent, AppColors.panelNavy.withOpacity(0.9)],
+                        colors: [Colors.transparent, AppColors.scrimDark.withOpacity(0.9)],
                       ),
                     ),
                   ),
@@ -93,7 +93,7 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
                                 borderRadius: BorderRadius.circular(18),
                                 border: Border.all(color: AppColors.businessOrange.withOpacity(0.4), width: 2),
                               ),
-                              child: const Icon(Icons.apartment, size: 30, color: AppColors.businessOrange),
+                              child: Icon(Icons.apartment, size: 30, color: AppColors.businessOrange),
                             ),
                             const SizedBox(width: 14),
                             Expanded(
@@ -107,7 +107,10 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
                                         Flexible(
                                           child: Text(
                                             business.businessName,
-                                            style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 20),
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .headlineMedium
+                                                ?.copyWith(fontSize: 20, color: Colors.white),
                                           ),
                                         ),
                                         if (business.verified) ...[
@@ -119,7 +122,7 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
                                               borderRadius: BorderRadius.circular(999),
                                               border: Border.all(color: AppColors.brandTeal.withOpacity(0.3)),
                                             ),
-                                            child: const Row(
+                                            child: Row(
                                               mainAxisSize: MainAxisSize.min,
                                               children: [
                                                 Icon(Icons.check_circle, size: 10, color: AppColors.brandTeal),
@@ -133,7 +136,7 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
                                         ],
                                       ],
                                     ),
-                                    Text(business.category, style: const TextStyle(color: AppColors.slate400, fontSize: 12)),
+                                    Text(business.category, style: const TextStyle(color: Colors.white70, fontSize: 12)),
                                   ],
                                 ),
                               ),
@@ -149,12 +152,12 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
                               ...List.generate(
                                 5,
                                 (i) => Icon(Icons.star,
-                                    size: 15, color: i < business.rating.round() ? Colors.amber : Colors.white.withOpacity(0.15)),
+                                    size: 15, color: i < business.rating.round() ? Colors.amber : AppColors.overlay(0.15)),
                               ),
                               const SizedBox(width: 8),
-                              Text('${business.rating}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14)),
+                              Text('${business.rating}', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700, fontSize: 14)),
                               const SizedBox(width: 4),
-                              Text('(${business.totalReviews} reseñas)', style: const TextStyle(color: AppColors.slate400, fontSize: 12)),
+                              Text('(${business.totalReviews} reseñas)', style: TextStyle(color: AppColors.slate400, fontSize: 12)),
                             ],
                           ),
                           AppButton(
@@ -174,7 +177,7 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
                       const SizedBox(height: 16),
                       _card(
                         title: 'DESCRIPCIÓN',
-                        child: Text(business.description, style: const TextStyle(color: Colors.white70, fontSize: 14, height: 1.4)),
+                        child: Text(business.description, style: TextStyle(color: AppColors.textSecondary, fontSize: 14, height: 1.4)),
                       ),
                       const SizedBox(height: 16),
                       _card(
@@ -196,10 +199,10 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text('Galería de fotos', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
+                          Text('Galería de fotos', style: TextStyle(color: AppColors.textPrimary, fontSize: 14, fontWeight: FontWeight.w600)),
                           GestureDetector(
                             onTap: _openEdit,
-                            child: const Text('Gestionar', style: TextStyle(color: AppColors.businessOrange, fontSize: 12, fontWeight: FontWeight.w600)),
+                            child: Text('Gestionar', style: TextStyle(color: AppColors.businessOrange, fontSize: 12, fontWeight: FontWeight.w600)),
                           ),
                         ],
                       ),
@@ -209,10 +212,10 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text('Últimas reseñas', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
+                          Text('Últimas reseñas', style: TextStyle(color: AppColors.textPrimary, fontSize: 14, fontWeight: FontWeight.w600)),
                           GestureDetector(
                             onTap: _openReviews,
-                            child: const Text('Ver todas', style: TextStyle(color: AppColors.brandTeal, fontSize: 12, fontWeight: FontWeight.w600)),
+                            child: Text('Ver todas', style: TextStyle(color: AppColors.brandTeal, fontSize: 12, fontWeight: FontWeight.w600)),
                           ),
                         ],
                       ),
@@ -236,12 +239,12 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
       decoration: BoxDecoration(
         color: AppColors.panelNavySoft,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
+        border: Border.all(color: AppColors.overlay(0.08)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: const TextStyle(color: AppColors.slate500, fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 1)),
+          Text(title, style: TextStyle(color: AppColors.slate500, fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 1)),
           const SizedBox(height: 8),
           child,
         ],
@@ -255,7 +258,7 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
       children: [
         Icon(icon, size: 15, color: AppColors.brandTeal),
         const SizedBox(width: 10),
-        Expanded(child: Text(value, style: const TextStyle(color: Colors.white70, fontSize: 13.5))),
+        Expanded(child: Text(value, style: TextStyle(color: AppColors.textSecondary, fontSize: 13.5))),
       ],
     );
   }
@@ -282,9 +285,9 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
               height: tileSize,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.white.withOpacity(0.15), style: BorderStyle.solid),
+                border: Border.all(color: AppColors.overlay(0.15), style: BorderStyle.solid),
               ),
-              child: const Column(
+              child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(Icons.add, size: 18, color: AppColors.slate400),
@@ -307,7 +310,7 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
       decoration: BoxDecoration(
         color: AppColors.panelNavySoft,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
+        border: Border.all(color: AppColors.overlay(0.08)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -320,25 +323,25 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
                   CircleAvatar(
                     radius: 14,
                     backgroundColor: AppColors.brandTeal.withOpacity(0.15),
-                    child: Text(r.initials, style: const TextStyle(color: AppColors.brandTeal, fontSize: 10, fontWeight: FontWeight.w700)),
+                    child: Text(r.initials, style: TextStyle(color: AppColors.brandTeal, fontSize: 10, fontWeight: FontWeight.w700)),
                   ),
                   const SizedBox(width: 10),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(r.author, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 12.5)),
-                      Text(r.dateLabel, style: const TextStyle(color: AppColors.slate500, fontSize: 10)),
+                      Text(r.author, style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 12.5)),
+                      Text(r.dateLabel, style: TextStyle(color: AppColors.slate500, fontSize: 10)),
                     ],
                   ),
                 ],
               ),
               Row(
-                children: List.generate(5, (i) => Icon(Icons.star, size: 11, color: i < r.rating ? Colors.amber : Colors.white.withOpacity(0.15))),
+                children: List.generate(5, (i) => Icon(Icons.star, size: 11, color: i < r.rating ? Colors.amber : AppColors.overlay(0.15))),
               ),
             ],
           ),
           const SizedBox(height: 8),
-          Text(r.text, style: const TextStyle(color: Colors.white70, fontSize: 13, height: 1.4)),
+          Text(r.text, style: TextStyle(color: AppColors.textSecondary, fontSize: 13, height: 1.4)),
         ],
       ),
     );

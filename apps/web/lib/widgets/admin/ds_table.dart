@@ -69,8 +69,8 @@ class _DsTableRowState extends State<DsTableRow> {
         duration: const Duration(milliseconds: 120),
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
         decoration: BoxDecoration(
-          color: _hovered ? Colors.white.withOpacity(0.03) : Colors.transparent,
-          border: const Border(top: BorderSide(color: AppColors.borderSubtle)),
+          color: _hovered ? AppColors.overlay(0.03) : Colors.transparent,
+          border: Border(top: BorderSide(color: AppColors.borderSubtle)),
         ),
         child: Row(
           children: List.generate(widget.cells.length, (i) {

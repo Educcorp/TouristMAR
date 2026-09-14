@@ -109,7 +109,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
             Text('Administra los usuarios del sistema.', style: AppTypography.body),
             const SizedBox(height: AppSpacing.lg),
             _SearchField(controller: _searchController),
-            const SizedBox(height: AppSpacing.xl),
+            SizedBox(height: AppSpacing.xl),
             _buildContent(),
           ],
         ),
@@ -190,25 +190,25 @@ class _SearchField extends StatelessWidget {
       constraints: const BoxConstraints(maxWidth: 360),
       child: TextField(
         controller: controller,
-        style: const TextStyle(color: Colors.white, fontSize: 14),
+        style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
         decoration: InputDecoration(
           hintText: 'Buscar por nombre o correo…',
           hintStyle: AppTypography.bodySmall,
-          prefixIcon: const Icon(Icons.search, size: 18, color: AppColors.slate500),
+          prefixIcon: Icon(Icons.search, size: 18, color: AppColors.slate500),
           filled: true,
           fillColor: AppColors.surface,
           contentPadding: const EdgeInsets.symmetric(vertical: 12),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(AppRadius.buttonLg),
-            borderSide: const BorderSide(color: AppColors.borderSubtle),
+            borderSide: BorderSide(color: AppColors.borderSubtle),
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(AppRadius.buttonLg),
-            borderSide: const BorderSide(color: AppColors.borderSubtle),
+            borderSide: BorderSide(color: AppColors.borderSubtle),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(AppRadius.buttonLg),
-            borderSide: const BorderSide(color: AppColors.adminViolet),
+            borderSide: BorderSide(color: AppColors.adminViolet),
           ),
         ),
       ),
@@ -231,7 +231,7 @@ class _IdentityCell extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(user.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
+              Text(user.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 13)),
               Text(user.email, maxLines: 1, overflow: TextOverflow.ellipsis, style: AppTypography.bodySmall),
             ],
           ),
@@ -251,7 +251,7 @@ class _ActionCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (isUpdating) {
-      return const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.slate400));
+      return SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.slate400));
     }
     return DsButton(
       label: blocked ? 'Desbloquear' : 'Bloquear',

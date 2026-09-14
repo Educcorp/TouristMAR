@@ -34,7 +34,7 @@ class DsStatCard extends StatelessWidget {
             curve: Curves.easeOutCubic,
             builder: (context, animated, _) => Text(
               '${animated.round()}',
-              style: const TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w700),
+              style: TextStyle(color: AppColors.textPrimary, fontSize: 26, fontWeight: FontWeight.w700),
             ),
           ),
           const SizedBox(height: 2),

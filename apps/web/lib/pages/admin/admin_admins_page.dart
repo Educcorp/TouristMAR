@@ -209,7 +209,7 @@ class _AdminAdminsPageState extends State<AdminAdminsPage> {
             ),
             if (_formError != null) ...[
               const SizedBox(height: AppSpacing.sm),
-              Text(_formError!, style: const TextStyle(color: AppColors.errorRed, fontSize: 13)),
+              Text(_formError!, style: TextStyle(color: AppColors.errorRed, fontSize: 13)),
             ],
             const SizedBox(height: AppSpacing.lg),
             Row(
@@ -220,7 +220,7 @@ class _AdminAdminsPageState extends State<AdminAdminsPage> {
                   variant: DsButtonVariant.ghost,
                   onPressed: _creating ? null : () => setState(() => _showForm = false),
                 ),
-                const SizedBox(width: AppSpacing.sm),
+                SizedBox(width: AppSpacing.sm),
                 DsButton(
                   label: _creating ? 'Creando...' : 'Crear administrador',
                   variant: DsButtonVariant.primary,
@@ -278,7 +278,7 @@ class _AdminRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(admin.name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
+                Text(admin.name, style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 13)),
                 Text(admin.email, style: AppTypography.bodySmall),
               ],
             ),
@@ -290,10 +290,10 @@ class _AdminRow extends StatelessWidget {
           if (canDelete) ...[
             const SizedBox(width: AppSpacing.sm),
             isDeleting
-                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.errorRed))
+                ? SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.errorRed))
                 : IconButton(
                     onPressed: onDelete,
-                    icon: const Icon(Icons.delete_outline, size: 18, color: AppColors.errorRed),
+                    icon: Icon(Icons.delete_outline, size: 18, color: AppColors.errorRed),
                   ),
           ],
         ],

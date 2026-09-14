@@ -69,7 +69,7 @@ class AdminHelpPage extends StatelessWidget {
               background: AppColors.adminViolet.withOpacity(0.06),
               child: Row(
                 children: [
-                  const DsIconBadgeCircle(icon: Icons.support_agent_outlined, color: AppColors.adminViolet, size: 38),
+                  DsIconBadgeCircle(icon: Icons.support_agent_outlined, color: AppColors.adminViolet, size: 38),
                   const SizedBox(width: AppSpacing.md),
                   Expanded(
                     child: Column(

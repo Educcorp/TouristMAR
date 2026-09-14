@@ -6,3 +6,4 @@ export const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE
 })
 
 export const AVATARS_BUCKET = 'avatars'
+export const NEGOCIO_ASSETS_BUCKET = 'negocio-assets'

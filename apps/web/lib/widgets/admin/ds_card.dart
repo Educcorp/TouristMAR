@@ -32,7 +32,7 @@ class _DsCardState extends State<DsCard> {
   Widget build(BuildContext context) {
     final interactive = widget.onTap != null;
     final borderColor = _hovered && interactive
-        ? Colors.white.withOpacity(0.16)
+        ? AppColors.overlay(0.16)
         : AppColors.borderSubtle;
 
     final card = AnimatedContainer(

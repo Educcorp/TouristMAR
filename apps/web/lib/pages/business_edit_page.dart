@@ -29,7 +29,49 @@ class _BusinessEditPageState extends State<BusinessEditPage> {
   final _authService = AuthService();
   bool _isSaving = false;
   bool _isUploadingCover = false;
+  final Set<String> _uploadingAssets = {};
   String? _error;
+
+  Future<void> _uploadAsset(String kind) async {
+    final token = SessionStorage.token;
+    if (token == null) {
+      setState(() => _error = 'Tu sesión expiró, vuelve a iniciar sesión');
+      return;
+    }
+
+    final result = await FilePicker.platform.pickFiles(withData: true);
+    final file = result?.files.single;
+    if (file == null || file.bytes == null) return;
+
+    setState(() {
+      _uploadingAssets.add(kind);
+      _error = null;
+    });
+
+    try {
+      final updated = await _authService.uploadNegocioAsset(token, kind, file.bytes!, file.name);
+      final negocio = updated.negocio;
+      if (negocio != null) {
+        setState(() {
+          switch (kind) {
+            case 'archivo360':
+              widget.business.archivo360 = negocio.archivo360;
+              break;
+            case 'arMarcador':
+              widget.business.arMarcador = negocio.arMarcador;
+              break;
+            case 'arGeo':
+              widget.business.arGeo = negocio.arGeo;
+              break;
+          }
+        });
+      }
+    } catch (err) {
+      setState(() => _error = err is AuthError ? err.message : 'No se pudo subir el archivo');
+    } finally {
+      if (mounted) setState(() => _uploadingAssets.remove(kind));
+    }
+  }
 
   Future<void> _changeCover() async {
     final token = SessionStorage.token;
@@ -128,14 +170,14 @@ class _BusinessEditPageState extends State<BusinessEditPage> {
                     alignment: Alignment.centerLeft,
                     child: TextButton.icon(
                       onPressed: () => Navigator.of(context).pop(false),
-                      icon: const Icon(Icons.arrow_back, size: 15, color: AppColors.slate400),
-                      label: const Text('Volver a mi negocio', style: TextStyle(color: AppColors.slate400, fontSize: 13)),
+                      icon: Icon(Icons.arrow_back, size: 15, color: AppColors.slate400),
+                      label: Text('Volver a mi negocio', style: TextStyle(color: AppColors.slate400, fontSize: 13)),
                     ),
                   ),
                   const SizedBox(height: 12),
                   Text('Editar negocio', style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 24)),
                   const SizedBox(height: 4),
-                  const Text(
+                  Text(
                     'Actualiza la información visible a los visitantes en el mapa.',
                     style: TextStyle(color: AppColors.slate400, fontSize: 14),
                   ),
@@ -186,35 +228,35 @@ class _BusinessEditPageState extends State<BusinessEditPage> {
                     accentColor: AppColors.businessOrange,
                   ),
                   const SizedBox(height: 20),
-                  const Text('Descripción', style: TextStyle(color: AppColors.slate300, fontSize: 14)),
+                  Text('Descripción', style: TextStyle(color: AppColors.slate300, fontSize: 14)),
                   const SizedBox(height: 8),
                   TextField(
                     controller: _descriptionController,
                     maxLength: 350,
                     maxLines: 4,
                     onChanged: (_) => setState(() {}),
-                    style: const TextStyle(color: Colors.white, fontSize: 14),
+                    style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
                     decoration: InputDecoration(
                       hintText: 'Describe tu negocio o lugar turístico…',
-                      hintStyle: const TextStyle(color: AppColors.slate500),
+                      hintStyle: TextStyle(color: AppColors.slate500),
                       filled: true,
                       fillColor: AppColors.panelNavySoft,
                       contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
-                      counterStyle: const TextStyle(color: AppColors.slate500, fontSize: 11),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.white.withOpacity(0.1))),
-                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.white.withOpacity(0.1))),
-                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: AppColors.businessOrange)),
+                      counterStyle: TextStyle(color: AppColors.slate500, fontSize: 11),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.overlay(0.1))),
+                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.overlay(0.1))),
+                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.businessOrange)),
                     ),
                   ),
                   const SizedBox(height: 12),
                   Container(
                     padding: const EdgeInsets.all(20),
                     margin: const EdgeInsets.only(top: 8),
-                    decoration: BoxDecoration(border: Border(top: BorderSide(color: Colors.white.withOpacity(0.08)))),
+                    decoration: BoxDecoration(border: Border(top: BorderSide(color: AppColors.overlay(0.08)))),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        Text(
                           'INFORMACIÓN DE CONTACTO',
                           style: TextStyle(color: AppColors.slate500, fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 1),
                         ),
@@ -254,29 +296,54 @@ class _BusinessEditPageState extends State<BusinessEditPage> {
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.04),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.white.withOpacity(0.1)),
-                    ),
-                    child: Row(
+                    padding: const EdgeInsets.all(20),
+                    margin: const EdgeInsets.only(top: 8),
+                    decoration: BoxDecoration(border: Border(top: BorderSide(color: AppColors.overlay(0.08)))),
+                    child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(Icons.info_outline, size: 15, color: AppColors.businessOrange),
-                        const SizedBox(width: 10),
-                        const Expanded(
-                          child: Text(
-                            'Las fotos 360° y la tarjeta AR son generadas por el administrador de TourisMAR tras su visita al lugar.',
-                            style: TextStyle(color: AppColors.slate400, fontSize: 12, height: 1.4),
-                          ),
+                        Text(
+                          'RECURSOS AR Y 360°',
+                          style: TextStyle(color: AppColors.slate500, fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 1),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Sube el material para que tu lugar aparezca con foto 360° y realidad aumentada en el mapa.',
+                          style: TextStyle(color: AppColors.slate400, fontSize: 12, height: 1.4),
+                        ),
+                        const SizedBox(height: 14),
+                        _AssetUploadRow(
+                          icon: Icons.threesixty,
+                          label: 'Foto o video 360°',
+                          hint: 'Imagen equirectangular o video inmersivo del lugar',
+                          uploaded: widget.business.archivo360 != null,
+                          isUploading: _uploadingAssets.contains('archivo360'),
+                          onTap: () => _uploadAsset('archivo360'),
+                        ),
+                        const SizedBox(height: 10),
+                        _AssetUploadRow(
+                          icon: Icons.qr_code_2_outlined,
+                          label: 'Modelo AR – Marcador',
+                          hint: 'Archivo 3D (.glb/.gltf) para escaneo por QR o marcador físico',
+                          uploaded: widget.business.arMarcador != null,
+                          isUploading: _uploadingAssets.contains('arMarcador'),
+                          onTap: () => _uploadAsset('arMarcador'),
+                        ),
+                        const SizedBox(height: 10),
+                        _AssetUploadRow(
+                          icon: Icons.explore_outlined,
+                          label: 'Modelo AR – Geolocalización',
+                          hint: 'Archivo 3D (.glb/.gltf) para exploración por GPS en exteriores',
+                          uploaded: widget.business.arGeo != null,
+                          isUploading: _uploadingAssets.contains('arGeo'),
+                          onTap: () => _uploadAsset('arGeo'),
                         ),
                       ],
                     ),
                   ),
                   if (_error != null) ...[
                     const SizedBox(height: 12),
-                    Text(_error!, style: const TextStyle(color: AppColors.errorRed, fontSize: 13)),
+                    Text(_error!, style: TextStyle(color: AppColors.errorRed, fontSize: 13)),
                   ],
                   const SizedBox(height: 20),
                   Row(
@@ -304,6 +371,70 @@ class _BusinessEditPageState extends State<BusinessEditPage> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _AssetUploadRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String hint;
+  final bool uploaded;
+  final bool isUploading;
+  final VoidCallback onTap;
+
+  const _AssetUploadRow({
+    required this.icon,
+    required this.label,
+    required this.hint,
+    required this.uploaded,
+    required this.isUploading,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.overlay(0.03),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.overlay(0.08)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: uploaded ? AppColors.businessOrange.withOpacity(0.15) : AppColors.overlay(0.05),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: uploaded ? AppColors.businessOrange.withOpacity(0.3) : AppColors.overlay(0.1)),
+            ),
+            child: Icon(uploaded ? Icons.check_circle : icon, size: 16, color: uploaded ? AppColors.businessOrange : AppColors.slate400),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: TextStyle(color: AppColors.textPrimary, fontSize: 13, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 2),
+                Text(hint, style: TextStyle(color: AppColors.slate500, fontSize: 11, height: 1.3)),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          if (isUploading)
+            const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+          else
+            TextButton.icon(
+              onPressed: onTap,
+              icon: Icon(Icons.upload_outlined, size: 14, color: AppColors.businessOrange),
+              label: Text(uploaded ? 'Reemplazar' : 'Subir', style: TextStyle(color: AppColors.businessOrange, fontSize: 12, fontWeight: FontWeight.w600)),
+            ),
+        ],
       ),
     );
   }

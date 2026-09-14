@@ -105,14 +105,14 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     alignment: Alignment.centerLeft,
                     child: TextButton.icon(
                       onPressed: () => Navigator.of(context).pop(false),
-                      icon: const Icon(Icons.arrow_back, size: 15, color: AppColors.slate400),
-                      label: const Text('Volver a mi perfil', style: TextStyle(color: AppColors.slate400, fontSize: 13)),
+                      icon: Icon(Icons.arrow_back, size: 15, color: AppColors.slate400),
+                      label: Text('Volver a mi perfil', style: TextStyle(color: AppColors.slate400, fontSize: 13)),
                     ),
                   ),
                   const SizedBox(height: 12),
                   Text('Editar perfil', style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 24)),
                   const SizedBox(height: 4),
-                  const Text(
+                  Text(
                     'Actualiza tu foto, nombre y descripción personal.',
                     style: TextStyle(color: AppColors.slate400, fontSize: 14),
                   ),
@@ -131,42 +131,42 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                 radius: 48,
                               ),
                               if (_isUploadingPhoto)
-                                const CircularProgressIndicator(color: AppColors.brandTeal),
+                                CircularProgressIndicator(color: AppColors.brandTeal),
                             ],
                           ),
                         ),
                         const SizedBox(height: 10),
                         TextButton.icon(
                           onPressed: _isUploadingPhoto ? null : _changePhoto,
-                          icon: const Icon(Icons.camera_alt_outlined, size: 13, color: AppColors.brandTeal),
-                          label: const Text('Cambiar foto', style: TextStyle(color: AppColors.brandTeal, fontSize: 12)),
+                          icon: Icon(Icons.camera_alt_outlined, size: 13, color: AppColors.brandTeal),
+                          label: Text('Cambiar foto', style: TextStyle(color: AppColors.brandTeal, fontSize: 12)),
                         ),
                       ],
                     ),
                   ),
                   const SizedBox(height: 12),
-                  const Text('Nombre completo', style: TextStyle(color: AppColors.slate300, fontSize: 14)),
+                  Text('Nombre completo', style: TextStyle(color: AppColors.slate300, fontSize: 14)),
                   const SizedBox(height: 8),
                   TextField(
                     controller: _nameController,
                     onChanged: (_) => setState(() {}),
-                    style: const TextStyle(color: Colors.white, fontSize: 14),
+                    style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
                     decoration: _inputDecoration(),
                   ),
                   const SizedBox(height: 20),
-                  const Text('Descripción personal', style: TextStyle(color: AppColors.slate300, fontSize: 14)),
+                  Text('Descripción personal', style: TextStyle(color: AppColors.slate300, fontSize: 14)),
                   const SizedBox(height: 8),
                   TextField(
                     controller: _bioController,
                     maxLength: 200,
                     maxLines: 4,
                     onChanged: (_) => setState(() {}),
-                    style: const TextStyle(color: Colors.white, fontSize: 14),
+                    style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
                     decoration: _inputDecoration(hint: 'Cuéntanos un poco sobre ti…'),
                   ),
                   if (_error != null) ...[
                     const SizedBox(height: 12),
-                    Text(_error!, style: const TextStyle(color: AppColors.errorRed, fontSize: 13)),
+                    Text(_error!, style: TextStyle(color: AppColors.errorRed, fontSize: 13)),
                   ],
                   const SizedBox(height: 12),
                   Row(
@@ -199,22 +199,22 @@ class _EditProfilePageState extends State<EditProfilePage> {
   InputDecoration _inputDecoration({String? hint}) {
     return InputDecoration(
       hintText: hint,
-      hintStyle: const TextStyle(color: AppColors.slate500),
+      hintStyle: TextStyle(color: AppColors.slate500),
       filled: true,
       fillColor: AppColors.panelNavySoft,
       contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
-      counterStyle: const TextStyle(color: AppColors.slate500, fontSize: 11),
+      counterStyle: TextStyle(color: AppColors.slate500, fontSize: 11),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
-        borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
+        borderSide: BorderSide(color: AppColors.overlay(0.1)),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
-        borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
+        borderSide: BorderSide(color: AppColors.overlay(0.1)),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
-        borderSide: const BorderSide(color: AppColors.brandTeal),
+        borderSide: BorderSide(color: AppColors.brandTeal),
       ),
     );
   }

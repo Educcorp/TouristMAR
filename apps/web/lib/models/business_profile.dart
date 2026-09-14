@@ -61,6 +61,9 @@ class BusinessProfile {
   String address;
   String hours;
   bool verified;
+  String? archivo360;
+  String? arMarcador;
+  String? arGeo;
 
   BusinessProfile({
     required this.businessName,
@@ -80,6 +83,9 @@ class BusinessProfile {
     required this.address,
     required this.hours,
     required this.verified,
+    this.archivo360,
+    this.arMarcador,
+    this.arGeo,
   });
 
   /// Perfil real de negocio devuelto por el backend. Las estadísticas
@@ -105,6 +111,9 @@ class BusinessProfile {
       address: negocio?.direccion ?? '',
       hours: negocio?.horario ?? '',
       verified: negocio?.aprobado ?? false,
+      archivo360: negocio?.archivo360,
+      arMarcador: negocio?.arMarcador,
+      arGeo: negocio?.arGeo,
     );
   }
 

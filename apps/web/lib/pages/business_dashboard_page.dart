@@ -46,7 +46,7 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
           shape: BoxShape.circle,
           border: Border.all(color: AppColors.businessOrange.withOpacity(0.4)),
         ),
-        child: const Icon(Icons.apartment, size: 16, color: AppColors.businessOrange),
+        child: Icon(Icons.apartment, size: 16, color: AppColors.businessOrange),
       ),
       drawerIdentity: BusinessIdentityCard(business: business),
       navItems: businessNavItems(context, business: business),
@@ -63,9 +63,9 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
                   const SizedBox(height: 20),
                   _buildStatsGrid(business),
                   const SizedBox(height: 28),
-                  const Text(
+                  Text(
                     'Gestionar negocio',
-                    style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
+                    style: TextStyle(color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 12),
                   _buildManageGrid(),
@@ -73,13 +73,13 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
+                      Text(
                         'Reseñas recientes',
-                        style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
+                        style: TextStyle(color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.w600),
                       ),
                       GestureDetector(
                         onTap: _openReviews,
-                        child: const Text(
+                        child: Text(
                           'Ver todas',
                           style: TextStyle(color: AppColors.businessOrange, fontSize: 13, fontWeight: FontWeight.w500),
                         ),
@@ -115,7 +115,7 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
                 gradient: LinearGradient(
                   begin: Alignment.bottomLeft,
                   end: Alignment.topRight,
-                  colors: [AppColors.panelNavy.withOpacity(0.92), AppColors.panelNavy.withOpacity(0.4)],
+                  colors: [AppColors.scrimDark.withOpacity(0.92), AppColors.scrimDark.withOpacity(0.4)],
                 ),
               ),
             ),
@@ -130,18 +130,19 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
                       const Text(
                         'PANEL DE NEGOCIO',
                         style: TextStyle(
-                            color: AppColors.businessOrange, fontWeight: FontWeight.w700, fontSize: 11, letterSpacing: 2),
+                            color: Color(0xFFF97316), fontWeight: FontWeight.w700, fontSize: 11, letterSpacing: 2),
                       ),
                       if (business.verified) ...[
                         const SizedBox(width: 6),
-                        const Icon(Icons.check_circle, size: 12, color: AppColors.brandTeal),
+                        const Icon(Icons.check_circle, size: 12, color: Color(0xFF22D3EE)),
                       ],
                     ],
                   ),
                   const SizedBox(height: 4),
-                  Text(business.businessName, style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 22)),
+                  Text(business.businessName,
+                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 22, color: Colors.white)),
                   const SizedBox(height: 2),
-                  Text(business.category, style: const TextStyle(color: AppColors.slate300, fontSize: 13)),
+                  Text(business.category, style: const TextStyle(color: Colors.white70, fontSize: 13)),
                 ],
               ),
             ),
@@ -168,7 +169,7 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
           physics: const NeverScrollableScrollPhysics(),
           mainAxisSpacing: 12,
           crossAxisSpacing: 12,
-          childAspectRatio: 1.3,
+          childAspectRatio: 1.1,
           children: stats.map((s) {
             final (icon, value, label, color) = s;
             return Container(
@@ -186,7 +187,7 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
                   const SizedBox(height: 8),
                   Text(value, style: TextStyle(color: color, fontSize: 22, fontWeight: FontWeight.w700)),
                   const SizedBox(height: 2),
-                  Text(label, style: const TextStyle(color: AppColors.slate400, fontSize: 11)),
+                  Text(label, style: TextStyle(color: AppColors.slate400, fontSize: 11)),
                 ],
               ),
             );
@@ -217,7 +218,7 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
           children: actions.map((a) {
             final (icon, label, color, onTap) = a;
             return Material(
-              color: Colors.white.withOpacity(0.03),
+              color: AppColors.overlay(0.03),
               borderRadius: BorderRadius.circular(16),
               child: InkWell(
                 onTap: onTap,
@@ -226,7 +227,7 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
                   padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 12),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.white.withOpacity(0.08)),
+                    border: Border.all(color: AppColors.overlay(0.08)),
                   ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -241,7 +242,7 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
                       Text(
                         label,
                         textAlign: TextAlign.center,
-                        style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500),
+                        style: TextStyle(color: AppColors.textPrimary, fontSize: 12, fontWeight: FontWeight.w500),
                       ),
                     ],
                   ),
@@ -266,25 +267,25 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.info_outline, size: 16, color: AppColors.businessOrange),
+          Icon(Icons.info_outline, size: 16, color: AppColors.businessOrange),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Completa tu perfil de negocio',
-                  style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
+                  style: TextStyle(color: AppColors.textPrimary, fontSize: 14, fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 2),
-                const Text(
+                Text(
                   'Agrega horarios detallados y al menos 5 fotos para aparecer destacado en el mapa.',
                   style: TextStyle(color: AppColors.slate400, fontSize: 12),
                 ),
                 const SizedBox(height: 6),
                 GestureDetector(
                   onTap: _openEdit,
-                  child: const Text(
+                  child: Text(
                     'Completar ahora →',
                     style: TextStyle(color: AppColors.businessOrange, fontSize: 12, fontWeight: FontWeight.w600),
                   ),
@@ -310,9 +311,9 @@ class _RecentReviewTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.03),
+        color: AppColors.overlay(0.03),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
+        border: Border.all(color: AppColors.overlay(0.08)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -320,7 +321,7 @@ class _RecentReviewTile extends StatelessWidget {
           CircleAvatar(
             radius: 16,
             backgroundColor: AppColors.brandTeal.withOpacity(0.15),
-            child: Text(review.initials, style: const TextStyle(color: AppColors.brandTeal, fontSize: 11, fontWeight: FontWeight.w700)),
+            child: Text(review.initials, style: TextStyle(color: AppColors.brandTeal, fontSize: 11, fontWeight: FontWeight.w700)),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -330,17 +331,17 @@ class _RecentReviewTile extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(review.author, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
+                    Text(review.author, style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 13)),
                     Row(
                       children: [
                         Row(
                           children: List.generate(
                             5,
-                            (i) => Icon(Icons.star, size: 11, color: i < review.rating ? Colors.amber : Colors.white.withOpacity(0.15)),
+                            (i) => Icon(Icons.star, size: 11, color: i < review.rating ? Colors.amber : AppColors.overlay(0.15)),
                           ),
                         ),
                         const SizedBox(width: 6),
-                        Text(review.dateLabel, style: const TextStyle(color: AppColors.slate500, fontSize: 10)),
+                        Text(review.dateLabel, style: TextStyle(color: AppColors.slate500, fontSize: 10)),
                       ],
                     ),
                   ],
@@ -350,7 +351,7 @@ class _RecentReviewTile extends StatelessWidget {
                   review.text,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: Colors.white70, fontSize: 12.5, height: 1.4),
+                  style: TextStyle(color: AppColors.textSecondary, fontSize: 12.5, height: 1.4),
                 ),
               ],
             ),

@@ -70,9 +70,9 @@ class AppButton extends StatelessWidget {
         );
       case AppButtonVariant.ghost:
         return _ButtonColors(
-          background: Colors.white.withOpacity(0.05),
-          foreground: Colors.white,
-          border: Border.all(color: Colors.white.withOpacity(0.1)),
+          background: AppColors.overlay(0.05),
+          foreground: AppColors.textPrimary,
+          border: Border.all(color: AppColors.overlay(0.1)),
         );
     }
   }

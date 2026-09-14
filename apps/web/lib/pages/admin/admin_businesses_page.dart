@@ -112,25 +112,25 @@ class _AdminBusinessesPageState extends State<AdminBusinessesPage> {
           constraints: const BoxConstraints(maxWidth: 360),
           child: TextField(
             controller: _searchController,
-            style: const TextStyle(color: Colors.white, fontSize: 14),
+            style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
             decoration: InputDecoration(
               hintText: 'Buscar negocio…',
               hintStyle: AppTypography.bodySmall,
-              prefixIcon: const Icon(Icons.search, size: 18, color: AppColors.slate500),
+              prefixIcon: Icon(Icons.search, size: 18, color: AppColors.slate500),
               filled: true,
               fillColor: AppColors.surface,
               contentPadding: const EdgeInsets.symmetric(vertical: 12),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(AppRadius.buttonLg),
-                borderSide: const BorderSide(color: AppColors.borderSubtle),
+                borderSide: BorderSide(color: AppColors.borderSubtle),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(AppRadius.buttonLg),
-                borderSide: const BorderSide(color: AppColors.borderSubtle),
+                borderSide: BorderSide(color: AppColors.borderSubtle),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(AppRadius.buttonLg),
-                borderSide: const BorderSide(color: AppColors.adminViolet),
+                borderSide: BorderSide(color: AppColors.adminViolet),
               ),
             ),
           ),
@@ -147,7 +147,7 @@ class _AdminBusinessesPageState extends State<AdminBusinessesPage> {
                 onTap: () => setState(() => _estadoFiltro = e),
               ),
             if (_categorias.isNotEmpty) ...[
-              const SizedBox(width: AppSpacing.sm, height: 1),
+              SizedBox(width: AppSpacing.sm, height: 1),
               for (final c in _categorias)
                 _FilterChip(
                   label: c,
@@ -242,20 +242,65 @@ class _BusinessCard extends StatelessWidget {
     return DsCard(
       child: Row(
         children: [
-          const DsIconBadgeCircle(icon: Icons.apartment, color: AppColors.businessOrange, size: 40),
+          DsIconBadgeCircle(icon: Icons.apartment, color: AppColors.businessOrange, size: 40),
           const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(negocio.nombre, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
+                Text(negocio.nombre, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 13)),
                 const SizedBox(height: 2),
                 Text(negocio.categoria ?? 'Sin categoría', maxLines: 1, overflow: TextOverflow.ellipsis, style: AppTypography.bodySmall),
               ],
             ),
           ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _AssetDot(label: '360', active: negocio.archivo360 != null),
+              const SizedBox(width: 4),
+              _AssetDot(label: 'M', active: negocio.arMarcador != null),
+              const SizedBox(width: 4),
+              _AssetDot(label: 'G', active: negocio.arGeo != null),
+            ],
+          ),
+          const SizedBox(width: AppSpacing.sm),
           DsBadge(text: label, tone: tone),
         ],
+      ),
+    );
+  }
+}
+
+/// Punto de estado para un recurso AR/360 (ver [_BusinessCard]): "360" =
+/// archivo 360°, "M" = modelo AR de marcador, "G" = modelo AR de
+/// geolocalización. Solo indica si ya se subió — la gestión real ocurre
+/// desde el panel del propio negocio.
+class _AssetDot extends StatelessWidget {
+  final String label;
+  final bool active;
+
+  const _AssetDot({required this.label, required this.active});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = active ? AppColors.brandTeal : AppColors.slate500;
+    return Tooltip(
+      message: label == '360'
+          ? (active ? 'Foto/video 360° subido' : 'Sin foto/video 360°')
+          : label == 'M'
+              ? (active ? 'Modelo AR de marcador subido' : 'Sin modelo AR de marcador')
+              : (active ? 'Modelo AR de geolocalización subido' : 'Sin modelo AR de geolocalización'),
+      child: Container(
+        width: 22,
+        height: 20,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: active ? color.withOpacity(0.15) : AppColors.overlay(0.05),
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: active ? color.withOpacity(0.4) : AppColors.overlay(0.1)),
+        ),
+        child: Text(label, style: TextStyle(color: color, fontSize: 9, fontWeight: FontWeight.w700)),
       ),
     );
   }

@@ -114,25 +114,30 @@ class _InicioContentState extends State<_InicioContent> {
       color: AppColors.adminViolet,
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(AppSpacing.xl),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _Hero(),
-            const SizedBox(height: AppSpacing.xl),
-            if (_loading)
-              const DsLoadingState()
-            else if (_error != null)
-              DsErrorState(message: _error!, onRetry: _load)
-            else if (_stats != null)
-              _StatsGrid(stats: _stats!),
-            const SizedBox(height: AppSpacing.xxl),
-            Text('Atajos del sistema', style: AppTypography.h2),
-            const SizedBox(height: 2),
-            Text('Accede rápidamente a los módulos principales', style: AppTypography.body),
-            const SizedBox(height: AppSpacing.lg),
-            _SectionsGrid(onNavigate: widget.onNavigate),
-          ],
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 960),
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.xl),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _Hero(),
+                  SizedBox(height: AppSpacing.lg),
+                  if (_loading)
+                    const DsLoadingState()
+                  else if (_error != null)
+                    DsErrorState(message: _error!, onRetry: _load)
+                  else if (_stats != null)
+                    _StatsGrid(stats: _stats!),
+                  const SizedBox(height: AppSpacing.xl),
+                  Text('Atajos del sistema', style: AppTypography.h3),
+                  const SizedBox(height: AppSpacing.sm),
+                  _SectionsGrid(onNavigate: widget.onNavigate),
+                ],
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -144,7 +149,7 @@ class _Hero extends StatelessWidget {
   Widget build(BuildContext context) {
     final now = DateTime.now();
     return SizedBox(
-      height: 220,
+      height: 170,
       child: ClipRRect(
         borderRadius: BorderRadius.circular(AppRadius.hero),
         child: Stack(
@@ -159,8 +164,8 @@ class _Hero extends StatelessWidget {
                     begin: Alignment.centerLeft,
                     end: Alignment.centerRight,
                     colors: [
-                      AppColors.bgDeep.withOpacity(0.92),
-                      AppColors.bgDeep.withOpacity(0.55),
+                      AppColors.scrimDark.withOpacity(0.92),
+                      AppColors.scrimDark.withOpacity(0.55),
                     ],
                   ),
                 ),
@@ -172,65 +177,44 @@ class _Hero extends StatelessWidget {
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
-                    colors: [AppColors.bgDeep.withOpacity(0.3), Colors.transparent],
+                    colors: [AppColors.scrimDark.withOpacity(0.3), Colors.transparent],
                   ),
                 ),
               ),
             ),
             Positioned.fill(
               child: Padding(
-                padding: const EdgeInsets.all(AppSpacing.xl),
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    final compact = Breakpoints.isCompact(constraints.maxWidth);
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(width: 18, height: 1, color: AppColors.adminViolet),
-                            const SizedBox(width: AppSpacing.sm),
-                            Text('PANEL DE ADMINISTRACIÓN',
-                                style: AppTypography.caption.copyWith(color: AppColors.adminViolet, letterSpacing: 2)),
-                            const SizedBox(width: AppSpacing.sm),
-                            Container(width: 18, height: 1, color: AppColors.adminViolet),
-                          ],
-                        ),
-                        const SizedBox(height: AppSpacing.sm),
-                        Text('TourisMAR — Admin', style: compact ? AppTypography.h1 : AppTypography.display.copyWith(fontSize: 34)),
-                        const SizedBox(height: 4),
-                        Text('Gestión central del sistema turístico', style: AppTypography.body.copyWith(fontSize: 15)),
-                        const SizedBox(height: AppSpacing.md),
-                        Wrap(
-                          spacing: AppSpacing.lg,
-                          runSpacing: 4,
-                          children: [
-                            _MetaChip(icon: Icons.location_on_outlined, text: 'Manzanillo, Colima'),
-                            _MetaChip(icon: Icons.calendar_today_outlined, text: formatDateEs(now)),
-                          ],
-                        ),
+                        Container(width: 16, height: 1, color: const Color(0xFFA78BFA)),
+                        const SizedBox(width: AppSpacing.sm),
+                        const Text('PANEL DE ADMINISTRACIÓN',
+                            style: TextStyle(
+                                color: Color(0xFFA78BFA), fontSize: 11, fontWeight: FontWeight.w500, letterSpacing: 2)),
                       ],
-                    );
-                  },
-                ),
-              ),
-            ),
-            Positioned(
-              top: AppSpacing.lg,
-              right: AppSpacing.xl,
-              child: Text(
-                'Descubre\nManzanillo',
-                textAlign: TextAlign.right,
-                style: TextStyle(
-                  fontFamily: AppTypography.h1.fontFamily,
-                  fontStyle: FontStyle.italic,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white.withOpacity(0.85),
-                  height: 1.2,
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text('TourisMAR — Admin', style: AppTypography.h1.copyWith(fontSize: 24, color: Colors.white)),
+                    const SizedBox(height: 2),
+                    const Text('Gestión central del sistema turístico',
+                        style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.4)),
+                    const SizedBox(height: AppSpacing.sm),
+                    Wrap(
+                      spacing: AppSpacing.lg,
+                      runSpacing: 4,
+                      children: [
+                        _MetaChip(icon: Icons.location_on_outlined, text: 'Manzanillo, Colima'),
+                        _MetaChip(icon: Icons.calendar_today_outlined, text: formatDateEs(now)),
+                      ],
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -281,7 +265,7 @@ class _StatsGrid extends StatelessWidget {
           physics: const NeverScrollableScrollPhysics(),
           mainAxisSpacing: AppSpacing.md,
           crossAxisSpacing: AppSpacing.md,
-          childAspectRatio: compact ? 1.05 : 1.5,
+          childAspectRatio: compact ? 0.95 : 1.15,
           children: items.map((s) {
             final (icon, value, label, color) = s;
             return DsStatCard(icon: icon, value: value, label: label, accent: color);
@@ -299,60 +283,28 @@ class _SectionsGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final items = [
-      (
-        Icons.report_gmailerrorred_outlined,
-        'Solicitudes',
-        'Gestiona y da seguimiento a las solicitudes del sistema.',
-        AppColors.amber,
-        AdminSection.solicitudes,
-        'assets/images/admin-section-solicitudes.webp',
-      ),
-      (
-        Icons.group_outlined,
-        'Usuarios',
-        'Administra los usuarios del sistema.',
-        AppColors.brandTeal,
-        AdminSection.usuarios,
-        'assets/images/admin-section-usuarios.webp',
-      ),
-      (
-        Icons.apartment_outlined,
-        'Negocios',
-        'Registra y administra los negocios turísticos.',
-        AppColors.businessOrange,
-        AdminSection.negocios,
-        'assets/images/admin-section-negocios.webp',
-      ),
-      (
-        Icons.shield_outlined,
-        'Admins',
-        'Configuración y control de administradores.',
-        AppColors.adminViolet,
-        AdminSection.admins,
-        'assets/images/admin-section-admins.webp',
-      ),
+      (Icons.report_gmailerrorred_outlined, 'Solicitudes', AppColors.amber, AdminSection.solicitudes),
+      (Icons.group_outlined, 'Usuarios', AppColors.brandTeal, AdminSection.usuarios),
+      (Icons.apartment_outlined, 'Negocios', AppColors.businessOrange, AdminSection.negocios),
+      (Icons.shield_outlined, 'Admins', AppColors.adminViolet, AdminSection.admins),
     ];
 
     return LayoutBuilder(
       builder: (context, constraints) {
         final compact = Breakpoints.isCompact(constraints.maxWidth);
         return GridView.count(
-          crossAxisCount: compact ? 2 : 4,
+          crossAxisCount: compact ? 1 : 2,
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          mainAxisSpacing: AppSpacing.md,
-          crossAxisSpacing: AppSpacing.md,
-          // Íconos ~5x más grandes que en el diseño original: las tarjetas
-          // necesitan bastante más alto para no desbordar el contenido.
-          childAspectRatio: compact ? 0.52 : 0.72,
+          mainAxisSpacing: AppSpacing.sm,
+          crossAxisSpacing: AppSpacing.sm,
+          childAspectRatio: compact ? 5.5 : 4.2,
           children: items.map((s) {
-            final (icon, title, desc, color, section, bg) = s;
+            final (icon, title, color, section) = s;
             return DsSectionCard(
               icon: icon,
               title: title,
-              description: desc,
               accent: color,
-              backgroundImage: bg,
               onTap: () => onNavigate(section),
             );
           }).toList(),

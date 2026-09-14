@@ -100,7 +100,7 @@ class _AdminRequestsPageState extends State<AdminRequestsPage> {
             ),
             const SizedBox(height: 4),
             Text('Gestiona y da seguimiento a las solicitudes del sistema.', style: AppTypography.body),
-            const SizedBox(height: AppSpacing.xl),
+            SizedBox(height: AppSpacing.xl),
             _buildContent(),
           ],
         ),
@@ -153,13 +153,13 @@ class _RequestRow extends StatelessWidget {
           final identity = Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const DsIconBadgeCircle(icon: Icons.apartment, color: AppColors.businessOrange),
+              DsIconBadgeCircle(icon: Icons.apartment, color: AppColors.businessOrange),
               const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(negocio.nombre, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14)),
+                    Text(negocio.nombre, style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700, fontSize: 14)),
                     const SizedBox(height: 2),
                     Text(negocio.categoria ?? 'Sin categoría', style: AppTypography.bodySmall),
                   ],
@@ -185,7 +185,7 @@ class _RequestRow extends StatelessWidget {
           final actions = Padding(
             padding: EdgeInsets.only(top: AppSpacing.md, left: compact ? 0 : 56),
             child: isDeciding
-                ? const SizedBox(
+                ? SizedBox(
                     width: 20,
                     height: 20,
                     child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.slate400),

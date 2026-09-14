@@ -8,6 +8,8 @@ import '../pages/login_page.dart';
 import '../pages/profile_page.dart';
 import '../services/session_storage.dart';
 import '../theme/app_theme.dart';
+import '../theme/breakpoints.dart';
+import 'theme_toggle_tile.dart';
 import 'user_avatar.dart';
 
 class NavItem {
@@ -98,15 +100,15 @@ class _DrawerStat extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 16)),
-        Text(label, style: const TextStyle(color: AppColors.slate400, fontSize: 10)),
+        Text(value, style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700, fontSize: 16)),
+        Text(label, style: TextStyle(color: AppColors.slate400, fontSize: 10)),
       ],
     );
   }
 }
 
 /// Bloque de identidad del visitante mostrado arriba del menú de navegación
-/// en el drawer (avatar, nombre, correo, y stats de lugares/reseñas).
+/// (avatar, nombre, correo, y stats de lugares/reseñas).
 class VisitorIdentityCard extends StatelessWidget {
   final String name;
   final String email;
@@ -139,11 +141,11 @@ class VisitorIdentityCard extends StatelessWidget {
                   Text(name,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14)),
+                      style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
                   Text(email,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: AppColors.slate400, fontSize: 12)),
+                      style: TextStyle(color: AppColors.slate400, fontSize: 12)),
                 ],
               ),
             ),
@@ -162,9 +164,8 @@ class VisitorIdentityCard extends StatelessWidget {
   }
 }
 
-/// Bloque de identidad del negocio mostrado arriba del menú de navegación en
-/// el drawer del panel de empresa (logo, nombre, verificado, categoría y
-/// stats de calificación/reseñas/visitas).
+/// Bloque de identidad del negocio mostrado arriba del menú de navegación
+/// (logo, nombre, verificado, categoría y stats de calificación/reseñas/visitas).
 class BusinessIdentityCard extends StatelessWidget {
   final BusinessProfile business;
 
@@ -185,7 +186,7 @@ class BusinessIdentityCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: AppColors.businessOrange.withOpacity(0.3)),
               ),
-              child: const Icon(Icons.apartment, color: AppColors.businessOrange, size: 20),
+              child: Icon(Icons.apartment, color: AppColors.businessOrange, size: 20),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -198,18 +199,18 @@ class BusinessIdentityCard extends StatelessWidget {
                         child: Text(business.businessName,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14)),
+                            style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
                       ),
                       if (business.verified) ...[
                         const SizedBox(width: 4),
-                        const Icon(Icons.check_circle, color: AppColors.brandTeal, size: 12),
+                        Icon(Icons.check_circle, color: AppColors.brandTeal, size: 12),
                       ],
                     ],
                   ),
                   Text(business.category,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: AppColors.slate400, fontSize: 12)),
+                      style: TextStyle(color: AppColors.slate400, fontSize: 12)),
                 ],
               ),
             ),
@@ -230,9 +231,12 @@ class BusinessIdentityCard extends StatelessWidget {
   }
 }
 
-/// Shell compartido por todas las páginas de visitante y de empresa: barra
-/// superior + drawer lateral. Solo cambia el color de acento, el badge y los
-/// nav items — el resto de la estructura es idéntica en ambos flujos.
+/// Shell compartido por todas las páginas de visitante y de empresa: sidebar
+/// izquierdo fijo (siempre visible, sin botón para abrirlo) en pantallas
+/// anchas; en pantallas angostas —donde un sidebar fijo no cabe— cae a un
+/// drawer con botón, igual que antes. Solo cambia el color de acento, el
+/// badge y los nav items — el resto de la estructura es idéntica en ambos
+/// flujos (visitante/empresa).
 class AppShell extends StatelessWidget {
   final Color accentColor;
   final String? badgeText;
@@ -253,18 +257,99 @@ class AppShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.panelNavy,
-      endDrawer: _NavDrawer(
-        accentColor: accentColor,
-        badgeText: badgeText,
-        identity: drawerIdentity,
-        navItems: navItems,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isWide = Breakpoints.isExpanded(constraints.maxWidth);
+
+        if (isWide) {
+          return Scaffold(
+            backgroundColor: AppColors.panelNavy,
+            body: Row(
+              children: [
+                SizedBox(
+                  width: 280,
+                  child: _SidebarPanel(
+                    accentColor: accentColor,
+                    badgeText: badgeText,
+                    identity: drawerIdentity,
+                    navItems: navItems,
+                  ),
+                ),
+                Expanded(
+                  child: Column(
+                    children: [
+                      _CompactTopBar(accentColor: accentColor),
+                      Expanded(child: body),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        return Scaffold(
+          backgroundColor: AppColors.panelNavy,
+          endDrawer: Drawer(
+            backgroundColor: AppColors.panelNavySoft,
+            width: 320,
+            child: SafeArea(
+              child: _SidebarContent(
+                accentColor: accentColor,
+                badgeText: badgeText,
+                identity: drawerIdentity,
+                navItems: navItems,
+                closeDrawerOnTap: true,
+                showCloseButton: true,
+              ),
+            ),
+          ),
+          body: Column(
+            children: [
+              _TopBar(accentColor: accentColor, badgeText: badgeText, avatarIcon: avatarIcon),
+              Expanded(child: body),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Barra superior mínima para cuando el sidebar ya está fijo a la izquierda:
+/// solo campana de notificaciones, sin logo (ya está en el sidebar) ni botón
+/// de avatar (no hay drawer que abrir).
+class _CompactTopBar extends StatelessWidget {
+  final Color accentColor;
+
+  const _CompactTopBar({required this.accentColor});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      decoration: BoxDecoration(
+        color: AppColors.panelNavy,
+        border: Border(bottom: BorderSide(color: AppColors.overlay(0.08))),
       ),
-      body: Column(
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          _TopBar(accentColor: accentColor, badgeText: badgeText, avatarIcon: avatarIcon),
-          Expanded(child: body),
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Icon(Icons.notifications_none, color: AppColors.slate300),
+              Positioned(
+                right: -1,
+                top: -1,
+                child: Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(color: AppColors.orange, shape: BoxShape.circle),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -284,7 +369,7 @@ class _TopBar extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       decoration: BoxDecoration(
         color: AppColors.panelNavy,
-        border: Border(bottom: BorderSide(color: Colors.white.withOpacity(0.08))),
+        border: Border(bottom: BorderSide(color: AppColors.overlay(0.08))),
       ),
       child: Row(
         children: [
@@ -292,12 +377,12 @@ class _TopBar extends StatelessWidget {
             width: 32,
             height: 32,
             decoration: BoxDecoration(color: accentColor, shape: BoxShape.circle),
-            child: const Icon(Icons.waves, size: 18, color: AppColors.panelNavy),
+            child: Icon(Icons.waves, size: 18, color: AppColors.panelNavy),
           ),
           const SizedBox(width: 8),
-          const Text(
+          Text(
             'TOURISMAR',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, letterSpacing: 2, fontSize: 13),
+            style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, letterSpacing: 2, fontSize: 13),
           ),
           if (badgeText != null) ...[
             const SizedBox(width: 8),
@@ -318,14 +403,14 @@ class _TopBar extends StatelessWidget {
           Stack(
             clipBehavior: Clip.none,
             children: [
-              const Icon(Icons.notifications_none, color: AppColors.slate300),
+              Icon(Icons.notifications_none, color: AppColors.slate300),
               Positioned(
                 right: -1,
                 top: -1,
                 child: Container(
                   width: 8,
                   height: 8,
-                  decoration: const BoxDecoration(color: AppColors.orange, shape: BoxShape.circle),
+                  decoration: BoxDecoration(color: AppColors.orange, shape: BoxShape.circle),
                 ),
               ),
             ],
@@ -343,13 +428,15 @@ class _TopBar extends StatelessWidget {
   }
 }
 
-class _NavDrawer extends StatelessWidget {
+/// Panel de sidebar fijo (pantallas anchas): mismo contenido que el drawer
+/// pero sin barra de cierre y sin necesidad de popear nada al navegar.
+class _SidebarPanel extends StatelessWidget {
   final Color accentColor;
   final String? badgeText;
   final Widget identity;
   final List<NavItem> navItems;
 
-  const _NavDrawer({
+  const _SidebarPanel({
     required this.accentColor,
     required this.identity,
     required this.navItems,
@@ -358,129 +445,167 @@ class _NavDrawer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Drawer(
-      backgroundColor: AppColors.panelNavySoft,
-      width: 320,
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.panelNavySoft,
+        border: Border(right: BorderSide(color: AppColors.overlay(0.08))),
+      ),
       child: SafeArea(
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-              decoration: BoxDecoration(
-                border: Border(bottom: BorderSide(color: Colors.white.withOpacity(0.08))),
+        child: _SidebarContent(
+          accentColor: accentColor,
+          badgeText: badgeText,
+          identity: identity,
+          navItems: navItems,
+          closeDrawerOnTap: false,
+          showCloseButton: false,
+        ),
+      ),
+    );
+  }
+}
+
+/// Contenido compartido entre el sidebar fijo y el drawer móvil: logo,
+/// identidad, lista de navegación, toggle de tema y cerrar sesión.
+class _SidebarContent extends StatelessWidget {
+  final Color accentColor;
+  final String? badgeText;
+  final Widget identity;
+  final List<NavItem> navItems;
+  final bool closeDrawerOnTap;
+  final bool showCloseButton;
+
+  const _SidebarContent({
+    required this.accentColor,
+    required this.identity,
+    required this.navItems,
+    required this.closeDrawerOnTap,
+    required this.showCloseButton,
+    this.badgeText,
+  });
+
+  void _handleTap(BuildContext context, VoidCallback onTap) {
+    if (closeDrawerOnTap) Navigator.of(context).pop();
+    onTap();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          decoration: BoxDecoration(
+            border: Border(bottom: BorderSide(color: AppColors.overlay(0.08))),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(color: accentColor, shape: BoxShape.circle),
+                child: Icon(Icons.waves, size: 12, color: AppColors.panelNavy),
               ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 24,
-                    height: 24,
-                    decoration: BoxDecoration(color: accentColor, shape: BoxShape.circle),
-                    child: const Icon(Icons.waves, size: 12, color: AppColors.panelNavy),
+              const SizedBox(width: 8),
+              Text(
+                'TOURISMAR',
+                style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700, fontSize: 12, letterSpacing: 1.5),
+              ),
+              if (badgeText != null) ...[
+                const SizedBox(width: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                  decoration: BoxDecoration(
+                    color: accentColor.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(4),
                   ),
-                  const SizedBox(width: 8),
-                  const Text(
-                    'TOURISMAR',
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 12, letterSpacing: 1.5),
+                  child: Text(
+                    badgeText!,
+                    style: TextStyle(color: accentColor, fontSize: 9, fontWeight: FontWeight.w700),
                   ),
-                  if (badgeText != null) ...[
-                    const SizedBox(width: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                      decoration: BoxDecoration(
-                        color: accentColor.withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        badgeText!,
-                        style: TextStyle(color: accentColor, fontSize: 9, fontWeight: FontWeight.w700),
-                      ),
-                    ),
-                  ],
-                  const Spacer(),
-                  IconButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.close, color: AppColors.slate300, size: 18),
-                  ),
-                ],
-              ),
-            ),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                border: Border(bottom: BorderSide(color: Colors.white.withOpacity(0.08))),
-              ),
-              child: identity,
-            ),
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                children: navItems.map((item) {
-                  final color = item.highlight ? accentColor : AppColors.slate300;
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 4),
-                    child: Material(
-                      color: item.highlight ? accentColor.withOpacity(0.1) : Colors.transparent,
-                      borderRadius: BorderRadius.circular(12),
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(12),
-                        onTap: () {
-                          Navigator.of(context).pop();
-                          item.onTap();
-                        },
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                          child: Row(
-                            children: [
-                              Icon(item.icon, size: 18, color: color),
-                              const SizedBox(width: 12),
-                              Text(
-                                item.label,
-                                style: TextStyle(
-                                  color: item.highlight ? color : Colors.white.withOpacity(0.85),
-                                  fontSize: 14,
-                                  fontWeight: item.highlight ? FontWeight.w600 : FontWeight.w500,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-              child: Material(
-                color: Colors.transparent,
-                borderRadius: BorderRadius.circular(12),
-                child: InkWell(
+                ),
+              ],
+              const Spacer(),
+              if (showCloseButton)
+                IconButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: Icon(Icons.close, color: AppColors.slate300, size: 18),
+                ),
+            ],
+          ),
+        ),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            border: Border(bottom: BorderSide(color: AppColors.overlay(0.08))),
+          ),
+          child: identity,
+        ),
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            children: navItems.map((item) {
+              final color = item.highlight ? accentColor : AppColors.slate300;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Material(
+                  color: item.highlight ? accentColor.withOpacity(0.1) : Colors.transparent,
                   borderRadius: BorderRadius.circular(12),
-                  onTap: () {
-                    Navigator.of(context).pop();
-                    _logout(context);
-                  },
-                  child: const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                    child: Row(
-                      children: [
-                        Icon(Icons.logout, size: 18, color: AppColors.errorRed),
-                        SizedBox(width: 12),
-                        Text(
-                          'Cerrar sesión',
-                          style: TextStyle(color: AppColors.errorRed, fontSize: 14, fontWeight: FontWeight.w500),
-                        ),
-                      ],
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: () => _handleTap(context, item.onTap),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      child: Row(
+                        children: [
+                          Icon(item.icon, size: 18, color: color),
+                          const SizedBox(width: 12),
+                          Text(
+                            item.label,
+                            style: TextStyle(
+                              color: item.highlight ? color : AppColors.overlay(0.85),
+                              fontSize: 14,
+                              fontWeight: item.highlight ? FontWeight.w600 : FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
+              );
+            }).toList(),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: const ThemeToggleTile(),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+          child: Material(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: () => _handleTap(context, () => _logout(context)),
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                child: Row(
+                  children: [
+                    Icon(Icons.logout, size: 18, color: AppColors.errorRed),
+                    SizedBox(width: 12),
+                    Text(
+                      'Cerrar sesión',
+                      style: TextStyle(color: AppColors.errorRed, fontSize: 14, fontWeight: FontWeight.w500),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ],
+          ),
         ),
-      ),
+      ],
     );
   }
 }

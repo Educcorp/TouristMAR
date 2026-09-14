@@ -5,8 +5,8 @@ import 'ds_button.dart';
 import 'ds_icon_badge.dart';
 
 class DsLoadingState extends StatelessWidget {
-  final Color accent;
-  const DsLoadingState({super.key, this.accent = AppColors.adminViolet});
+  final Color? accent;
+  const DsLoadingState({super.key, this.accent});
 
   @override
   Widget build(BuildContext context) {
@@ -16,7 +16,7 @@ class DsLoadingState extends StatelessWidget {
         child: SizedBox(
           width: 28,
           height: 28,
-          child: CircularProgressIndicator(strokeWidth: 2.5, color: accent),
+          child: CircularProgressIndicator(strokeWidth: 2.5, color: accent ?? AppColors.adminViolet),
         ),
       ),
     );
@@ -71,10 +71,10 @@ class DsErrorState extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(Icons.error_outline, color: AppColors.errorRed, size: 18),
+          Icon(Icons.error_outline, color: AppColors.errorRed, size: 18),
           const SizedBox(width: AppSpacing.md),
           Expanded(
-            child: Text(message, style: const TextStyle(color: AppColors.errorRed, fontSize: 13)),
+            child: Text(message, style: TextStyle(color: AppColors.errorRed, fontSize: 13)),
           ),
           if (onRetry != null) ...[
             const SizedBox(width: AppSpacing.md),

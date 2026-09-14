@@ -29,7 +29,7 @@ class _FeaturedPlace {
 class HomePage extends StatefulWidget {
   final AuthUser user;
 
-  const HomePage({super.key, required this.user});
+  HomePage({super.key, required this.user});
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -38,7 +38,7 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   late final VisitorProfile _profile = VisitorProfile.fromAuthUser(widget.user);
 
-  final _quickActions = const [
+  final _quickActions = [
     _QuickAction(Icons.map_outlined, 'Explorar mapa', AppColors.brandTeal),
     _QuickAction(Icons.favorite_border, 'Mis favoritos', AppColors.orange),
     _QuickAction(Icons.add, 'Proponer lugar', AppColors.brandTeal),
@@ -86,9 +86,9 @@ class _HomePageState extends State<HomePage> {
                   const SizedBox(height: 20),
                   _buildSearchBar(),
                   const SizedBox(height: 28),
-                  const Text(
+                  Text(
                     'Acciones rápidas',
-                    style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
+                    style: TextStyle(color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 12),
                   _buildQuickActions(),
@@ -96,11 +96,11 @@ class _HomePageState extends State<HomePage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
+                      Text(
                         'Lugares destacados',
-                        style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
+                        style: TextStyle(color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.w600),
                       ),
-                      const Text(
+                      Text(
                         'Ver todos',
                         style: TextStyle(color: AppColors.brandTeal, fontSize: 13, fontWeight: FontWeight.w500),
                       ),
@@ -135,7 +135,7 @@ class _HomePageState extends State<HomePage> {
                 gradient: LinearGradient(
                   begin: Alignment.bottomLeft,
                   end: Alignment.topRight,
-                  colors: [AppColors.panelNavy.withOpacity(0.9), AppColors.panelNavy.withOpacity(0.35)],
+                  colors: [AppColors.scrimDark.withOpacity(0.9), AppColors.scrimDark.withOpacity(0.35)],
                 ),
               ),
             ),
@@ -147,15 +147,15 @@ class _HomePageState extends State<HomePage> {
                 children: [
                   const Text(
                     'MANZANILLO · COLIMA',
-                    style: TextStyle(color: AppColors.brandTeal, fontWeight: FontWeight.w600, fontSize: 11, letterSpacing: 2),
+                    style: TextStyle(color: Color(0xFF22D3EE), fontWeight: FontWeight.w600, fontSize: 11, letterSpacing: 2),
                   ),
                   const SizedBox(height: 6),
                   Text(
                     '$_greeting, $firstName ☀️',
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 24),
+                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 24, color: Colors.white),
                   ),
                   const SizedBox(height: 2),
-                  const Text('¿Qué vas a explorar hoy?', style: TextStyle(color: AppColors.slate300, fontSize: 13)),
+                  const Text('¿Qué vas a explorar hoy?', style: TextStyle(color: Colors.white70, fontSize: 13)),
                 ],
               ),
             ),
@@ -171,21 +171,21 @@ class _HomePageState extends State<HomePage> {
       decoration: BoxDecoration(
         color: AppColors.panelNavySoft,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        border: Border.all(color: AppColors.overlay(0.1)),
       ),
       child: Row(
         children: [
-          const Icon(Icons.search, size: 18, color: AppColors.slate500),
+          Icon(Icons.search, size: 18, color: AppColors.slate500),
           const SizedBox(width: 10),
           Expanded(
             child: TextField(
-              style: const TextStyle(color: Colors.white, fontSize: 14),
+              style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
               decoration: InputDecoration(
                 border: InputBorder.none,
                 isDense: true,
                 contentPadding: const EdgeInsets.symmetric(vertical: 14),
                 hintText: 'Buscar playas, restaurantes, miradores...',
-                hintStyle: const TextStyle(color: AppColors.slate500),
+                hintStyle: TextStyle(color: AppColors.slate500),
               ),
             ),
           ),

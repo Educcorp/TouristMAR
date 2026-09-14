@@ -9,6 +9,7 @@ import {
   updateTuristaProfile,
   updateNegocioProfile,
   uploadProfilePhoto,
+  uploadNegocioAsset,
   findOrCreateGoogleUserFromMobileToken,
   DatabaseNotReadyError,
   GoogleLoginNotAllowedError,
@@ -71,6 +72,9 @@ export function toPublicUser(user: UserWithNegocio) {
           sitioWeb: user.negocio.sitioWeb,
           horario: user.negocio.horario,
           portada: user.negocio.portada,
+          archivo360: user.negocio.archivo360,
+          arMarcador: user.negocio.arMarcador,
+          arGeo: user.negocio.arGeo,
           estado: user.negocio.estado,
         }
       : null,
@@ -157,6 +161,36 @@ export async function uploadAvatar(req: AuthedRequest & { file?: Express.Multer.
       buffer: req.file.buffer,
       mimetype: req.file.mimetype,
     })
+    if (!updated) {
+      return res.status(404).json({ error: 'Usuario no encontrado' })
+    }
+    return res.json({ user: toPublicUser(updated) })
+  } catch (err) {
+    if (err instanceof DatabaseNotReadyError) {
+      return res.status(503).json({ error: err.message })
+    }
+    return res.status(400).json({ error: (err as Error).message })
+  }
+}
+
+const ASSET_KINDS = ['archivo360', 'arMarcador', 'arGeo'] as const
+
+export async function uploadNegocioAssetHandler(req: AuthedRequest & { file?: Express.Multer.File }, res: Response) {
+  const kind = req.params.kind as (typeof ASSET_KINDS)[number]
+  if (!ASSET_KINDS.includes(kind)) {
+    return res.status(400).json({ error: 'Tipo de recurso inválido' })
+  }
+  if (!req.file) {
+    return res.status(400).json({ error: 'No se recibió ningún archivo' })
+  }
+
+  try {
+    await uploadNegocioAsset(req.userId!, kind, {
+      buffer: req.file.buffer,
+      mimetype: req.file.mimetype,
+      originalname: req.file.originalname,
+    })
+    const updated = await findUserById(req.userId!)
     if (!updated) {
       return res.status(404).json({ error: 'Usuario no encontrado' })
     }

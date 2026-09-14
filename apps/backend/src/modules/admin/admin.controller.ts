@@ -61,6 +61,9 @@ export async function listNegocios(_req: AuthedRequest, res: Response) {
         email: n.user.email,
         contacto: n.user.nombres,
         solicitadoEn: n.createdAt,
+        archivo360: n.archivo360,
+        arMarcador: n.arMarcador,
+        arGeo: n.arGeo,
       })),
     })
   } catch (err) {

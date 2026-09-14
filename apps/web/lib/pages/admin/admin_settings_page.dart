@@ -49,7 +49,7 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(widget.admin.name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14)),
+                          Text(widget.admin.name, style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
                           const SizedBox(height: 2),
                           Text(widget.admin.email, style: AppTypography.bodySmall),
                         ],
@@ -69,13 +69,13 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
               child: DsCard(
                 child: Row(
                   children: [
-                    const DsIconBadgeCircle(icon: Icons.dark_mode_outlined, color: AppColors.adminViolet, size: 36),
+                    DsIconBadgeCircle(icon: Icons.dark_mode_outlined, color: AppColors.adminViolet, size: 36),
                     const SizedBox(width: AppSpacing.md),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('Reducir movimiento', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
+                          Text('Reducir movimiento', style: TextStyle(color: AppColors.textPrimary, fontSize: 13, fontWeight: FontWeight.w600)),
                           Text('Disminuye las animaciones de la interfaz.', style: AppTypography.bodySmall),
                         ],
                       ),
@@ -95,13 +95,13 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
               child: DsCard(
                 child: Row(
                   children: [
-                    const DsIconBadgeCircle(icon: Icons.notifications_outlined, color: AppColors.slate400, size: 36),
+                    DsIconBadgeCircle(icon: Icons.notifications_outlined, color: AppColors.slate400, size: 36),
                     const SizedBox(width: AppSpacing.md),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('Alertas por correo', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
+                          Text('Alertas por correo', style: TextStyle(color: AppColors.textPrimary, fontSize: 13, fontWeight: FontWeight.w600)),
                           Text('Aún no disponible en esta versión del panel.', style: AppTypography.bodySmall),
                         ],
                       ),
@@ -117,10 +117,10 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
               child: DsCard(
                 child: Row(
                   children: [
-                    const DsIconBadgeCircle(icon: Icons.logout, color: AppColors.errorRed, size: 36),
+                    DsIconBadgeCircle(icon: Icons.logout, color: AppColors.errorRed, size: 36),
                     const SizedBox(width: AppSpacing.md),
-                    const Expanded(
-                      child: Text('Cerrar sesión en este dispositivo.', style: TextStyle(color: Colors.white, fontSize: 13)),
+                    Expanded(
+                      child: Text('Cerrar sesión en este dispositivo.', style: TextStyle(color: AppColors.textPrimary, fontSize: 13)),
                     ),
                     DsButton(
                       label: 'Cerrar sesión',

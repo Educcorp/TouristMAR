@@ -46,8 +46,8 @@ class HeroPanel extends StatelessWidget {
               begin: Alignment.bottomCenter,
               end: Alignment.topCenter,
               colors: [
-                AppColors.panelNavy,
-                AppColors.panelNavy.withOpacity(0.5),
+                AppColors.scrimDark,
+                AppColors.scrimDark.withOpacity(0.5),
                 Colors.black.withOpacity(0.1),
               ],
             ),
@@ -63,8 +63,8 @@ class HeroPanel extends StatelessWidget {
                   Container(
                     width: 36,
                     height: 36,
-                    decoration: const BoxDecoration(color: AppColors.brandTeal, shape: BoxShape.circle),
-                    child: const Icon(Icons.waves, size: 20, color: AppColors.panelNavy),
+                    decoration: BoxDecoration(color: AppColors.brandTeal, shape: BoxShape.circle),
+                    child: Icon(Icons.waves, size: 20, color: AppColors.panelNavy),
                   ),
                   const SizedBox(width: 8),
                   const Text(
@@ -74,19 +74,20 @@ class HeroPanel extends StatelessWidget {
                 ],
               ),
               const Spacer(),
-              const Text(
+              Text(
                 'MANZANILLO · COLIMA',
-                style: TextStyle(color: AppColors.brandTeal, fontWeight: FontWeight.w600, fontSize: 12, letterSpacing: 3),
+                style: const TextStyle(color: Color(0xFF22D3EE), fontWeight: FontWeight.w600, fontSize: 12, letterSpacing: 3),
               ),
               const SizedBox(height: 16),
-              Text('Descubre el Pacífico\nMexicano', style: Theme.of(context).textTheme.headlineLarge),
+              Text('Descubre el Pacífico\nMexicano',
+                  style: Theme.of(context).textTheme.headlineLarge?.copyWith(color: Colors.white)),
               const SizedBox(height: 16),
               ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 420),
                 child: const Text(
                   'Playas, senderos de hiking, miradores y sabores locales — todo '
                   'centralizado para que explores Manzanillo como nunca antes.',
-                  style: TextStyle(color: AppColors.slate300, fontSize: 15, height: 1.4),
+                  style: TextStyle(color: Colors.white70, fontSize: 15, height: 1.4),
                 ),
               ),
               const SizedBox(height: 20),
@@ -99,7 +100,7 @@ class HeroPanel extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.only(top: 20),
                 decoration: BoxDecoration(
-                  border: Border(top: BorderSide(color: Colors.white.withOpacity(0.1))),
+                  border: Border(top: BorderSide(color: AppColors.overlay(0.1))),
                 ),
                 child: Row(
                   children: _stats
@@ -110,7 +111,7 @@ class HeroPanel extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(s.value, style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w600)),
-                              Text(s.label, style: const TextStyle(color: AppColors.slate400, fontSize: 12)),
+                              Text(s.label, style: const TextStyle(color: Colors.white60, fontSize: 12)),
                             ],
                           ),
                         ),
@@ -137,7 +138,7 @@ class _CategoryPill extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.black.withOpacity(0.3),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        border: Border.all(color: AppColors.overlay(0.1)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
