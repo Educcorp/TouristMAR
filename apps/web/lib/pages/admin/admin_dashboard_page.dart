@@ -127,7 +127,7 @@ class _InicioContentState extends State<_InicioContent> {
             else if (_stats != null)
               _StatsGrid(stats: _stats!),
             const SizedBox(height: AppSpacing.xxl),
-            Text('Secciones del sistema', style: AppTypography.h2),
+            Text('Atajos del sistema', style: AppTypography.h2),
             const SizedBox(height: 2),
             Text('Accede rápidamente a los módulos principales', style: AppTypography.body),
             const SizedBox(height: AppSpacing.lg),
@@ -150,7 +150,7 @@ class _Hero extends StatelessWidget {
         child: Stack(
           children: [
             Positioned.fill(
-              child: Image.asset('assets/images/hero-manzanillo.jpg', fit: BoxFit.cover),
+              child: Image.asset('assets/images/admin-hero-bahia.webp', fit: BoxFit.cover),
             ),
             Positioned.fill(
               child: DecoratedBox(
@@ -299,25 +299,62 @@ class _SectionsGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final items = [
-      (Icons.report_gmailerrorred_outlined, 'Solicitudes', 'Gestiona y da seguimiento a las solicitudes del sistema.', AppColors.amber, AdminSection.solicitudes),
-      (Icons.group_outlined, 'Usuarios', 'Administra los usuarios del sistema.', AppColors.brandTeal, AdminSection.usuarios),
-      (Icons.apartment_outlined, 'Negocios', 'Registra y administra los negocios turísticos.', AppColors.businessOrange, AdminSection.negocios),
-      (Icons.shield_outlined, 'Admins', 'Configuración y control de administradores.', AppColors.adminViolet, AdminSection.admins),
+      (
+        Icons.report_gmailerrorred_outlined,
+        'Solicitudes',
+        'Gestiona y da seguimiento a las solicitudes del sistema.',
+        AppColors.amber,
+        AdminSection.solicitudes,
+        'assets/images/admin-section-solicitudes.webp',
+      ),
+      (
+        Icons.group_outlined,
+        'Usuarios',
+        'Administra los usuarios del sistema.',
+        AppColors.brandTeal,
+        AdminSection.usuarios,
+        'assets/images/admin-section-usuarios.webp',
+      ),
+      (
+        Icons.apartment_outlined,
+        'Negocios',
+        'Registra y administra los negocios turísticos.',
+        AppColors.businessOrange,
+        AdminSection.negocios,
+        'assets/images/admin-section-negocios.webp',
+      ),
+      (
+        Icons.shield_outlined,
+        'Admins',
+        'Configuración y control de administradores.',
+        AppColors.adminViolet,
+        AdminSection.admins,
+        'assets/images/admin-section-admins.webp',
+      ),
     ];
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final columns = Breakpoints.isCompact(constraints.maxWidth) ? 2 : 4;
+        final compact = Breakpoints.isCompact(constraints.maxWidth);
         return GridView.count(
-          crossAxisCount: columns,
+          crossAxisCount: compact ? 2 : 4,
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           mainAxisSpacing: AppSpacing.md,
           crossAxisSpacing: AppSpacing.md,
-          childAspectRatio: 0.95,
+          // Íconos ~5x más grandes que en el diseño original: las tarjetas
+          // necesitan bastante más alto para no desbordar el contenido.
+          childAspectRatio: compact ? 0.52 : 0.72,
           children: items.map((s) {
-            final (icon, title, desc, color, section) = s;
-            return DsSectionCard(icon: icon, title: title, description: desc, accent: color, onTap: () => onNavigate(section));
+            final (icon, title, desc, color, section, bg) = s;
+            return DsSectionCard(
+              icon: icon,
+              title: title,
+              description: desc,
+              accent: color,
+              backgroundImage: bg,
+              onTap: () => onNavigate(section),
+            );
           }).toList(),
         );
       },
