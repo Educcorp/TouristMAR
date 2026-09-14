@@ -39,7 +39,7 @@ class _ProfilePageState extends State<ProfilePage> {
         visitedCount: profile.visited.length,
         reviewsCount: profile.reviews.length,
       ),
-      navItems: visitorNavItems(context, profile: profile),
+      navItems: visitorNavItems(context, profile: profile, current: VisitorSection.profile),
       body: SingleChildScrollView(
         child: Column(
           children: [

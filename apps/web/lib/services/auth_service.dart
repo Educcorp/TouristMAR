@@ -273,38 +273,6 @@ class AuthService {
     return AuthUser.fromJson(data['user'] as Map<String, dynamic>);
   }
 
-  static final _extensionMediaTypes = {
-    'jpg': MediaType('image', 'jpeg'),
-    'jpeg': MediaType('image', 'jpeg'),
-    'png': MediaType('image', 'png'),
-    'webp': MediaType('image', 'webp'),
-    'mp4': MediaType('video', 'mp4'),
-    'glb': MediaType('model', 'gltf-binary'),
-    'gltf': MediaType('model', 'gltf+json'),
-  };
-
-  /// Sube un recurso AR/360 de un negocio (foto/video 360°, modelo AR de
-  /// marcador o de geolocalización). [kind] es 'archivo360' | 'arMarcador' |
-  /// 'arGeo', igual que las llaves del `negocio` en [AuthUser].
-  Future<AuthUser> uploadNegocioAsset(String token, String kind, Uint8List bytes, String filename) async {
-    final ext = filename.contains('.') ? filename.split('.').last.toLowerCase() : '';
-    final contentType = _extensionMediaTypes[ext] ?? MediaType('application', 'octet-stream');
-
-    final request = http.MultipartRequest('POST', Uri.parse('$apiUrl/auth/profile/negocio-asset/$kind'))
-      ..headers['Authorization'] = 'Bearer $token'
-      ..files.add(http.MultipartFile.fromBytes('file', bytes, filename: filename, contentType: contentType));
-
-    final streamed = await _client.send(request);
-    final res = await http.Response.fromStream(streamed);
-    final data = _decode(res.body);
-
-    if (res.statusCode < 200 || res.statusCode >= 300) {
-      throw AuthError((data['error'] as String?) ?? 'No se pudo subir el archivo');
-    }
-
-    return AuthUser.fromJson(data['user'] as Map<String, dynamic>);
-  }
-
   Future<AuthUser> updateProfile(String token, Map<String, String> fields) async {
     final res = await _client.patch(
       Uri.parse('$apiUrl/auth/profile'),

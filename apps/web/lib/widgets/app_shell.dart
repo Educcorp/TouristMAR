@@ -40,11 +40,24 @@ void _logout(BuildContext context) {
   );
 }
 
-List<NavItem> visitorNavItems(BuildContext context, {required VisitorProfile profile}) {
+/// Qué página del flujo de visitante está activa — decide qué ítem del nav
+/// se resalta. Antes el resaltado era fijo por ítem ("Mi perfil" siempre
+/// marcado); ahora cada página que arma la lista dice cuál es, vía [current].
+enum VisitorSection { home, profile }
+
+/// Análogo a [VisitorSection] para el flujo de empresa.
+enum BusinessSection { dashboard, profile, reviews }
+
+List<NavItem> visitorNavItems(
+  BuildContext context, {
+  required VisitorProfile profile,
+  required VisitorSection current,
+}) {
   return [
     NavItem(
       icon: Icons.home_outlined,
       label: 'Inicio',
+      highlight: current == VisitorSection.home,
       onTap: () => Navigator.of(context).popUntil((r) => r.isFirst),
     ),
     NavItem(icon: Icons.map_outlined, label: 'Explorar mapa', onTap: () => _comingSoon(context)),
@@ -52,7 +65,7 @@ List<NavItem> visitorNavItems(BuildContext context, {required VisitorProfile pro
     NavItem(
       icon: Icons.person_outline,
       label: 'Mi perfil',
-      highlight: true,
+      highlight: current == VisitorSection.profile,
       onTap: () => Navigator.of(context).push(
         MaterialPageRoute(builder: (_) => ProfilePage(profile: profile)),
       ),
@@ -62,17 +75,22 @@ List<NavItem> visitorNavItems(BuildContext context, {required VisitorProfile pro
   ];
 }
 
-List<NavItem> businessNavItems(BuildContext context, {required BusinessProfile business}) {
+List<NavItem> businessNavItems(
+  BuildContext context, {
+  required BusinessProfile business,
+  required BusinessSection current,
+}) {
   return [
     NavItem(
       icon: Icons.bar_chart,
       label: 'Dashboard',
+      highlight: current == BusinessSection.dashboard,
       onTap: () => Navigator.of(context).popUntil((r) => r.isFirst),
     ),
     NavItem(
       icon: Icons.apartment,
       label: 'Mi negocio',
-      highlight: true,
+      highlight: current == BusinessSection.profile,
       onTap: () => Navigator.of(context).push(
         MaterialPageRoute(builder: (_) => BusinessProfilePage(business: business)),
       ),
@@ -80,6 +98,7 @@ List<NavItem> businessNavItems(BuildContext context, {required BusinessProfile b
     NavItem(
       icon: Icons.forum_outlined,
       label: 'Reseñas',
+      highlight: current == BusinessSection.reviews,
       onTap: () => Navigator.of(context).push(
         MaterialPageRoute(builder: (_) => BusinessReviewsPage(business: business)),
       ),

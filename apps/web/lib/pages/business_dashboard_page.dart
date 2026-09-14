@@ -49,7 +49,7 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
         child: Icon(Icons.apartment, size: 16, color: AppColors.businessOrange),
       ),
       drawerIdentity: BusinessIdentityCard(business: business),
-      navItems: businessNavItems(context, business: business),
+      navItems: businessNavItems(context, business: business, current: BusinessSection.dashboard),
       body: SingleChildScrollView(
         child: Center(
           child: ConstrainedBox(

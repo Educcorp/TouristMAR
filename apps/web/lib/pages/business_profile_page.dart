@@ -49,7 +49,7 @@ class _BusinessProfilePageState extends State<BusinessProfilePage> {
         child: Icon(Icons.apartment, size: 16, color: AppColors.businessOrange),
       ),
       drawerIdentity: BusinessIdentityCard(business: business),
-      navItems: businessNavItems(context, business: business),
+      navItems: businessNavItems(context, business: business, current: BusinessSection.profile),
       body: SingleChildScrollView(
         child: Column(
           children: [

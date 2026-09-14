@@ -4,7 +4,7 @@ import { OAuth2Client } from 'google-auth-library'
 import { Prisma } from '@prisma/client'
 import type { Profile } from 'passport-google-oauth20'
 import { prisma } from '../../config/prisma'
-import { supabase, AVATARS_BUCKET, NEGOCIO_ASSETS_BUCKET } from '../../config/supabase'
+import { supabase, AVATARS_BUCKET } from '../../config/supabase'
 import { env, isGoogleAuthEnabled } from '../../config/env'
 
 const googleClient = isGoogleAuthEnabled ? new OAuth2Client(env.GOOGLE_CLIENT_ID) : null
@@ -246,56 +246,6 @@ export async function uploadProfilePhoto(userId: string, file: { buffer: Buffer;
     }
 
     return prisma.user.findUnique({ where: { id: userId }, include: { negocio: true } })
-  })
-}
-
-export type NegocioAssetKind = 'archivo360' | 'arMarcador' | 'arGeo'
-
-const NEGOCIO_ASSET_FIELD: Record<NegocioAssetKind, 'archivo360' | 'arMarcador' | 'arGeo'> = {
-  archivo360: 'archivo360',
-  arMarcador: 'arMarcador',
-  arGeo: 'arGeo',
-}
-
-const NEGOCIO_ASSET_PATH: Record<NegocioAssetKind, string> = {
-  archivo360: '360',
-  arMarcador: 'ar-marcador',
-  arGeo: 'ar-geo',
-}
-
-// Sin lista blanca de mimetypes: además de imágenes/video (360°), esto
-// recibe modelos 3D para AR (.glb/.gltf) cuyo mimetype el navegador suele
-// mandar como 'application/octet-stream' — validar por tipo sería más
-// restrictivo de lo útil aquí.
-export async function uploadNegocioAsset(
-  userId: string,
-  kind: NegocioAssetKind,
-  file: { buffer: Buffer; mimetype: string; originalname: string },
-) {
-  return withDbGuard(async () => {
-    const negocio = await prisma.negocioProfile.findUnique({ where: { userId } })
-    if (!negocio) {
-      throw new Error('Este usuario no tiene un perfil de negocio')
-    }
-
-    const ext = file.originalname.includes('.') ? file.originalname.split('.').pop() : null
-    const path = `${userId}/${NEGOCIO_ASSET_PATH[kind]}${ext ? `.${ext}` : ''}`
-
-    const { error: uploadError } = await supabase.storage
-      .from(NEGOCIO_ASSETS_BUCKET)
-      .upload(path, file.buffer, { contentType: file.mimetype, upsert: true })
-
-    if (uploadError) {
-      throw new Error(`No se pudo subir el archivo: ${uploadError.message}`)
-    }
-
-    const { data } = supabase.storage.from(NEGOCIO_ASSETS_BUCKET).getPublicUrl(path)
-    const publicUrl = `${data.publicUrl}?v=${Date.now()}`
-
-    return prisma.negocioProfile.update({
-      where: { userId },
-      data: { [NEGOCIO_ASSET_FIELD[kind]]: publicUrl },
-    })
   })
 }
 

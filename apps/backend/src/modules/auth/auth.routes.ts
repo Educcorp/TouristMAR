@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import multer from 'multer'
-import { register, login, me, updateProfile, uploadAvatar, uploadNegocioAssetHandler, googleMobileLogin } from './auth.controller'
+import { register, login, me, updateProfile, uploadAvatar, googleMobileLogin } from './auth.controller'
 import { requireAuth } from './auth.middleware'
 import { passport } from '../../config/passport'
 import { env, isGoogleAuthEnabled } from '../../config/env'
@@ -17,24 +17,11 @@ const upload = multer({
   },
 })
 
-// Recursos de negocio (360°/AR): videos e imágenes equirectangulares y
-// modelos 3D (.glb/.gltf), bastante más pesados que un avatar.
-const uploadNegocioAssetMiddleware = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 100 * 1024 * 1024 },
-})
-
 authRouter.post('/register', register)
 authRouter.post('/login', login)
 authRouter.get('/me', requireAuth, me)
 authRouter.patch('/profile', requireAuth, updateProfile)
 authRouter.post('/profile/avatar', requireAuth, upload.single('file'), uploadAvatar)
-authRouter.post(
-  '/profile/negocio-asset/:kind',
-  requireAuth,
-  uploadNegocioAssetMiddleware.single('file'),
-  uploadNegocioAssetHandler,
-)
 authRouter.post('/google/mobile', googleMobileLogin)
 
 if (isGoogleAuthEnabled) {

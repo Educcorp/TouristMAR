@@ -72,7 +72,7 @@ class _HomePageState extends State<HomePage> {
         visitedCount: _profile.visited.length,
         reviewsCount: _profile.reviews.length,
       ),
-      navItems: visitorNavItems(context, profile: _profile),
+      navItems: visitorNavItems(context, profile: _profile, current: VisitorSection.home),
       body: SingleChildScrollView(
         child: Center(
           child: ConstrainedBox(
