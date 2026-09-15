@@ -6,6 +6,7 @@ import '../services/auth_service.dart';
 import '../services/session_storage.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_button.dart';
+import '../widgets/themed_builder.dart';
 import '../widgets/user_avatar.dart';
 
 class EditProfilePage extends StatefulWidget {
@@ -89,7 +90,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => ThemedBuilder(builder: _buildScaffold);
+
+  Widget _buildScaffold(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.panelNavy,
       body: SafeArea(

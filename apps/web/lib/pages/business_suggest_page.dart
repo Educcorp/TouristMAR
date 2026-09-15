@@ -6,6 +6,7 @@ import '../services/session_storage.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_button.dart';
 import '../widgets/app_text_field.dart';
+import '../widgets/themed_builder.dart';
 
 /// Formulario para que una cuenta de negocio ya aprobada sugiera un negocio
 /// adicional — cae en la misma cola de "Solicitudes" del admin que un
@@ -68,7 +69,9 @@ class _BusinessSuggestPageState extends State<BusinessSuggestPage> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => ThemedBuilder(builder: _buildScaffold);
+
+  Widget _buildScaffold(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.panelNavy,
       body: SafeArea(

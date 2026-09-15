@@ -9,6 +9,7 @@ import '../../widgets/admin/admin_shell.dart';
 import '../../widgets/admin/ds_states.dart';
 import '../../widgets/admin/ds_section_card.dart';
 import '../../widgets/admin/ds_stat_card.dart';
+import '../../widgets/themed_builder.dart';
 import 'admin_admins_page.dart';
 import 'admin_businesses_page.dart';
 import 'admin_help_page.dart';
@@ -35,13 +36,21 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
   AdminSection _selected = AdminSection.inicio;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => ThemedBuilder(builder: _buildShell);
+
+  Widget _buildShell(BuildContext context) {
     return AdminShell(
       admin: widget.admin,
       selected: _selected,
       onSelect: (s) => setState(() => _selected = s),
+      onNotificationTap: _handleNotificationTap,
       body: _buildBody(),
     );
+  }
+
+  void _handleNotificationTap(AppNotification notification) {
+    final section = adminSectionForNotification(notification.tipo);
+    if (section != null) setState(() => _selected = section);
   }
 
   Widget _buildBody() {

@@ -14,8 +14,9 @@ import 'admin/ds_states.dart';
 /// siempre vive dentro de uno) y abre un diálogo con el detalle al tocarla.
 class NotificationBell extends StatefulWidget {
   final Color accentColor;
+  final ValueChanged<AppNotification>? onNotificationTap;
 
-  const NotificationBell({super.key, required this.accentColor});
+  const NotificationBell({super.key, required this.accentColor, this.onNotificationTap});
 
   @override
   State<NotificationBell> createState() => _NotificationBellState();
@@ -45,8 +46,9 @@ class _NotificationBellState extends State<NotificationBell> {
   }
 
   Future<void> _openPanel() async {
-    await showNotificationsDialog(context, widget.accentColor);
+    final tapped = await showNotificationsDialog(context, widget.accentColor);
     _refreshCount();
+    if (tapped != null) widget.onNotificationTap?.call(tapped);
   }
 
   @override
@@ -57,28 +59,38 @@ class _NotificationBellState extends State<NotificationBell> {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: _openPanel,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Icon(Icons.notifications_none, color: AppColors.slate300),
-          if (_unread > 0)
-            Positioned(
-              right: -6,
-              top: -4,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                constraints: const BoxConstraints(minWidth: 16),
-                decoration: BoxDecoration(color: widget.accentColor, borderRadius: BorderRadius.circular(999)),
-                child: Text(
-                  _unread > 9 ? '9+' : '$_unread',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w700),
+    return Material(
+      color: Colors.transparent,
+      shape: const CircleBorder(),
+      child: InkWell(
+        onTap: _openPanel,
+        customBorder: const CircleBorder(),
+        hoverColor: widget.accentColor.withOpacity(0.12),
+        splashColor: widget.accentColor.withOpacity(0.18),
+        child: Padding(
+          padding: const EdgeInsets.all(6),
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Icon(Icons.notifications_none, color: AppColors.slate300),
+              if (_unread > 0)
+                Positioned(
+                  right: -4,
+                  top: -2,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                    constraints: const BoxConstraints(minWidth: 16),
+                    decoration: BoxDecoration(color: widget.accentColor, borderRadius: BorderRadius.circular(999)),
+                    child: Text(
+                      _unread > 9 ? '9+' : '$_unread',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w700),
+                    ),
+                  ),
                 ),
-              ),
-            ),
-        ],
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -86,9 +98,11 @@ class _NotificationBellState extends State<NotificationBell> {
 
 /// Abre el mismo panel de notificaciones que la campana — usado también
 /// desde el ítem "Notificaciones" del drawer, para que ambos accesos lleven
-/// al mismo lugar en vez de duplicar la lógica.
-Future<void> showNotificationsDialog(BuildContext context, Color accentColor) {
-  return showDialog<void>(
+/// al mismo lugar en vez de duplicar la lógica. Si se toca una notificación
+/// (no los botones "Cerrar"/"Marcar todas"), el diálogo se cierra solo y
+/// devuelve esa notificación para que el llamador decida a dónde navegar.
+Future<AppNotification?> showNotificationsDialog(BuildContext context, Color accentColor) {
+  return showDialog<AppNotification?>(
     context: context,
     builder: (_) => _NotificationsDialog(accentColor: accentColor),
   );
@@ -140,17 +154,7 @@ class _NotificationsDialogState extends State<_NotificationsDialog> {
     if (token == null) return;
     setState(() {
       final idx = _notifications.indexWhere((x) => x.id == n.id);
-      if (idx != -1) {
-        _notifications[idx] = AppNotification(
-          id: n.id,
-          tipo: n.tipo,
-          titulo: n.titulo,
-          cuerpo: n.cuerpo,
-          negocioId: n.negocioId,
-          leida: true,
-          createdAt: n.createdAt,
-        );
-      }
+      if (idx != -1) _notifications[idx] = n.copyWith(leida: true);
     });
     try {
       await _authService.markNotificationRead(token, n.id);
@@ -163,22 +167,18 @@ class _NotificationsDialogState extends State<_NotificationsDialog> {
   Future<void> _markAllRead() async {
     final token = SessionStorage.token;
     if (token == null) return;
-    setState(() {
-      _notifications = _notifications
-          .map((n) => AppNotification(
-                id: n.id,
-                tipo: n.tipo,
-                titulo: n.titulo,
-                cuerpo: n.cuerpo,
-                negocioId: n.negocioId,
-                leida: true,
-                createdAt: n.createdAt,
-              ))
-          .toList();
-    });
+    setState(() => _notifications = _notifications.map((n) => n.copyWith(leida: true)).toList());
     try {
       await _authService.markAllNotificationsRead(token);
     } catch (_) {}
+  }
+
+  /// Tocar una notificación (a diferencia de "Marcar todas"/"Cerrar") cierra
+  /// el panel y le entrega la notificación a quien lo abrió, para que
+  /// navegue a su contenido relacionado.
+  Future<void> _handleTileTap(AppNotification n) async {
+    await _markRead(n);
+    if (mounted) Navigator.of(context).pop(n.copyWith(leida: true));
   }
 
   @override
@@ -233,7 +233,7 @@ class _NotificationsDialogState extends State<_NotificationsDialog> {
         itemBuilder: (context, i) => _NotificationTile(
           notification: _notifications[i],
           accentColor: widget.accentColor,
-          onTap: () => _markRead(_notifications[i]),
+          onTap: () => _handleTileTap(_notifications[i]),
         ),
       ),
     );

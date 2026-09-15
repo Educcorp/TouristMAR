@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/business_profile.dart';
 import '../services/auth_service.dart';
 import '../widgets/business/business_shell.dart';
+import '../widgets/themed_builder.dart';
 import 'business_dashboard_page.dart';
 import 'business_profile_page.dart';
 import 'business_reviews_page.dart';
@@ -58,7 +59,9 @@ class _BusinessHomePageState extends State<BusinessHomePage> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => ThemedBuilder(builder: _buildShell);
+
+  Widget _buildShell(BuildContext context) {
     return BusinessShell(
       negocios: _negocios,
       selected: _selected,
@@ -66,8 +69,22 @@ class _BusinessHomePageState extends State<BusinessHomePage> {
       onAddNegocio: _openSuggestForm,
       section: _section,
       onSelectSection: _selectSection,
+      onNotificationTap: _handleNotificationTap,
       body: _buildBody(),
     );
+  }
+
+  /// Una notificación de aprobado/rechazado trae el negocioId al que se
+  /// refiere — si todavía está en la lista (siempre debería estarlo), se
+  /// selecciona y se manda a "Mi negocio" para que se vea el resultado.
+  void _handleNotificationTap(AppNotification notification) {
+    final negocioId = notification.negocioId;
+    if (negocioId == null) return;
+    if (!_negocios.any((n) => n.id == negocioId)) return;
+    setState(() {
+      _selectedId = negocioId;
+      _section = BusinessSection.perfil;
+    });
   }
 
   Widget _buildBody() {

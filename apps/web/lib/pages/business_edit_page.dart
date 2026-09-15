@@ -8,6 +8,7 @@ import '../theme/app_theme.dart';
 import '../widgets/app_button.dart';
 import '../widgets/app_text_field.dart';
 import '../widgets/cover_image.dart';
+import '../widgets/themed_builder.dart';
 
 class BusinessEditPage extends StatefulWidget {
   final BusinessProfile business;
@@ -137,7 +138,9 @@ class _BusinessEditPageState extends State<BusinessEditPage> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => ThemedBuilder(builder: _buildScaffold);
+
+  Widget _buildScaffold(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.panelNavy,
       body: SafeArea(

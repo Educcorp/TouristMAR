@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../models/business_profile.dart';
 import '../../pages/login_page.dart';
+import '../../services/auth_service.dart';
 import '../../services/session_storage.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/breakpoints.dart';
@@ -48,6 +49,7 @@ class BusinessShell extends StatelessWidget {
   final BusinessSection section;
   final ValueChanged<BusinessSection> onSelectSection;
   final Widget body;
+  final ValueChanged<AppNotification>? onNotificationTap;
 
   const BusinessShell({
     super.key,
@@ -58,6 +60,7 @@ class BusinessShell extends StatelessWidget {
     required this.section,
     required this.onSelectSection,
     required this.body,
+    this.onNotificationTap,
   });
 
   @override
@@ -95,7 +98,7 @@ class BusinessShell extends StatelessWidget {
                 Expanded(
                   child: Column(
                     children: [
-                      const _BusinessCompactTopBar(),
+                      _BusinessCompactTopBar(onNotificationTap: onNotificationTap),
                       Expanded(child: body),
                     ],
                   ),
@@ -125,7 +128,7 @@ class BusinessShell extends StatelessWidget {
           ),
           body: Column(
             children: [
-              const _BusinessTopBar(),
+              _BusinessTopBar(onNotificationTap: onNotificationTap),
               Expanded(child: body),
             ],
           ),
@@ -136,7 +139,9 @@ class BusinessShell extends StatelessWidget {
 }
 
 class _BusinessCompactTopBar extends StatelessWidget {
-  const _BusinessCompactTopBar();
+  final ValueChanged<AppNotification>? onNotificationTap;
+
+  const _BusinessCompactTopBar({this.onNotificationTap});
 
   @override
   Widget build(BuildContext context) {
@@ -149,7 +154,7 @@ class _BusinessCompactTopBar extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          NotificationBell(accentColor: AppColors.businessOrange),
+          NotificationBell(accentColor: AppColors.businessOrange, onNotificationTap: onNotificationTap),
         ],
       ),
     );
@@ -157,7 +162,9 @@ class _BusinessCompactTopBar extends StatelessWidget {
 }
 
 class _BusinessTopBar extends StatelessWidget {
-  const _BusinessTopBar();
+  final ValueChanged<AppNotification>? onNotificationTap;
+
+  const _BusinessTopBar({this.onNotificationTap});
 
   @override
   Widget build(BuildContext context) {
@@ -194,7 +201,7 @@ class _BusinessTopBar extends StatelessWidget {
             ),
           ),
           const Spacer(),
-          NotificationBell(accentColor: AppColors.businessOrange),
+          NotificationBell(accentColor: AppColors.businessOrange, onNotificationTap: onNotificationTap),
           const SizedBox(width: 20),
           Builder(
             builder: (context) => GestureDetector(

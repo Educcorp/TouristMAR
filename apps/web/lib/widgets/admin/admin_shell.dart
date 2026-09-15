@@ -8,6 +8,20 @@ import '../../theme/breakpoints.dart';
 import '../notification_bell.dart';
 import '../theme_toggle_tile.dart';
 
+/// Adónde debe mandar al admin una notificación según su tipo — usado por
+/// [AdminDashboardPage] para pasarle a la campana un handler concreto.
+AdminSection? adminSectionForNotification(String tipo) {
+  switch (tipo) {
+    case 'negocio_pendiente':
+    case 'negocio_sugerido':
+      return AdminSection.solicitudes;
+    case 'usuario_nuevo':
+      return AdminSection.usuarios;
+    default:
+      return null;
+  }
+}
+
 /// Destinos disponibles en el panel admin.
 enum AdminSection { inicio, solicitudes, usuarios, negocios, admins, reportes, configuracion, ayuda }
 
@@ -48,6 +62,7 @@ class AdminShell extends StatelessWidget {
   final AdminSection selected;
   final ValueChanged<AdminSection> onSelect;
   final Widget body;
+  final ValueChanged<AppNotification>? onNotificationTap;
 
   const AdminShell({
     super.key,
@@ -55,6 +70,7 @@ class AdminShell extends StatelessWidget {
     required this.selected,
     required this.onSelect,
     required this.body,
+    this.onNotificationTap,
   });
 
   @override
@@ -96,7 +112,7 @@ class AdminShell extends StatelessWidget {
                 Expanded(
                   child: Column(
                     children: [
-                      const _AdminCompactTopBar(),
+                      _AdminCompactTopBar(onNotificationTap: onNotificationTap),
                       Expanded(child: content),
                     ],
                   ),
@@ -123,7 +139,7 @@ class AdminShell extends StatelessWidget {
           ),
           body: Column(
             children: [
-              const _AdminTopBar(),
+              _AdminTopBar(onNotificationTap: onNotificationTap),
               Expanded(child: content),
             ],
           ),
@@ -134,7 +150,9 @@ class AdminShell extends StatelessWidget {
 }
 
 class _AdminCompactTopBar extends StatelessWidget {
-  const _AdminCompactTopBar();
+  final ValueChanged<AppNotification>? onNotificationTap;
+
+  const _AdminCompactTopBar({this.onNotificationTap});
 
   @override
   Widget build(BuildContext context) {
@@ -147,7 +165,7 @@ class _AdminCompactTopBar extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          NotificationBell(accentColor: AppColors.adminViolet),
+          NotificationBell(accentColor: AppColors.adminViolet, onNotificationTap: onNotificationTap),
         ],
       ),
     );
@@ -155,7 +173,9 @@ class _AdminCompactTopBar extends StatelessWidget {
 }
 
 class _AdminTopBar extends StatelessWidget {
-  const _AdminTopBar();
+  final ValueChanged<AppNotification>? onNotificationTap;
+
+  const _AdminTopBar({this.onNotificationTap});
 
   @override
   Widget build(BuildContext context) {
@@ -192,7 +212,7 @@ class _AdminTopBar extends StatelessWidget {
             ),
           ),
           const Spacer(),
-          NotificationBell(accentColor: AppColors.adminViolet),
+          NotificationBell(accentColor: AppColors.adminViolet, onNotificationTap: onNotificationTap),
           const SizedBox(width: 20),
           Builder(
             builder: (context) => GestureDetector(

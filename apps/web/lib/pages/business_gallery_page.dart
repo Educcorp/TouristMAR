@@ -6,6 +6,7 @@ import '../services/auth_service.dart';
 import '../services/session_storage.dart';
 import '../theme/app_theme.dart';
 import '../widgets/cover_image.dart';
+import '../widgets/themed_builder.dart';
 
 class BusinessGalleryPage extends StatefulWidget {
   final BusinessProfile business;
@@ -109,7 +110,9 @@ class _BusinessGalleryPageState extends State<BusinessGalleryPage> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => ThemedBuilder(builder: _buildScaffold);
+
+  Widget _buildScaffold(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.panelNavy,
       body: SafeArea(

@@ -198,6 +198,16 @@ class AppNotification {
     required this.createdAt,
   });
 
+  AppNotification copyWith({bool? leida}) => AppNotification(
+        id: id,
+        tipo: tipo,
+        titulo: titulo,
+        cuerpo: cuerpo,
+        negocioId: negocioId,
+        leida: leida ?? this.leida,
+        createdAt: createdAt,
+      );
+
   factory AppNotification.fromJson(Map<String, dynamic> json) => AppNotification(
         id: json['id'] as String,
         tipo: json['tipo'] as String,

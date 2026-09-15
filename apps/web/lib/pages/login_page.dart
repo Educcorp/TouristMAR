@@ -5,6 +5,7 @@ import '../theme/breakpoints.dart';
 import '../theme/theme_controller.dart';
 import '../widgets/hero_panel.dart';
 import '../widgets/login_form.dart';
+import '../widgets/themed_builder.dart';
 
 class LoginPage extends StatelessWidget {
   final String? initialError;
@@ -13,6 +14,10 @@ class LoginPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return ThemedBuilder(builder: (context) => _buildScaffold());
+  }
+
+  Widget _buildScaffold() {
     return Scaffold(
       backgroundColor: AppColors.panelNavy,
       body: Stack(

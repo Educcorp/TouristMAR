@@ -8,6 +8,7 @@ import '../widgets/app_shell.dart';
 import '../widgets/place_card.dart';
 import '../widgets/quick_action_card.dart';
 import '../widgets/register_place_banner.dart';
+import '../widgets/themed_builder.dart';
 import '../widgets/user_avatar.dart';
 
 class _QuickAction {
@@ -59,7 +60,9 @@ class _HomePageState extends State<HomePage> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => ThemedBuilder(builder: _buildShell);
+
+  Widget _buildShell(BuildContext context) {
     final firstName = widget.user.name.trim().isEmpty ? widget.user.name : widget.user.name.split(' ').first;
 
     return AppShell(

@@ -13,18 +13,14 @@ class TouristMarApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Sin `key: ValueKey(mode)`: cada pantalla se reconstruye a sí misma con
+    // `ThemedBuilder` (ver ese archivo) en vez de forzar la reconstrucción de
+    // toda la app — así el Navigator y la sesión actual sobreviven al cambio
+    // de tema, sin el parpadeo de vuelta al login que había antes.
     return ValueListenableBuilder<ThemeMode>(
       valueListenable: ThemeController.mode,
       builder: (context, mode, _) {
-        // key: fuerza a reconstruir toda la app (Navigator incluido) al
-        // cambiar de tema. Los colores de AppColors son globales (no pasan
-        // por `Theme.of(context)`), así que las páginas ya montadas en el
-        // stack de navegación no se enterarían del cambio sin esto. El
-        // costo es volver a la pantalla principal — LoginForm ya restaura
-        // la sesión y manda al usuario a su panel correspondiente, igual
-        // que pasaría con un refresh normal del navegador.
         return MaterialApp(
-          key: ValueKey(mode),
           title: 'TourisMAR — Iniciar sesión',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.current,

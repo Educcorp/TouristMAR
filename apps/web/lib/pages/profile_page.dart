@@ -5,6 +5,7 @@ import '../theme/app_theme.dart';
 import '../theme/breakpoints.dart';
 import '../widgets/app_button.dart';
 import '../widgets/app_shell.dart';
+import '../widgets/themed_builder.dart';
 import '../widgets/user_avatar.dart';
 import 'edit_profile_page.dart';
 
@@ -26,7 +27,9 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => ThemedBuilder(builder: _buildShell);
+
+  Widget _buildShell(BuildContext context) {
     final profile = widget.profile;
 
     return AppShell(
