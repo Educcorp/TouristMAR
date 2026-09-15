@@ -2,58 +2,42 @@ import 'package:flutter/material.dart';
 
 import '../models/business_profile.dart';
 import '../theme/app_theme.dart';
-import '../widgets/app_shell.dart';
+import '../widgets/admin/ds_states.dart';
 
-class BusinessReviewsPage extends StatelessWidget {
+/// Contenido de la sección "Reseñas" embebido en [BusinessShell] — sin
+/// Scaffold/AppBar propio, igual que las páginas del panel admin.
+class BusinessReviewsContent extends StatelessWidget {
   final BusinessProfile business;
 
-  const BusinessReviewsPage({super.key, required this.business});
+  const BusinessReviewsContent({super.key, required this.business});
 
   static const _distribution = [72, 18, 6, 3, 1];
 
   @override
   Widget build(BuildContext context) {
-    return AppShell(
-      accentColor: AppColors.businessOrange,
-      badgeText: 'EMPRESA',
-      avatarIcon: Container(
-        width: 32,
-        height: 32,
-        decoration: BoxDecoration(
-          color: AppColors.businessOrange.withOpacity(0.12),
-          shape: BoxShape.circle,
-          border: Border.all(color: AppColors.businessOrange.withOpacity(0.4)),
-        ),
-        child: Icon(Icons.apartment, size: 16, color: AppColors.businessOrange),
-      ),
-      drawerIdentity: BusinessIdentityCard(business: business),
-      navItems: businessNavItems(context, business: business, current: BusinessSection.reviews),
-      body: SingleChildScrollView(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 680),
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      TextButton.icon(
-                        onPressed: () => Navigator.of(context).pop(),
-                        icon: Icon(Icons.arrow_back, size: 15, color: AppColors.slate400),
-                        label: Text('Volver', style: TextStyle(color: AppColors.slate400, fontSize: 13)),
-                      ),
-                      const SizedBox(width: 8),
-                      Text('Reseñas de clientes', style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 20)),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
+    return SingleChildScrollView(
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 680),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Reseñas de clientes', style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 20)),
+                const SizedBox(height: 16),
+                if (!business.verified)
+                  const DsEmptyState(
+                    icon: Icons.forum_outlined,
+                    title: 'Aún no hay reseñas',
+                    subtitle: 'Este negocio todavía no está activo en el mapa.',
+                  )
+                else ...[
                   _buildSummary(),
                   const SizedBox(height: 20),
                   ...businessReviews.map((r) => _buildReview(r)),
                 ],
-              ),
+              ],
             ),
           ),
         ),

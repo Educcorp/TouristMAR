@@ -2,9 +2,8 @@ import 'dart:html' as html;
 
 import 'package:flutter/material.dart';
 
-import '../models/business_profile.dart';
 import '../pages/admin/admin_dashboard_page.dart';
-import '../pages/business_dashboard_page.dart';
+import '../pages/business_home_page.dart';
 import '../pages/home_page.dart';
 import '../services/auth_service.dart';
 import '../services/session_storage.dart';
@@ -107,14 +106,14 @@ class _LoginFormState extends State<LoginForm> {
       return;
     }
     if (user.isNegocio) {
-      if (user.negocio != null && user.negocio!.aprobado) {
+      if (user.negociosAprobados.isNotEmpty) {
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => BusinessDashboardPage(business: BusinessProfile.fromAuthUser(user))),
+          MaterialPageRoute(builder: (_) => BusinessHomePage(user: user)),
         );
         return;
       }
       setState(() {
-        _negocioEstado = user.negocio;
+        _negocioEstado = user.negocios.isNotEmpty ? user.negocios.first : null;
         _screen = _Screen.negocioEstado;
       });
       return;

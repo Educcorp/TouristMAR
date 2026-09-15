@@ -2,6 +2,7 @@ import { Response } from 'express'
 import { z } from 'zod'
 import {
   listNegociosPendientes,
+  listApprovedNegocioUserIds,
   reviewNegocio,
   getAdminStats,
   listGestionableUsers,
@@ -30,15 +31,19 @@ export async function dashboard(_req: AuthedRequest, res: Response) {
 
 export async function listPendingNegocios(_req: AuthedRequest, res: Response) {
   try {
-    const negocios = await listNegociosPendientes()
+    const [negocios, aprobadosPorDueño] = await Promise.all([listNegociosPendientes(), listApprovedNegocioUserIds()])
     return res.json({
       negocios: negocios.map((n) => ({
-        id: n.userId,
+        id: n.id,
+        ownerId: n.userId,
         nombre: n.nombre,
         categoria: n.categoria,
         email: n.user.email,
         contacto: n.user.nombres,
         solicitadoEn: n.createdAt,
+        // Distingue, para el admin, un registro nuevo de una empresa que
+        // sugiere un negocio adicional (ya tiene al menos uno aprobado).
+        esAdicional: aprobadosPorDueño.has(n.userId),
       })),
     })
   } catch (err) {
@@ -54,7 +59,8 @@ export async function listNegocios(_req: AuthedRequest, res: Response) {
     const negocios = await listNegociosAll()
     return res.json({
       negocios: negocios.map((n) => ({
-        id: n.userId,
+        id: n.id,
+        ownerId: n.userId,
         nombre: n.nombre,
         categoria: n.categoria,
         estado: n.estado,
@@ -76,7 +82,7 @@ export async function listNegocios(_req: AuthedRequest, res: Response) {
 
 async function decide(req: AuthedRequest, res: Response, decision: 'aprobado' | 'rechazado') {
   try {
-    const negocio = await reviewNegocio(req.params.userId, decision, req.userId!)
+    const negocio = await reviewNegocio(req.params.negocioId, decision, req.userId!)
     return res.json({ negocio })
   } catch (err) {
     if (err instanceof DatabaseNotReadyError) {

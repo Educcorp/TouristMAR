@@ -165,6 +165,10 @@ class _RequestRow extends StatelessWidget {
                   ],
                 ),
               ),
+              if (negocio.esAdicional) ...[
+                const DsBadge(text: 'Negocio adicional', tone: BadgeTone.info),
+                const SizedBox(width: AppSpacing.sm),
+              ],
               const DsBadge(text: 'Pendiente', tone: BadgeTone.warning),
             ],
           );

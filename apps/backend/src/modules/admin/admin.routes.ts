@@ -21,8 +21,8 @@ adminRouter.get('/dashboard', dashboard)
 
 adminRouter.get('/negocios', listNegocios)
 adminRouter.get('/negocios/pendientes', listPendingNegocios)
-adminRouter.post('/negocios/:userId/aprobar', approveNegocio)
-adminRouter.post('/negocios/:userId/rechazar', rejectNegocio)
+adminRouter.post('/negocios/:negocioId/aprobar', approveNegocio)
+adminRouter.post('/negocios/:negocioId/rechazar', rejectNegocio)
 
 adminRouter.get('/users', listUsers)
 adminRouter.patch('/users/:userId/activo', updateUserActive)

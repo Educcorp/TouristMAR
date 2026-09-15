@@ -12,6 +12,9 @@ const googleClient = isGoogleAuthEnabled ? new OAuth2Client(env.GOOGLE_CLIENT_ID
 export class DatabaseNotReadyError extends Error {}
 export class GoogleLoginNotAllowedError extends Error {}
 export class AccountBlockedError extends Error {}
+/// Un negocioId que no existe, o que existe pero no le pertenece al usuario
+/// autenticado — se tratan igual (404) para no filtrar si el id existe.
+export class NegocioNotFoundError extends Error {}
 
 async function withDbGuard<T>(fn: () => Promise<T>): Promise<T> {
   try {
@@ -51,19 +54,19 @@ export async function registerUser(input: RegisterInput) {
         passwordHash,
         nombres: input.nombres,
         rol: input.rol,
-        negocio:
+        negocios:
           input.rol === 'negocio' && input.negocio
-            ? { create: { nombre: input.negocio.nombre, categoria: input.negocio.categoria } }
+            ? { create: [{ nombre: input.negocio.nombre, categoria: input.negocio.categoria }] }
             : undefined,
       },
-      include: { negocio: true },
+      include: { negocios: true },
     })
   })
 }
 
 export async function validateCredentials(email: string, password: string) {
   return withDbGuard(async () => {
-    const user = await prisma.user.findUnique({ where: { email }, include: { negocio: true } })
+    const user = await prisma.user.findUnique({ where: { email }, include: { negocios: true } })
     if (!user || !user.passwordHash) return null
     const valid = await bcrypt.compare(password, user.passwordHash)
     if (!valid) return null
@@ -75,7 +78,7 @@ export async function validateCredentials(email: string, password: string) {
 }
 
 async function resolveGoogleAccount(email: string, googleId: string, profile: { displayName?: string; photo?: string }) {
-  const existingByGoogleId = await prisma.user.findUnique({ where: { googleId }, include: { negocio: true } })
+  const existingByGoogleId = await prisma.user.findUnique({ where: { googleId }, include: { negocios: true } })
   if (existingByGoogleId) {
     if (existingByGoogleId.activo === false) {
       throw new AccountBlockedError('Tu cuenta ha sido bloqueada por un administrador')
@@ -83,7 +86,7 @@ async function resolveGoogleAccount(email: string, googleId: string, profile: { 
     return existingByGoogleId
   }
 
-  const existingByEmail = await prisma.user.findUnique({ where: { email }, include: { negocio: true } })
+  const existingByEmail = await prisma.user.findUnique({ where: { email }, include: { negocios: true } })
 
   if (existingByEmail && existingByEmail.activo === false) {
     throw new AccountBlockedError('Tu cuenta ha sido bloqueada por un administrador')
@@ -100,12 +103,13 @@ async function resolveGoogleAccount(email: string, googleId: string, profile: { 
         nombres: profile.displayName || email,
         avatarUrl: profile.photo,
       },
-      include: { negocio: true },
+      include: { negocios: true },
     })
   }
 
   if (existingByEmail.rol === 'negocio') {
-    if (existingByEmail.negocio?.estado !== 'aprobado') {
+    const tieneAprobado = existingByEmail.negocios.some((n) => n.estado === 'aprobado')
+    if (!tieneAprobado) {
       throw new GoogleLoginNotAllowedError(
         'Tu negocio todavía no ha sido aprobado por un administrador. Podrás iniciar sesión con Google en cuanto se apruebe tu cuenta.',
       )
@@ -120,7 +124,7 @@ async function resolveGoogleAccount(email: string, googleId: string, profile: { 
     return prisma.user.update({
       where: { id: existingByEmail.id },
       data: { googleId },
-      include: { negocio: true },
+      include: { negocios: true },
     })
   }
 
@@ -166,7 +170,7 @@ export async function findOrCreateGoogleUserFromMobileToken(idToken: string) {
 }
 
 export async function findUserById(id: string) {
-  return withDbGuard(() => prisma.user.findUnique({ where: { id }, include: { negocio: true } }))
+  return withDbGuard(() => prisma.user.findUnique({ where: { id }, include: { negocios: true } }))
 }
 
 export function signToken(userId: string) {
@@ -178,7 +182,7 @@ export async function updateTuristaProfile(userId: string, data: { nombres?: str
     prisma.user.update({
       where: { id: userId },
       data: { nombres: data.nombres, bio: data.bio },
-      include: { negocio: true },
+      include: { negocios: true },
     }),
   )
 }
@@ -194,13 +198,24 @@ export interface NegocioProfileInput {
   portada?: string
 }
 
-export async function updateNegocioProfile(userId: string, data: NegocioProfileInput) {
-  return withDbGuard(() =>
-    prisma.negocioProfile.update({
-      where: { userId },
-      data,
-    }),
-  )
+/// Confirma que `negocioId` existe y le pertenece a `userId`. Todas las
+/// mutaciones sobre un negocio puntual (editar, subir portada/galería,
+/// aprobar/rechazar queda aparte porque eso lo hace un admin, no el dueño)
+/// pasan por aquí primero — ahora que una cuenta puede tener varios negocios
+/// ya no alcanza con `where: { userId }` para identificar cuál.
+async function assertOwnedNegocio(negocioId: string, userId: string) {
+  const negocio = await prisma.negocioProfile.findUnique({ where: { id: negocioId } })
+  if (!negocio || negocio.userId !== userId) {
+    throw new NegocioNotFoundError('No se encontró ese negocio')
+  }
+  return negocio
+}
+
+export async function updateNegocioProfile(negocioId: string, userId: string, data: NegocioProfileInput) {
+  return withDbGuard(async () => {
+    await assertOwnedNegocio(negocioId, userId)
+    return prisma.negocioProfile.update({ where: { id: negocioId }, data })
+  })
 }
 
 const ALLOWED_IMAGE_TYPES: Record<string, string> = {
@@ -210,13 +225,15 @@ const ALLOWED_IMAGE_TYPES: Record<string, string> = {
   'image/gif': 'gif',
 }
 
+/// Solo para el avatar de turista — la portada de un negocio se sube con
+/// [uploadNegocioPortada], que exige un negocioId puntual.
 export async function uploadProfilePhoto(userId: string, file: { buffer: Buffer; mimetype: string }) {
   if (!ALLOWED_IMAGE_TYPES[file.mimetype]) {
     throw new Error('Formato de imagen no soportado (usa PNG, JPG, WEBP o GIF)')
   }
 
   return withDbGuard(async () => {
-    const user = await prisma.user.findUnique({ where: { id: userId }, include: { negocio: true } })
+    const user = await prisma.user.findUnique({ where: { id: userId } })
     if (!user) {
       throw new Error('Usuario no encontrado')
     }
@@ -239,31 +256,55 @@ export async function uploadProfilePhoto(userId: string, file: { buffer: Buffer;
     const { data } = supabase.storage.from(AVATARS_BUCKET).getPublicUrl(path)
     const publicUrl = `${data.publicUrl}?v=${Date.now()}`
 
-    if (user.rol === 'negocio' && user.negocio) {
-      await prisma.negocioProfile.update({ where: { userId }, data: { portada: publicUrl } })
-    } else {
-      await prisma.user.update({ where: { id: userId }, data: { avatarUrl: publicUrl } })
-    }
+    await prisma.user.update({ where: { id: userId }, data: { avatarUrl: publicUrl } })
 
-    return prisma.user.findUnique({ where: { id: userId }, include: { negocio: true } })
+    return prisma.user.findUnique({ where: { id: userId }, include: { negocios: true } })
   })
 }
 
-export async function addNegocioGaleriaImage(userId: string, file: { buffer: Buffer; mimetype: string; originalname: string }) {
+export async function uploadNegocioPortada(negocioId: string, userId: string, file: { buffer: Buffer; mimetype: string }) {
   if (!ALLOWED_IMAGE_TYPES[file.mimetype]) {
     throw new Error('Formato de imagen no soportado (usa PNG, JPG, WEBP o GIF)')
   }
 
   return withDbGuard(async () => {
-    const negocio = await prisma.negocioProfile.findUnique({ where: { userId } })
-    if (!negocio) {
-      throw new Error('Este usuario no tiene un perfil de negocio')
+    await assertOwnedNegocio(negocioId, userId)
+
+    // Un archivo fijo por negocio (no por usuario, ya que un dueño puede
+    // tener varios) — cada subida nueva sobreescribe la portada anterior de
+    // ESE negocio en particular.
+    const path = `${negocioId}/portada`
+    const { error: uploadError } = await supabase.storage
+      .from(NEGOCIO_ASSETS_BUCKET)
+      .upload(path, file.buffer, { contentType: file.mimetype, upsert: true })
+
+    if (uploadError) {
+      throw new Error(`No se pudo subir la imagen: ${uploadError.message}`)
     }
+
+    const { data } = supabase.storage.from(NEGOCIO_ASSETS_BUCKET).getPublicUrl(path)
+    const publicUrl = `${data.publicUrl}?v=${Date.now()}`
+
+    return prisma.negocioProfile.update({ where: { id: negocioId }, data: { portada: publicUrl } })
+  })
+}
+
+export async function addNegocioGaleriaImage(
+  negocioId: string,
+  userId: string,
+  file: { buffer: Buffer; mimetype: string; originalname: string },
+) {
+  if (!ALLOWED_IMAGE_TYPES[file.mimetype]) {
+    throw new Error('Formato de imagen no soportado (usa PNG, JPG, WEBP o GIF)')
+  }
+
+  return withDbGuard(async () => {
+    await assertOwnedNegocio(negocioId, userId)
 
     const ext = ALLOWED_IMAGE_TYPES[file.mimetype]
     // Ruta única por subida (a diferencia de portada/avatar): la galería
     // acumula varias fotos en vez de reemplazar una sola.
-    const path = `${userId}/galeria/${Date.now()}.${ext}`
+    const path = `${negocioId}/galeria/${Date.now()}.${ext}`
 
     const { error: uploadError } = await supabase.storage
       .from(NEGOCIO_ASSETS_BUCKET)
@@ -276,22 +317,53 @@ export async function addNegocioGaleriaImage(userId: string, file: { buffer: Buf
     const { data } = supabase.storage.from(NEGOCIO_ASSETS_BUCKET).getPublicUrl(path)
 
     return prisma.negocioProfile.update({
-      where: { userId },
+      where: { id: negocioId },
       data: { galeria: { push: data.publicUrl } },
     })
   })
 }
 
-export async function removeNegocioGaleriaImage(userId: string, url: string) {
+export async function removeNegocioGaleriaImage(negocioId: string, userId: string, url: string) {
   return withDbGuard(async () => {
-    const negocio = await prisma.negocioProfile.findUnique({ where: { userId } })
-    if (!negocio) {
-      throw new Error('Este usuario no tiene un perfil de negocio')
-    }
+    const negocio = await assertOwnedNegocio(negocioId, userId)
 
     return prisma.negocioProfile.update({
-      where: { userId },
+      where: { id: negocioId },
       data: { galeria: negocio.galeria.filter((img) => img !== url) },
+    })
+  })
+}
+
+export interface SuggestNegocioInput {
+  nombre: string
+  categoria?: string
+  descripcion?: string
+  direccion?: string
+}
+
+/// Una cuenta de negocio ya aprobada sugiere un negocio adicional — cae en la
+/// misma cola de revisión que un registro nuevo (mismo `estado: 'pendiente'`,
+/// misma tabla), solo que ligado a un `userId` que ya tiene al menos un
+/// negocio aprobado. Se exige eso para no dejar que una cuenta sin vetear
+/// nunca amontone solicitudes.
+export async function suggestNegocio(userId: string, input: SuggestNegocioInput) {
+  return withDbGuard(async () => {
+    const user = await prisma.user.findUnique({ where: { id: userId }, include: { negocios: true } })
+    if (!user || user.rol !== 'negocio') {
+      throw new Error('Solo las cuentas de negocio pueden sugerir un negocio nuevo')
+    }
+    if (!user.negocios.some((n) => n.estado === 'aprobado')) {
+      throw new Error('Necesitas tener al menos un negocio aprobado antes de sugerir uno nuevo')
+    }
+
+    return prisma.negocioProfile.create({
+      data: {
+        userId,
+        nombre: input.nombre,
+        categoria: input.categoria,
+        descripcion: input.descripcion,
+        direccion: input.direccion,
+      },
     })
   })
 }
@@ -306,10 +378,20 @@ export async function listNegociosPendientes() {
   )
 }
 
-export async function reviewNegocio(negocioUserId: string, decision: 'aprobado' | 'rechazado', adminId: string) {
+/// Ids de dueños que ya tienen al menos un negocio aprobado — usado por el
+/// admin para distinguir, en la cola de solicitudes, un registro nuevo de
+/// una sugerencia de negocio adicional de una cuenta ya vetada.
+export async function listApprovedNegocioUserIds() {
+  return withDbGuard(async () => {
+    const rows = await prisma.negocioProfile.findMany({ where: { estado: 'aprobado' }, select: { userId: true } })
+    return new Set(rows.map((r) => r.userId))
+  })
+}
+
+export async function reviewNegocio(negocioId: string, decision: 'aprobado' | 'rechazado', adminId: string) {
   return withDbGuard(() =>
     prisma.negocioProfile.update({
-      where: { userId: negocioUserId },
+      where: { id: negocioId },
       data: { estado: decision, revisadoPor: adminId, revisadoEn: new Date() },
     }),
   )
@@ -334,7 +416,7 @@ export async function listGestionableUsers() {
   return withDbGuard(() =>
     prisma.user.findMany({
       where: { rol: { in: ['turista', 'negocio'] } },
-      include: { negocio: true },
+      include: { negocios: true },
       orderBy: { createdAt: 'desc' },
     }),
   )
@@ -349,7 +431,7 @@ export async function setUserActive(userId: string, activo: boolean) {
     if (user.rol === 'admin' || user.rol === 'super_admin') {
       throw new CannotModifyAdminError('No puedes bloquear a un administrador')
     }
-    return prisma.user.update({ where: { id: userId }, data: { activo }, include: { negocio: true } })
+    return prisma.user.update({ where: { id: userId }, data: { activo }, include: { negocios: true } })
   })
 }
 

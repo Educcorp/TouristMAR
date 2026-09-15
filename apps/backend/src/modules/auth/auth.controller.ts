@@ -9,12 +9,15 @@ import {
   updateTuristaProfile,
   updateNegocioProfile,
   uploadProfilePhoto,
+  uploadNegocioPortada,
   addNegocioGaleriaImage,
   removeNegocioGaleriaImage,
+  suggestNegocio,
   findOrCreateGoogleUserFromMobileToken,
   DatabaseNotReadyError,
   GoogleLoginNotAllowedError,
   AccountBlockedError,
+  NegocioNotFoundError,
 } from './auth.service'
 import type { AuthedRequest } from './auth.middleware'
 
@@ -38,9 +41,12 @@ const googleMobileSchema = z.object({
   idToken: z.string().min(1),
 })
 
-const profileSchema = z.object({
+const turistaProfileSchema = z.object({
   nombres: z.string().min(1).optional(),
   bio: z.string().max(200).optional(),
+})
+
+const negocioProfileSchema = z.object({
   nombre: z.string().min(1).optional(),
   categoria: z.string().optional(),
   descripcion: z.string().max(350).optional(),
@@ -48,12 +54,18 @@ const profileSchema = z.object({
   telefono: z.string().optional(),
   sitioWeb: z.string().optional(),
   horario: z.string().optional(),
-  portada: z.string().optional(),
 })
 
-type UserWithNegocio = User & { negocio: NegocioProfile | null }
+const suggestNegocioSchema = z.object({
+  nombre: z.string().min(1),
+  categoria: z.string().optional(),
+  descripcion: z.string().max(350).optional(),
+  direccion: z.string().optional(),
+})
 
-export function toPublicUser(user: UserWithNegocio) {
+type UserWithNegocios = User & { negocios: NegocioProfile[] }
+
+export function toPublicUser(user: UserWithNegocios) {
   return {
     id: user.id,
     email: user.email,
@@ -63,23 +75,23 @@ export function toPublicUser(user: UserWithNegocio) {
     createdAt: user.createdAt,
     avatarUrl: user.avatarUrl ?? null,
     bio: user.bio ?? null,
-    negocio: user.negocio
-      ? {
-          nombre: user.negocio.nombre,
-          categoria: user.negocio.categoria,
-          descripcion: user.negocio.descripcion,
-          direccion: user.negocio.direccion,
-          telefono: user.negocio.telefono,
-          sitioWeb: user.negocio.sitioWeb,
-          horario: user.negocio.horario,
-          portada: user.negocio.portada,
-          galeria: user.negocio.galeria,
-          archivo360: user.negocio.archivo360,
-          arMarcador: user.negocio.arMarcador,
-          arGeo: user.negocio.arGeo,
-          estado: user.negocio.estado,
-        }
-      : null,
+    negocios: user.negocios.map((n) => ({
+      id: n.id,
+      nombre: n.nombre,
+      categoria: n.categoria,
+      descripcion: n.descripcion,
+      direccion: n.direccion,
+      telefono: n.telefono,
+      sitioWeb: n.sitioWeb,
+      horario: n.horario,
+      portada: n.portada,
+      galeria: n.galeria,
+      archivo360: n.archivo360,
+      arMarcador: n.arMarcador,
+      arGeo: n.arGeo,
+      estado: n.estado,
+      createdAt: n.createdAt,
+    })),
   }
 }
 
@@ -159,6 +171,14 @@ export async function uploadAvatar(req: AuthedRequest & { file?: Express.Multer.
   }
 
   try {
+    const current = await findUserById(req.userId!)
+    if (!current) {
+      return res.status(404).json({ error: 'Usuario no encontrado' })
+    }
+    if (current.rol === 'negocio') {
+      return res.status(400).json({ error: 'Usa /profile/negocios/:negocioId/avatar para la portada de un negocio' })
+    }
+
     const updated = await uploadProfilePhoto(req.userId!, {
       buffer: req.file.buffer,
       mimetype: req.file.mimetype,
@@ -175,29 +195,13 @@ export async function uploadAvatar(req: AuthedRequest & { file?: Express.Multer.
   }
 }
 
-async function requireNegocio(userId: string, res: Response) {
-  const current = await findUserById(userId)
-  if (!current) {
-    res.status(404).json({ error: 'Usuario no encontrado' })
-    return null
-  }
-  if (current.rol !== 'negocio' || !current.negocio) {
-    res.status(403).json({ error: 'Solo las cuentas de negocio tienen galería' })
-    return null
-  }
-  return current
-}
-
 export async function uploadGaleriaImage(req: AuthedRequest & { file?: Express.Multer.File }, res: Response) {
   if (!req.file) {
     return res.status(400).json({ error: 'No se recibió ningún archivo' })
   }
 
   try {
-    const current = await requireNegocio(req.userId!, res)
-    if (!current) return
-
-    await addNegocioGaleriaImage(req.userId!, {
+    await addNegocioGaleriaImage(req.params.negocioId, req.userId!, {
       buffer: req.file.buffer,
       mimetype: req.file.mimetype,
       originalname: req.file.originalname,
@@ -207,6 +211,9 @@ export async function uploadGaleriaImage(req: AuthedRequest & { file?: Express.M
   } catch (err) {
     if (err instanceof DatabaseNotReadyError) {
       return res.status(503).json({ error: err.message })
+    }
+    if (err instanceof NegocioNotFoundError) {
+      return res.status(404).json({ error: err.message })
     }
     return res.status(400).json({ error: (err as Error).message })
   }
@@ -221,12 +228,53 @@ export async function deleteGaleriaImage(req: AuthedRequest, res: Response) {
   }
 
   try {
-    const current = await requireNegocio(req.userId!, res)
-    if (!current) return
-
-    await removeNegocioGaleriaImage(req.userId!, parsed.data.url)
+    await removeNegocioGaleriaImage(req.params.negocioId, req.userId!, parsed.data.url)
     const updated = await findUserById(req.userId!)
     return res.json({ user: toPublicUser(updated!) })
+  } catch (err) {
+    if (err instanceof DatabaseNotReadyError) {
+      return res.status(503).json({ error: err.message })
+    }
+    if (err instanceof NegocioNotFoundError) {
+      return res.status(404).json({ error: err.message })
+    }
+    return res.status(400).json({ error: (err as Error).message })
+  }
+}
+
+export async function uploadNegocioPortadaHandler(req: AuthedRequest & { file?: Express.Multer.File }, res: Response) {
+  if (!req.file) {
+    return res.status(400).json({ error: 'No se recibió ningún archivo' })
+  }
+
+  try {
+    await uploadNegocioPortada(req.params.negocioId, req.userId!, {
+      buffer: req.file.buffer,
+      mimetype: req.file.mimetype,
+    })
+    const updated = await findUserById(req.userId!)
+    return res.json({ user: toPublicUser(updated!) })
+  } catch (err) {
+    if (err instanceof DatabaseNotReadyError) {
+      return res.status(503).json({ error: err.message })
+    }
+    if (err instanceof NegocioNotFoundError) {
+      return res.status(404).json({ error: err.message })
+    }
+    return res.status(400).json({ error: (err as Error).message })
+  }
+}
+
+export async function createNegocioSuggestion(req: AuthedRequest, res: Response) {
+  const parsed = suggestNegocioSchema.safeParse(req.body)
+  if (!parsed.success) {
+    return res.status(400).json({ error: 'Datos inválidos', details: parsed.error.flatten().fieldErrors })
+  }
+
+  try {
+    await suggestNegocio(req.userId!, parsed.data)
+    const updated = await findUserById(req.userId!)
+    return res.status(201).json({ user: toPublicUser(updated!) })
   } catch (err) {
     if (err instanceof DatabaseNotReadyError) {
       return res.status(503).json({ error: err.message })
@@ -251,7 +299,7 @@ export async function me(req: AuthedRequest, res: Response) {
 }
 
 export async function updateProfile(req: AuthedRequest, res: Response) {
-  const parsed = profileSchema.safeParse(req.body)
+  const parsed = turistaProfileSchema.safeParse(req.body)
   if (!parsed.success) {
     return res.status(400).json({ error: 'Datos inválidos', details: parsed.error.flatten().fieldErrors })
   }
@@ -261,17 +309,11 @@ export async function updateProfile(req: AuthedRequest, res: Response) {
     if (!current) {
       return res.status(404).json({ error: 'Usuario no encontrado' })
     }
-
     if (current.rol === 'negocio') {
-      if (!current.negocio) {
-        return res.status(404).json({ error: 'Este negocio no tiene un perfil creado' })
-      }
-      const { nombre, categoria, descripcion, direccion, telefono, sitioWeb, horario, portada } = parsed.data
-      await updateNegocioProfile(current.id, { nombre, categoria, descripcion, direccion, telefono, sitioWeb, horario, portada })
-    } else {
-      const { nombres, bio } = parsed.data
-      await updateTuristaProfile(current.id, { nombres, bio })
+      return res.status(400).json({ error: 'Usa /profile/negocios/:negocioId para editar un negocio' })
     }
+
+    await updateTuristaProfile(current.id, parsed.data)
 
     const updated = await findUserById(current.id)
     return res.json({ user: toPublicUser(updated!) })
@@ -280,5 +322,26 @@ export async function updateProfile(req: AuthedRequest, res: Response) {
       return res.status(503).json({ error: err.message })
     }
     return res.status(500).json({ error: 'Error interno' })
+  }
+}
+
+export async function updateNegocio(req: AuthedRequest, res: Response) {
+  const parsed = negocioProfileSchema.safeParse(req.body)
+  if (!parsed.success) {
+    return res.status(400).json({ error: 'Datos inválidos', details: parsed.error.flatten().fieldErrors })
+  }
+
+  try {
+    await updateNegocioProfile(req.params.negocioId, req.userId!, parsed.data)
+    const updated = await findUserById(req.userId!)
+    return res.json({ user: toPublicUser(updated!) })
+  } catch (err) {
+    if (err instanceof DatabaseNotReadyError) {
+      return res.status(503).json({ error: err.message })
+    }
+    if (err instanceof NegocioNotFoundError) {
+      return res.status(404).json({ error: err.message })
+    }
+    return res.status(400).json({ error: (err as Error).message })
   }
 }

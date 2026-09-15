@@ -9,6 +9,7 @@ const String apiUrl = String.fromEnvironment(
 );
 
 class NegocioInfo {
+  final String id;
   final String nombre;
   final String? categoria;
   final String? descripcion;
@@ -22,8 +23,10 @@ class NegocioInfo {
   final String? arMarcador;
   final String? arGeo;
   final String estado;
+  final DateTime createdAt;
 
   const NegocioInfo({
+    required this.id,
     required this.nombre,
     this.categoria,
     this.descripcion,
@@ -37,6 +40,7 @@ class NegocioInfo {
     this.arMarcador,
     this.arGeo,
     required this.estado,
+    required this.createdAt,
   });
 
   bool get aprobado => estado == 'aprobado';
@@ -44,6 +48,7 @@ class NegocioInfo {
   bool get rechazado => estado == 'rechazado';
 
   factory NegocioInfo.fromJson(Map<String, dynamic> json) => NegocioInfo(
+        id: json['id'] as String,
         nombre: json['nombre'] as String,
         categoria: json['categoria'] as String?,
         descripcion: json['descripcion'] as String?,
@@ -57,6 +62,7 @@ class NegocioInfo {
         arMarcador: json['arMarcador'] as String?,
         arGeo: json['arGeo'] as String?,
         estado: json['estado'] as String,
+        createdAt: DateTime.parse(json['createdAt'] as String),
       );
 }
 
@@ -68,7 +74,7 @@ class AuthUser {
   final bool activo;
   final String? avatarUrl;
   final String? bio;
-  final NegocioInfo? negocio;
+  final List<NegocioInfo> negocios;
 
   const AuthUser({
     required this.id,
@@ -78,12 +84,13 @@ class AuthUser {
     this.activo = true,
     this.avatarUrl,
     this.bio,
-    this.negocio,
+    this.negocios = const [],
   });
 
   bool get isNegocio => role == 'negocio';
   bool get isAdmin => role == 'admin' || role == 'super_admin';
   bool get isSuperAdmin => role == 'super_admin';
+  List<NegocioInfo> get negociosAprobados => negocios.where((n) => n.aprobado).toList();
 
   factory AuthUser.fromJson(Map<String, dynamic> json) => AuthUser(
         id: json['id'] as String,
@@ -93,7 +100,7 @@ class AuthUser {
         activo: json['activo'] as bool? ?? true,
         avatarUrl: json['avatarUrl'] as String?,
         bio: json['bio'] as String?,
-        negocio: json['negocio'] != null ? NegocioInfo.fromJson(json['negocio'] as Map<String, dynamic>) : null,
+        negocios: (json['negocios'] as List?)?.map((n) => NegocioInfo.fromJson(n as Map<String, dynamic>)).toList() ?? const [],
       );
 }
 
@@ -125,6 +132,7 @@ class AdminAccount {
 
 class NegocioSummary {
   final String id;
+  final String? ownerId;
   final String nombre;
   final String? categoria;
   final String estado;
@@ -134,9 +142,11 @@ class NegocioSummary {
   final String? archivo360;
   final String? arMarcador;
   final String? arGeo;
+  final bool esAdicional;
 
   const NegocioSummary({
     required this.id,
+    this.ownerId,
     required this.nombre,
     this.categoria,
     required this.estado,
@@ -146,6 +156,7 @@ class NegocioSummary {
     this.archivo360,
     this.arMarcador,
     this.arGeo,
+    this.esAdicional = false,
   });
 
   bool get pendiente => estado == 'pendiente';
@@ -154,6 +165,7 @@ class NegocioSummary {
 
   factory NegocioSummary.fromJson(Map<String, dynamic> json) => NegocioSummary(
         id: json['id'] as String,
+        ownerId: json['ownerId'] as String?,
         nombre: json['nombre'] as String,
         categoria: json['categoria'] as String?,
         estado: json['estado'] as String? ?? 'pendiente',
@@ -163,6 +175,7 @@ class NegocioSummary {
         archivo360: json['archivo360'] as String?,
         arMarcador: json['arMarcador'] as String?,
         arGeo: json['arGeo'] as String?,
+        esAdicional: json['esAdicional'] as bool? ?? false,
       );
 }
 
@@ -276,11 +289,11 @@ class AuthService {
     return AuthUser.fromJson(data['user'] as Map<String, dynamic>);
   }
 
-  Future<AuthUser> uploadGaleriaImage(String token, Uint8List bytes, String filename) async {
+  Future<AuthUser> uploadGaleriaImage(String token, String negocioId, Uint8List bytes, String filename) async {
     final ext = filename.contains('.') ? filename.split('.').last.toLowerCase() : 'jpg';
     final subtype = ext == 'jpg' ? 'jpeg' : ext;
 
-    final request = http.MultipartRequest('POST', Uri.parse('$apiUrl/auth/profile/galeria'))
+    final request = http.MultipartRequest('POST', Uri.parse('$apiUrl/auth/profile/negocios/$negocioId/galeria'))
       ..headers['Authorization'] = 'Bearer $token'
       ..files.add(http.MultipartFile.fromBytes(
         'file',
@@ -300,8 +313,8 @@ class AuthService {
     return AuthUser.fromJson(data['user'] as Map<String, dynamic>);
   }
 
-  Future<AuthUser> deleteGaleriaImage(String token, String url) async {
-    final request = http.Request('DELETE', Uri.parse('$apiUrl/auth/profile/galeria'))
+  Future<AuthUser> deleteGaleriaImage(String token, String negocioId, String url) async {
+    final request = http.Request('DELETE', Uri.parse('$apiUrl/auth/profile/negocios/$negocioId/galeria'))
       ..headers['Authorization'] = 'Bearer $token'
       ..headers['Content-Type'] = 'application/json'
       ..body = jsonEncode({'url': url});
@@ -312,6 +325,30 @@ class AuthService {
 
     if (res.statusCode < 200 || res.statusCode >= 300) {
       throw AuthError((data['error'] as String?) ?? 'No se pudo eliminar la imagen');
+    }
+
+    return AuthUser.fromJson(data['user'] as Map<String, dynamic>);
+  }
+
+  Future<AuthUser> uploadNegocioPortada(String token, String negocioId, Uint8List bytes, String filename) async {
+    final ext = filename.contains('.') ? filename.split('.').last.toLowerCase() : 'jpg';
+    final subtype = ext == 'jpg' ? 'jpeg' : ext;
+
+    final request = http.MultipartRequest('POST', Uri.parse('$apiUrl/auth/profile/negocios/$negocioId/avatar'))
+      ..headers['Authorization'] = 'Bearer $token'
+      ..files.add(http.MultipartFile.fromBytes(
+        'file',
+        bytes,
+        filename: filename,
+        contentType: MediaType('image', subtype),
+      ));
+
+    final streamed = await _client.send(request);
+    final res = await http.Response.fromStream(streamed);
+    final data = _decode(res.body);
+
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      throw AuthError((data['error'] as String?) ?? 'No se pudo subir la imagen');
     }
 
     return AuthUser.fromJson(data['user'] as Map<String, dynamic>);
@@ -328,6 +365,49 @@ class AuthService {
 
     if (res.statusCode < 200 || res.statusCode >= 300) {
       throw AuthError((data['error'] as String?) ?? 'No se pudo actualizar el perfil');
+    }
+
+    return AuthUser.fromJson(data['user'] as Map<String, dynamic>);
+  }
+
+  Future<AuthUser> updateNegocio(String token, String negocioId, Map<String, String> fields) async {
+    final res = await _client.patch(
+      Uri.parse('$apiUrl/auth/profile/negocios/$negocioId'),
+      headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+      body: jsonEncode(fields),
+    );
+
+    final data = _decode(res.body);
+
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      throw AuthError((data['error'] as String?) ?? 'No se pudo actualizar el negocio');
+    }
+
+    return AuthUser.fromJson(data['user'] as Map<String, dynamic>);
+  }
+
+  Future<AuthUser> createNegocioSuggestion(
+    String token, {
+    required String nombre,
+    String? categoria,
+    String? descripcion,
+    String? direccion,
+  }) async {
+    final res = await _client.post(
+      Uri.parse('$apiUrl/auth/profile/negocios'),
+      headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+      body: jsonEncode({
+        'nombre': nombre,
+        if (categoria != null && categoria.trim().isNotEmpty) 'categoria': categoria,
+        if (descripcion != null && descripcion.trim().isNotEmpty) 'descripcion': descripcion,
+        if (direccion != null && direccion.trim().isNotEmpty) 'direccion': direccion,
+      }),
+    );
+
+    final data = _decode(res.body);
+
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      throw AuthError((data['error'] as String?) ?? 'No se pudo enviar la sugerencia');
     }
 
     return AuthUser.fromJson(data['user'] as Map<String, dynamic>);
@@ -358,12 +438,12 @@ class AuthService {
     return (data['negocios'] as List).map((n) => NegocioSummary.fromJson(n as Map<String, dynamic>)).toList();
   }
 
-  Future<void> adminApproveNegocio(String token, String userId) {
-    return _post('/admin/negocios/$userId/aprobar', token);
+  Future<void> adminApproveNegocio(String token, String negocioId) {
+    return _post('/admin/negocios/$negocioId/aprobar', token);
   }
 
-  Future<void> adminRejectNegocio(String token, String userId) {
-    return _post('/admin/negocios/$userId/rechazar', token);
+  Future<void> adminRejectNegocio(String token, String negocioId) {
+    return _post('/admin/negocios/$negocioId/rechazar', token);
   }
 
   Future<List<AdminAccount>> adminListAdmins(String token) async {

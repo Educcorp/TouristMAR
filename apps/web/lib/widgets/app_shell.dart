@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../models/business_profile.dart';
 import '../models/visitor_profile.dart';
-import '../pages/business_profile_page.dart';
-import '../pages/business_reviews_page.dart';
 import '../pages/login_page.dart';
 import '../pages/profile_page.dart';
 import '../services/session_storage.dart';
@@ -32,9 +29,9 @@ void _comingSoon(BuildContext context) {
   );
 }
 
-/// Ruta sin animación de transición: la navegación entre secciones del
-/// sidebar (Dashboard, Mi negocio, Reseñas...) debe sentirse como cambiar de
-/// pestaña, no como abrir una pantalla nueva encima de la anterior.
+/// Ruta sin animación de transición: navegar a "Mi perfil" desde el sidebar
+/// debe sentirse como cambiar de pestaña, no como abrir una pantalla nueva
+/// encima de la anterior.
 Route<T> _instantRoute<T>(WidgetBuilder builder) {
   return PageRouteBuilder<T>(
     pageBuilder: (context, animation, secondaryAnimation) => builder(context),
@@ -55,9 +52,6 @@ void _logout(BuildContext context) {
 /// se resalta. Antes el resaltado era fijo por ítem ("Mi perfil" siempre
 /// marcado); ahora cada página que arma la lista dice cuál es, vía [current].
 enum VisitorSection { home, profile }
-
-/// Análogo a [VisitorSection] para el flujo de empresa.
-enum BusinessSection { dashboard, profile, reviews }
 
 List<NavItem> visitorNavItems(
   BuildContext context, {
@@ -82,39 +76,6 @@ List<NavItem> visitorNavItems(
       ),
     ),
     NavItem(icon: Icons.notifications_outlined, label: 'Notificaciones', onTap: () => _comingSoon(context)),
-    NavItem(icon: Icons.settings_outlined, label: 'Configuración', onTap: () => _comingSoon(context)),
-  ];
-}
-
-List<NavItem> businessNavItems(
-  BuildContext context, {
-  required BusinessProfile business,
-  required BusinessSection current,
-}) {
-  return [
-    NavItem(
-      icon: Icons.bar_chart,
-      label: 'Dashboard',
-      highlight: current == BusinessSection.dashboard,
-      onTap: () => Navigator.of(context).popUntil((r) => r.isFirst),
-    ),
-    NavItem(
-      icon: Icons.apartment,
-      label: 'Mi negocio',
-      highlight: current == BusinessSection.profile,
-      onTap: () => Navigator.of(context).push(
-        _instantRoute((_) => BusinessProfilePage(business: business)),
-      ),
-    ),
-    NavItem(
-      icon: Icons.forum_outlined,
-      label: 'Reseñas',
-      highlight: current == BusinessSection.reviews,
-      onTap: () => Navigator.of(context).push(
-        _instantRoute((_) => BusinessReviewsPage(business: business)),
-      ),
-    ),
-    NavItem(icon: Icons.trending_up, label: 'Estadísticas', onTap: () => _comingSoon(context)),
     NavItem(icon: Icons.settings_outlined, label: 'Configuración', onTap: () => _comingSoon(context)),
   ];
 }
@@ -194,79 +155,12 @@ class VisitorIdentityCard extends StatelessWidget {
   }
 }
 
-/// Bloque de identidad del negocio mostrado arriba del menú de navegación
-/// (logo, nombre, verificado, categoría y stats de calificación/reseñas/visitas).
-class BusinessIdentityCard extends StatelessWidget {
-  final BusinessProfile business;
-
-  const BusinessIdentityCard({super.key, required this.business});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: AppColors.businessOrange.withOpacity(0.12),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.businessOrange.withOpacity(0.3)),
-              ),
-              child: Icon(Icons.apartment, color: AppColors.businessOrange, size: 20),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Flexible(
-                        child: Text(business.businessName,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
-                      ),
-                      if (business.verified) ...[
-                        const SizedBox(width: 4),
-                        Icon(Icons.check_circle, color: AppColors.brandTeal, size: 12),
-                      ],
-                    ],
-                  ),
-                  Text(business.category,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(color: AppColors.slate400, fontSize: 12)),
-                ],
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            _DrawerStat(value: '${business.rating}★', label: 'Calificación'),
-            const SizedBox(width: 20),
-            _DrawerStat(value: '${business.totalReviews}', label: 'Reseñas'),
-            const SizedBox(width: 20),
-            _DrawerStat(value: '${business.monthlyVisits}', label: 'Visitas/mes'),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-/// Shell compartido por todas las páginas de visitante y de empresa: sidebar
-/// izquierdo fijo (siempre visible, sin botón para abrirlo) en pantallas
-/// anchas; en pantallas angostas —donde un sidebar fijo no cabe— cae a un
-/// drawer con botón, igual que antes. Solo cambia el color de acento, el
-/// badge y los nav items — el resto de la estructura es idéntica en ambos
-/// flujos (visitante/empresa).
+/// Shell del flujo de visitante: sidebar izquierdo fijo (siempre visible,
+/// sin botón para abrirlo) en pantallas anchas; en pantallas angostas —donde
+/// un sidebar fijo no cabe— cae a un drawer con botón. El panel de empresa
+/// usa su propio [BusinessShell] (necesita un selector de negocio que este
+/// no tiene), y el panel admin su [AdminShell] — los tres comparten el mismo
+/// patrón visual pero cada uno vive en su propio widget.
 class AppShell extends StatelessWidget {
   final Color accentColor;
   final String? badgeText;

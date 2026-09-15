@@ -40,9 +40,9 @@ class _BusinessGalleryPageState extends State<BusinessGalleryPage> {
     });
 
     try {
-      final updated = await _authService.uploadGaleriaImage(token, file.bytes!, file.name);
+      final updated = await _authService.uploadGaleriaImage(token, widget.business.id, file.bytes!, file.name);
       setState(() {
-        widget.business.gallery = updated.negocio?.galeria ?? widget.business.gallery;
+        widget.business.gallery = _galeriaOf(updated) ?? widget.business.gallery;
         _changed = true;
       });
     } catch (err) {
@@ -91,9 +91,9 @@ class _BusinessGalleryPageState extends State<BusinessGalleryPage> {
     });
 
     try {
-      final updated = await _authService.deleteGaleriaImage(token, url);
+      final updated = await _authService.deleteGaleriaImage(token, widget.business.id, url);
       setState(() {
-        widget.business.gallery = updated.negocio?.galeria ?? widget.business.gallery;
+        widget.business.gallery = _galeriaOf(updated) ?? widget.business.gallery;
         _changed = true;
       });
     } catch (err) {
@@ -101,6 +101,11 @@ class _BusinessGalleryPageState extends State<BusinessGalleryPage> {
     } finally {
       if (mounted) setState(() => _deletingUrls.remove(url));
     }
+  }
+
+  List<String>? _galeriaOf(AuthUser user) {
+    final matches = user.negocios.where((n) => n.id == widget.business.id);
+    return matches.isEmpty ? null : matches.first.galeria;
   }
 
   @override

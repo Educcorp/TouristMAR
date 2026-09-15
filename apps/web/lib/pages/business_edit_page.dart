@@ -68,9 +68,11 @@ class _BusinessEditPageState extends State<BusinessEditPage> {
     });
 
     try {
-      final updated = await _authService.uploadAvatar(token, file.bytes!, file.name);
-      if (updated.negocio?.portada != null) {
-        setState(() => widget.business.coverImage = updated.negocio!.portada!);
+      final updated = await _authService.uploadNegocioPortada(token, widget.business.id, file.bytes!, file.name);
+      final matches = updated.negocios.where((n) => n.id == widget.business.id);
+      final portada = matches.isEmpty ? null : matches.first.portada;
+      if (portada != null) {
+        setState(() => widget.business.coverImage = portada);
       }
     } catch (err) {
       setState(() => _error = err is AuthError ? err.message : 'No se pudo subir la portada');
@@ -106,7 +108,7 @@ class _BusinessEditPageState extends State<BusinessEditPage> {
     });
 
     try {
-      final updated = await _authService.updateProfile(token, {
+      final updated = await _authService.updateNegocio(token, widget.business.id, {
         'nombre': _nameController.text.trim(),
         'categoria': _categoryController.text.trim(),
         'descripcion': _descriptionController.text.trim(),
@@ -117,7 +119,8 @@ class _BusinessEditPageState extends State<BusinessEditPage> {
       });
 
       final business = widget.business;
-      final negocio = updated.negocio;
+      final matches = updated.negocios.where((n) => n.id == widget.business.id);
+      final negocio = matches.isEmpty ? null : matches.first;
       business.businessName = negocio?.nombre ?? _nameController.text.trim();
       business.category = negocio?.categoria ?? '';
       business.description = negocio?.descripcion ?? '';

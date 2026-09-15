@@ -5,9 +5,12 @@ import {
   login,
   me,
   updateProfile,
+  updateNegocio,
   uploadAvatar,
+  uploadNegocioPortadaHandler,
   uploadGaleriaImage,
   deleteGaleriaImage,
+  createNegocioSuggestion,
   googleMobileLogin,
 } from './auth.controller'
 import { requireAuth } from './auth.middleware'
@@ -31,8 +34,11 @@ authRouter.post('/login', login)
 authRouter.get('/me', requireAuth, me)
 authRouter.patch('/profile', requireAuth, updateProfile)
 authRouter.post('/profile/avatar', requireAuth, upload.single('file'), uploadAvatar)
-authRouter.post('/profile/galeria', requireAuth, upload.single('file'), uploadGaleriaImage)
-authRouter.delete('/profile/galeria', requireAuth, deleteGaleriaImage)
+authRouter.post('/profile/negocios', requireAuth, createNegocioSuggestion)
+authRouter.patch('/profile/negocios/:negocioId', requireAuth, updateNegocio)
+authRouter.post('/profile/negocios/:negocioId/avatar', requireAuth, upload.single('file'), uploadNegocioPortadaHandler)
+authRouter.post('/profile/negocios/:negocioId/galeria', requireAuth, upload.single('file'), uploadGaleriaImage)
+authRouter.delete('/profile/negocios/:negocioId/galeria', requireAuth, deleteGaleriaImage)
 authRouter.post('/google/mobile', googleMobileLogin)
 
 if (isGoogleAuthEnabled) {

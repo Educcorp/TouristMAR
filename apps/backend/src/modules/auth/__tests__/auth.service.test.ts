@@ -118,7 +118,7 @@ describe('findOrCreateGoogleUser', () => {
     expect(update).toHaveBeenCalledWith({
       where: { id: 'user-1' },
       data: { googleId: 'google-123' },
-      include: { negocio: true },
+      include: { negocios: true },
     })
     expect(user).toMatchObject({ googleId: 'google-123' })
   })
@@ -137,7 +137,7 @@ describe('findOrCreateGoogleUser', () => {
         nombres: 'Ana Google',
         avatarUrl: 'http://avatar.jpg',
       },
-      include: { negocio: true },
+      include: { negocios: true },
     })
     expect(user).toMatchObject({ email: 'ana@correo.com' })
   })

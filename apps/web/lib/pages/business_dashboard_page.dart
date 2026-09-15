@@ -3,80 +3,73 @@ import 'package:flutter/material.dart';
 import '../models/business_profile.dart';
 import '../theme/app_theme.dart';
 import '../theme/breakpoints.dart';
-import '../widgets/app_shell.dart';
 import '../widgets/cover_image.dart';
 import 'business_edit_page.dart';
 import 'business_gallery_page.dart';
-import 'business_reviews_page.dart';
 
-class BusinessDashboardPage extends StatefulWidget {
+/// Contenido de la sección "Dashboard" embebido en [BusinessShell] — sin
+/// Scaffold/AppBar propio, igual que las páginas del panel admin.
+class BusinessDashboardContent extends StatefulWidget {
   final BusinessProfile business;
+  final VoidCallback onNegocioUpdated;
+  final VoidCallback onOpenReviews;
 
-  const BusinessDashboardPage({super.key, required this.business});
+  const BusinessDashboardContent({
+    super.key,
+    required this.business,
+    required this.onNegocioUpdated,
+    required this.onOpenReviews,
+  });
 
   @override
-  State<BusinessDashboardPage> createState() => _BusinessDashboardPageState();
+  State<BusinessDashboardContent> createState() => _BusinessDashboardContentState();
 }
 
-class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
+class _BusinessDashboardContentState extends State<BusinessDashboardContent> {
   Future<void> _openEdit() async {
     final changed = await Navigator.of(context).push<bool>(
       MaterialPageRoute(builder: (_) => BusinessEditPage(business: widget.business)),
     );
-    if (changed == true && mounted) setState(() {});
-  }
-
-  void _openReviews() {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => BusinessReviewsPage(business: widget.business)),
-    );
+    if (changed == true && mounted) {
+      setState(() {});
+      widget.onNegocioUpdated();
+    }
   }
 
   Future<void> _openGallery() async {
     final changed = await Navigator.of(context).push<bool>(
       MaterialPageRoute(builder: (_) => BusinessGalleryPage(business: widget.business)),
     );
-    if (changed == true && mounted) setState(() {});
+    if (changed == true && mounted) {
+      setState(() {});
+      widget.onNegocioUpdated();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final business = widget.business;
 
-    return AppShell(
-      accentColor: AppColors.businessOrange,
-      badgeText: 'EMPRESA',
-      avatarIcon: Container(
-        width: 32,
-        height: 32,
-        decoration: BoxDecoration(
-          color: AppColors.businessOrange.withOpacity(0.12),
-          shape: BoxShape.circle,
-          border: Border.all(color: AppColors.businessOrange.withOpacity(0.4)),
-        ),
-        child: Icon(Icons.apartment, size: 16, color: AppColors.businessOrange),
-      ),
-      drawerIdentity: BusinessIdentityCard(business: business),
-      navItems: businessNavItems(context, business: business, current: BusinessSection.dashboard),
-      body: SingleChildScrollView(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 960),
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildHero(business),
-                  const SizedBox(height: 20),
-                  _buildStatsGrid(business),
-                  const SizedBox(height: 28),
-                  Text(
-                    'Gestionar negocio',
-                    style: TextStyle(color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 12),
-                  _buildManageGrid(),
+    return SingleChildScrollView(
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 960),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildHero(business),
+                const SizedBox(height: 20),
+                if (business.verified) _buildStatsGrid(business) else _buildEstadoBanner(business),
+                const SizedBox(height: 28),
+                Text(
+                  'Gestionar negocio',
+                  style: TextStyle(color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 12),
+                _buildManageGrid(),
+                if (business.verified) ...[
                   const SizedBox(height: 28),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -86,7 +79,7 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
                         style: TextStyle(color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.w600),
                       ),
                       GestureDetector(
-                        onTap: _openReviews,
+                        onTap: widget.onOpenReviews,
                         child: Text(
                           'Ver todas',
                           style: TextStyle(color: AppColors.businessOrange, fontSize: 13, fontWeight: FontWeight.w500),
@@ -98,9 +91,9 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
                   ...businessReviews.take(2).map((r) => _RecentReviewTile(review: r)),
                   const SizedBox(height: 20),
                   _buildAlertBanner(),
-                  const SizedBox(height: 24),
                 ],
-              ),
+                const SizedBox(height: 24),
+              ],
             ),
           ),
         ),
@@ -160,6 +153,45 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
     );
   }
 
+  Widget _buildEstadoBanner(BusinessProfile business) {
+    final rechazado = business.estado == 'rechazado';
+    final color = rechazado ? AppColors.errorRed : AppColors.amber;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: color.withOpacity(0.25)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(rechazado ? Icons.cancel_outlined : Icons.hourglass_top, color: color),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  rechazado ? 'Solicitud rechazada' : 'Pendiente de aprobación',
+                  style: TextStyle(color: AppColors.textPrimary, fontSize: 14, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  rechazado
+                      ? 'Un administrador rechazó este negocio. Puedes actualizar la información e intentarlo de nuevo.'
+                      : 'Un administrador revisará esta solicitud pronto. Mientras tanto puedes completar la información.',
+                  style: TextStyle(color: AppColors.slate400, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildStatsGrid(BusinessProfile business) {
     final stats = [
       (Icons.people_outline, '${business.monthlyVisits}', 'Visitas este mes', AppColors.brandTeal),
@@ -209,8 +241,6 @@ class _BusinessDashboardPageState extends State<BusinessDashboardPage> {
     final actions = [
       (Icons.edit_outlined, 'Editar información', AppColors.brandTeal, _openEdit),
       (Icons.image_outlined, 'Gestionar fotos', AppColors.businessOrange, _openGallery),
-      (Icons.forum_outlined, 'Ver reseñas', Colors.amber, _openReviews),
-      (Icons.trending_up, 'Estadísticas', Colors.greenAccent, () {}),
     ];
 
     return LayoutBuilder(
