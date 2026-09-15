@@ -1,33 +1,25 @@
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import { OAuth2Client } from 'google-auth-library'
-import { Prisma } from '@prisma/client'
 import type { Profile } from 'passport-google-oauth20'
 import { prisma } from '../../config/prisma'
 import { supabase, AVATARS_BUCKET, NEGOCIO_ASSETS_BUCKET } from '../../config/supabase'
 import { env, isGoogleAuthEnabled } from '../../config/env'
+import { withDbGuard, DatabaseNotReadyError } from '../../config/db-guard'
+import { notifyAdmins, notifyUser } from '../notifications/notification.service'
+
+// Re-exportado para no romper `import { DatabaseNotReadyError } from './auth.service'`
+// en los controllers — vive en config/db-guard.ts porque notification.service.ts
+// también lo necesita y no puede importarlo de aquí sin crear un ciclo.
+export { DatabaseNotReadyError }
 
 const googleClient = isGoogleAuthEnabled ? new OAuth2Client(env.GOOGLE_CLIENT_ID) : null
 
-export class DatabaseNotReadyError extends Error {}
 export class GoogleLoginNotAllowedError extends Error {}
 export class AccountBlockedError extends Error {}
 /// Un negocioId que no existe, o que existe pero no le pertenece al usuario
 /// autenticado — se tratan igual (404) para no filtrar si el id existe.
 export class NegocioNotFoundError extends Error {}
-
-async function withDbGuard<T>(fn: () => Promise<T>): Promise<T> {
-  try {
-    return await fn()
-  } catch (err) {
-    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2021') {
-      throw new DatabaseNotReadyError(
-        'La tabla de usuarios no existe todavía en la base de datos. Corre las migraciones de Prisma (npx prisma migrate dev).',
-      )
-    }
-    throw err
-  }
-}
 
 interface RegisterInput {
   email: string
@@ -48,7 +40,7 @@ export async function registerUser(input: RegisterInput) {
     }
     const passwordHash = await bcrypt.hash(input.password, 10)
 
-    return prisma.user.create({
+    const user = await prisma.user.create({
       data: {
         email: input.email,
         passwordHash,
@@ -61,6 +53,19 @@ export async function registerUser(input: RegisterInput) {
       },
       include: { negocios: true },
     })
+
+    if (input.rol === 'negocio') {
+      await notifyAdmins(
+        'negocio_pendiente',
+        'Nueva solicitud de negocio',
+        `${input.nombres} quiere registrar "${input.negocio?.nombre ?? input.nombres}" como negocio`,
+        user.negocios[0]?.id,
+      )
+    } else {
+      await notifyAdmins('usuario_nuevo', 'Nuevo usuario registrado', `${input.nombres} (${input.email}) se registró como turista`)
+    }
+
+    return user
   })
 }
 
@@ -95,16 +100,19 @@ async function resolveGoogleAccount(email: string, googleId: string, profile: { 
   if (!existingByEmail) {
     // Cuenta nueva vía Google: solo se crean turistas. Los negocios deben
     // registrarse primero con correo/contraseña y ser aprobados por un admin.
-    return prisma.user.create({
+    const nombres = profile.displayName || email
+    const user = await prisma.user.create({
       data: {
         email,
         googleId,
         rol: 'turista',
-        nombres: profile.displayName || email,
+        nombres,
         avatarUrl: profile.photo,
       },
       include: { negocios: true },
     })
+    await notifyAdmins('usuario_nuevo', 'Nuevo usuario registrado', `${nombres} (${email}) se registró como turista`)
+    return user
   }
 
   if (existingByEmail.rol === 'negocio') {
@@ -356,7 +364,7 @@ export async function suggestNegocio(userId: string, input: SuggestNegocioInput)
       throw new Error('Necesitas tener al menos un negocio aprobado antes de sugerir uno nuevo')
     }
 
-    return prisma.negocioProfile.create({
+    const negocio = await prisma.negocioProfile.create({
       data: {
         userId,
         nombre: input.nombre,
@@ -365,6 +373,15 @@ export async function suggestNegocio(userId: string, input: SuggestNegocioInput)
         direccion: input.direccion,
       },
     })
+
+    await notifyAdmins(
+      'negocio_sugerido',
+      'Nuevo negocio sugerido',
+      `${user.nombres} sugirió agregar "${input.nombre}"`,
+      negocio.id,
+    )
+
+    return negocio
   })
 }
 
@@ -389,12 +406,24 @@ export async function listApprovedNegocioUserIds() {
 }
 
 export async function reviewNegocio(negocioId: string, decision: 'aprobado' | 'rechazado', adminId: string) {
-  return withDbGuard(() =>
-    prisma.negocioProfile.update({
+  return withDbGuard(async () => {
+    const negocio = await prisma.negocioProfile.update({
       where: { id: negocioId },
       data: { estado: decision, revisadoPor: adminId, revisadoEn: new Date() },
-    }),
-  )
+    })
+
+    await notifyUser(
+      negocio.userId,
+      decision === 'aprobado' ? 'negocio_aprobado' : 'negocio_rechazado',
+      decision === 'aprobado' ? '¡Tu negocio fue aprobado!' : 'Tu negocio fue rechazado',
+      decision === 'aprobado'
+        ? `"${negocio.nombre}" ya está activo en TourisMAR.`
+        : `Tu solicitud para "${negocio.nombre}" fue rechazada.`,
+      negocio.id,
+    )
+
+    return negocio
+  })
 }
 
 export class CannotModifyAdminError extends Error {}

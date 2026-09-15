@@ -7,7 +7,9 @@ import '../widgets/hero_panel.dart';
 import '../widgets/login_form.dart';
 
 class LoginPage extends StatelessWidget {
-  const LoginPage({super.key});
+  final String? initialError;
+
+  const LoginPage({super.key, this.initialError});
 
   @override
   Widget build(BuildContext context) {
@@ -20,13 +22,13 @@ class LoginPage extends StatelessWidget {
               final isWide = Breakpoints.isExpanded(constraints.maxWidth);
 
               if (!isWide) {
-                return LoginForm();
+                return LoginForm(initialError: initialError);
               }
 
               return Row(
                 children: [
                   const Expanded(flex: 58, child: HeroPanel()),
-                  Expanded(flex: 42, child: LoginForm()),
+                  Expanded(flex: 42, child: LoginForm(initialError: initialError)),
                 ],
               );
             },

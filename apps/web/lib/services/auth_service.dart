@@ -179,6 +179,36 @@ class NegocioSummary {
       );
 }
 
+class AppNotification {
+  final String id;
+  final String tipo;
+  final String titulo;
+  final String cuerpo;
+  final String? negocioId;
+  final bool leida;
+  final DateTime createdAt;
+
+  const AppNotification({
+    required this.id,
+    required this.tipo,
+    required this.titulo,
+    required this.cuerpo,
+    this.negocioId,
+    required this.leida,
+    required this.createdAt,
+  });
+
+  factory AppNotification.fromJson(Map<String, dynamic> json) => AppNotification(
+        id: json['id'] as String,
+        tipo: json['tipo'] as String,
+        titulo: json['titulo'] as String,
+        cuerpo: json['cuerpo'] as String,
+        negocioId: json['negocioId'] as String?,
+        leida: json['leida'] as bool,
+        createdAt: DateTime.parse(json['createdAt'] as String),
+      );
+}
+
 class AdminStats {
   final int turistas;
   final int negociosActivos;
@@ -214,7 +244,10 @@ class AuthResponse {
 
 class AuthError implements Exception {
   final String message;
-  const AuthError(this.message);
+  final String? code;
+  const AuthError(this.message, {this.code});
+
+  bool get isBlocked => code == 'blocked';
 
   @override
   String toString() => message;
@@ -259,7 +292,7 @@ class AuthService {
     final data = _decode(res.body);
 
     if (res.statusCode < 200 || res.statusCode >= 300) {
-      throw AuthError((data['error'] as String?) ?? 'No se pudo obtener la sesión');
+      throw AuthError((data['error'] as String?) ?? 'No se pudo obtener la sesión', code: data['code'] as String?);
     }
 
     return AuthUser.fromJson(data['user'] as Map<String, dynamic>);
@@ -444,6 +477,24 @@ class AuthService {
 
   Future<void> adminRejectNegocio(String token, String negocioId) {
     return _post('/admin/negocios/$negocioId/rechazar', token);
+  }
+
+  Future<List<AppNotification>> listNotifications(String token) async {
+    final data = await _get('/notifications', token);
+    return (data['notifications'] as List).map((n) => AppNotification.fromJson(n as Map<String, dynamic>)).toList();
+  }
+
+  Future<int> unreadNotificationCount(String token) async {
+    final data = await _get('/notifications/unread-count', token);
+    return data['count'] as int;
+  }
+
+  Future<void> markNotificationRead(String token, String id) {
+    return _post('/notifications/$id/leer', token);
+  }
+
+  Future<void> markAllNotificationsRead(String token) {
+    return _post('/notifications/leer-todas', token);
   }
 
   Future<List<AdminAccount>> adminListAdmins(String token) async {

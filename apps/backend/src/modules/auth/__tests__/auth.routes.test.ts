@@ -7,8 +7,12 @@ vi.mock('../../../config/prisma', () => ({
   prisma: {
     user: {
       findUnique: vi.fn(),
+      findMany: vi.fn(),
       create: vi.fn(),
       update: vi.fn(),
+    },
+    notification: {
+      createMany: vi.fn(),
     },
   },
 }))
@@ -17,6 +21,7 @@ import { prisma } from '../../../config/prisma'
 import { authRouter } from '../auth.routes'
 
 const findUnique = vi.mocked(prisma.user.findUnique)
+const findMany = vi.mocked(prisma.user.findMany)
 const create = vi.mocked(prisma.user.create)
 
 function buildApp() {
@@ -28,6 +33,8 @@ function buildApp() {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  // Sin admins registrados en estos tests: notifyAdmins() se vuelve un no-op.
+  findMany.mockResolvedValue([])
 })
 
 describe('POST /api/auth/register', () => {

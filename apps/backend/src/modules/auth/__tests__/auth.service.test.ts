@@ -7,8 +7,12 @@ vi.mock('../../../config/prisma', () => ({
   prisma: {
     user: {
       findUnique: vi.fn(),
+      findMany: vi.fn(),
       create: vi.fn(),
       update: vi.fn(),
+    },
+    notification: {
+      createMany: vi.fn(),
     },
   },
 }))
@@ -22,11 +26,15 @@ import {
 } from '../auth.service'
 
 const findUnique = vi.mocked(prisma.user.findUnique)
+const findMany = vi.mocked(prisma.user.findMany)
 const create = vi.mocked(prisma.user.create)
 const update = vi.mocked(prisma.user.update)
 
 beforeEach(() => {
   vi.clearAllMocks()
+  // Sin admins registrados en estos tests: notifyAdmins() se vuelve un no-op
+  // en vez de tener que simular también prisma.notification.createMany.
+  findMany.mockResolvedValue([])
 })
 
 describe('registerUser', () => {

@@ -28,6 +28,14 @@ enum estado_negocio_enum {
   rechazado
 }
 
+enum notificacion_tipo_enum {
+  negocio_pendiente
+  negocio_sugerido
+  negocio_aprobado
+  negocio_rechazado
+  usuario_nuevo
+}
+
 model User {
   id              String     @id @default(uuid()) @db.Uuid
   email           String     @unique
@@ -45,7 +53,8 @@ model User {
   createdAt       DateTime   @default(now()) @map("created_at")
   updatedAt       DateTime   @updatedAt @map("updated_at")
 
-  negocios NegocioProfile[]
+  negocios      NegocioProfile[]
+  notifications Notification[]
 
   @@map("users")
 }
@@ -74,4 +83,23 @@ model NegocioProfile {
 
   @@index([userId])
   @@map("negocio_profiles")
+}
+
+/// Notificación puntual para una cuenta (admin o dueño de negocio). No hay
+/// destinatario "por rol" — al ocurrir un evento se crea una fila por cada
+/// admin vigente (fan-out simple, son pocas cuentas) o una sola fila para el
+/// dueño de un negocio puntual.
+model Notification {
+  id        String                 @id @default(uuid()) @db.Uuid
+  userId    String                 @map("user_id") @db.Uuid
+  user      User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tipo      notificacion_tipo_enum
+  titulo    String
+  cuerpo    String
+  negocioId String?                @map("negocio_id") @db.Uuid
+  leida     Boolean                @default(false)
+  createdAt DateTime               @default(now()) @map("created_at")
+
+  @@index([userId, leida])
+  @@map("notifications")
 }

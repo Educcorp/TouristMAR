@@ -5,6 +5,7 @@ import '../../pages/login_page.dart';
 import '../../services/session_storage.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/breakpoints.dart';
+import '../notification_bell.dart';
 import '../theme_toggle_tile.dart';
 
 /// Secciones persistentes del panel de empresa.
@@ -148,21 +149,7 @@ class _BusinessCompactTopBar extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Icon(Icons.notifications_none, color: AppColors.slate300),
-              Positioned(
-                right: -1,
-                top: -1,
-                child: Container(
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(color: AppColors.orange, shape: BoxShape.circle),
-                ),
-              ),
-            ],
-          ),
+          NotificationBell(accentColor: AppColors.businessOrange),
         ],
       ),
     );
@@ -207,21 +194,7 @@ class _BusinessTopBar extends StatelessWidget {
             ),
           ),
           const Spacer(),
-          Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Icon(Icons.notifications_none, color: AppColors.slate300),
-              Positioned(
-                right: -1,
-                top: -1,
-                child: Container(
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(color: AppColors.orange, shape: BoxShape.circle),
-                ),
-              ),
-            ],
-          ),
+          NotificationBell(accentColor: AppColors.businessOrange),
           const SizedBox(width: 20),
           Builder(
             builder: (context) => GestureDetector(

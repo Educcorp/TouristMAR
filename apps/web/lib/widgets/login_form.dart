@@ -13,6 +13,7 @@ import 'app_button.dart';
 import 'app_text_field.dart';
 import 'google_logo.dart';
 import 'register_place_banner.dart';
+import 'session_guard.dart';
 
 enum _Mode { login, register }
 
@@ -22,8 +23,9 @@ enum _Screen { credentials, forgot, forgotSent, negocioEstado }
 
 class LoginForm extends StatefulWidget {
   final AuthService authService;
+  final String? initialError;
 
-  LoginForm({super.key, AuthService? authService}) : authService = authService ?? AuthService();
+  LoginForm({super.key, AuthService? authService, this.initialError}) : authService = authService ?? AuthService();
 
   @override
   State<LoginForm> createState() => _LoginFormState();
@@ -50,6 +52,7 @@ class _LoginFormState extends State<LoginForm> {
   @override
   void initState() {
     super.initState();
+    _error = widget.initialError;
     _restoreSession();
   }
 
@@ -101,14 +104,14 @@ class _LoginFormState extends State<LoginForm> {
   void _routeUser(AuthUser user) {
     if (user.isAdmin) {
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => AdminDashboardPage(admin: user)),
+        MaterialPageRoute(builder: (_) => SessionGuard(child: AdminDashboardPage(admin: user))),
       );
       return;
     }
     if (user.isNegocio) {
       if (user.negociosAprobados.isNotEmpty) {
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => BusinessHomePage(user: user)),
+          MaterialPageRoute(builder: (_) => SessionGuard(child: BusinessHomePage(user: user))),
         );
         return;
       }
@@ -118,7 +121,9 @@ class _LoginFormState extends State<LoginForm> {
       });
       return;
     }
-    Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => HomePage(user: user)));
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (_) => SessionGuard(child: HomePage(user: user))),
+    );
   }
 
   void _handleGoogleOrBusinessClick() {

@@ -6,6 +6,7 @@ import '../pages/profile_page.dart';
 import '../services/session_storage.dart';
 import '../theme/app_theme.dart';
 import '../theme/breakpoints.dart';
+import 'notification_bell.dart';
 import 'theme_toggle_tile.dart';
 import 'user_avatar.dart';
 
@@ -75,7 +76,11 @@ List<NavItem> visitorNavItems(
         _instantRoute((_) => ProfilePage(profile: profile)),
       ),
     ),
-    NavItem(icon: Icons.notifications_outlined, label: 'Notificaciones', onTap: () => _comingSoon(context)),
+    NavItem(
+      icon: Icons.notifications_outlined,
+      label: 'Notificaciones',
+      onTap: () => showNotificationsDialog(context, AppColors.brandTeal),
+    ),
     NavItem(icon: Icons.settings_outlined, label: 'Configuración', onTap: () => _comingSoon(context)),
   ];
 }
@@ -259,21 +264,7 @@ class _CompactTopBar extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Icon(Icons.notifications_none, color: AppColors.slate300),
-              Positioned(
-                right: -1,
-                top: -1,
-                child: Container(
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(color: AppColors.orange, shape: BoxShape.circle),
-                ),
-              ),
-            ],
-          ),
+          NotificationBell(accentColor: accentColor),
         ],
       ),
     );
@@ -324,21 +315,7 @@ class _TopBar extends StatelessWidget {
             ),
           ],
           const Spacer(),
-          Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Icon(Icons.notifications_none, color: AppColors.slate300),
-              Positioned(
-                right: -1,
-                top: -1,
-                child: Container(
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(color: AppColors.orange, shape: BoxShape.circle),
-                ),
-              ),
-            ],
-          ),
+          NotificationBell(accentColor: accentColor),
           const SizedBox(width: 20),
           Builder(
             builder: (context) => GestureDetector(
