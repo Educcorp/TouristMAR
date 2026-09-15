@@ -109,7 +109,7 @@ class _AdminRequestsPageState extends State<AdminRequestsPage> {
   }
 
   Widget _buildContent() {
-    if (_loading) return const DsLoadingState();
+    if (_loading) return DsLoadingState();
     if (_error != null) return DsErrorState(message: _error!, onRetry: _load);
     if (_requests.isEmpty) {
       return const DsEmptyState(

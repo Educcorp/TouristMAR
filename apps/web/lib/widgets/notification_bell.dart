@@ -211,7 +211,7 @@ class _NotificationsDialogState extends State<_NotificationsDialog> {
   }
 
   Widget _buildContent() {
-    if (_loading) return const SizedBox(height: 120, child: DsLoadingState());
+    if (_loading) return SizedBox(height: 120, child: DsLoadingState());
     if (_error != null) return SizedBox(height: 120, child: DsErrorState(message: _error!, onRetry: _load));
     if (_notifications.isEmpty) {
       return const SizedBox(

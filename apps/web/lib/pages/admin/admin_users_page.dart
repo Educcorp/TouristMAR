@@ -118,7 +118,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
   }
 
   Widget _buildContent() {
-    if (_loading) return const DsLoadingState();
+    if (_loading) return DsLoadingState();
     if (_error != null) return DsErrorState(message: _error!, onRetry: _load);
     final filtered = _filtered;
     if (filtered.isEmpty) {

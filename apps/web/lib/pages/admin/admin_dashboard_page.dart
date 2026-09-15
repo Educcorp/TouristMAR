@@ -70,7 +70,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
       case AdminSection.configuracion:
         return AdminSettingsPage(admin: widget.admin);
       case AdminSection.ayuda:
-        return const AdminHelpPage();
+        return AdminHelpPage();
     }
   }
 }
@@ -134,7 +134,7 @@ class _InicioContentState extends State<_InicioContent> {
                   _Hero(),
                   SizedBox(height: AppSpacing.lg),
                   if (_loading)
-                    const DsLoadingState()
+                    DsLoadingState()
                   else if (_error != null)
                     DsErrorState(message: _error!, onRetry: _load)
                   else if (_stats != null)

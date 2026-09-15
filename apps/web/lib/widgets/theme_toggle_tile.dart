@@ -7,7 +7,13 @@ import '../theme/theme_controller.dart';
 /// pinta que el resto de las opciones del drawer (ver `_NavDrawer` en
 /// `app_shell.dart` y `_AdminNavDrawer` en `admin_shell.dart`).
 class ThemeToggleTile extends StatelessWidget {
-  const ThemeToggleTile({super.key});
+  // Sin constructor `const`: build() lee `ThemeController.isDark`, un valor
+  // externo mutable que no pasa por el constructor. Si esto fuera `const`,
+  // Dart canonicalizaría la instancia y Flutter la trataría como "nunca
+  // cambia" — se saltaría el rebuild entero al alternar el tema (el switch y
+  // la etiqueta se quedarían congelados en el valor del primer render, que
+  // es justo el bug que se reportó).
+  ThemeToggleTile({super.key});
 
   @override
   Widget build(BuildContext context) {

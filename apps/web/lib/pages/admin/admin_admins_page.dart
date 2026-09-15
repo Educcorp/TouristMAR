@@ -236,7 +236,7 @@ class _AdminAdminsPageState extends State<AdminAdminsPage> {
   }
 
   Widget _buildList() {
-    if (_loading) return const DsLoadingState();
+    if (_loading) return DsLoadingState();
     if (_error != null) return DsErrorState(message: _error!, onRetry: _load);
     if (_admins.isEmpty) {
       return const DsEmptyState(

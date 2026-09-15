@@ -27,7 +27,11 @@ const _topics = [
 /// Contenido de la sección "Ayuda": guía rápida del panel, con el mismo
 /// lenguaje visual que el resto (no es un stub de "próximamente").
 class AdminHelpPage extends StatelessWidget {
-  const AdminHelpPage({super.key});
+  // Sin `const`: build() lee AppColors/AppTypography (dependen de
+  // ThemeController, un valor externo mutable) — con `const`, Dart
+  // canonicalizaría la instancia y esta página se quedaría con los colores
+  // del primer render si el tema cambia mientras está visible.
+  AdminHelpPage({super.key});
 
   @override
   Widget build(BuildContext context) {

@@ -511,7 +511,7 @@ class _BusinessSidebarContent extends StatelessWidget {
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: const ThemeToggleTile(),
+          child: ThemeToggleTile(),
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),

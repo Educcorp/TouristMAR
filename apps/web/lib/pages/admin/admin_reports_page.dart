@@ -89,7 +89,7 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
             Text('Métricas y distribución del sistema, calculadas en tiempo real.', style: AppTypography.body),
             SizedBox(height: AppSpacing.xl),
             if (_loading)
-              const DsLoadingState()
+              DsLoadingState()
             else if (_error != null)
               DsErrorState(message: _error!, onRetry: _load)
             else
