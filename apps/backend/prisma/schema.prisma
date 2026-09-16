@@ -28,6 +28,14 @@ enum estado_negocio_enum {
   rechazado
 }
 
+enum notificacion_tipo_enum {
+  negocio_pendiente
+  negocio_sugerido
+  negocio_aprobado
+  negocio_rechazado
+  usuario_nuevo
+}
+
 model User {
   id              String     @id @default(uuid()) @db.Uuid
   email           String     @unique
@@ -38,20 +46,22 @@ model User {
   fechaNacimiento DateTime?  @map("fecha_nacimiento") @db.Date
   sexo            sexo_enum?
   rol             rol_enum   @default(turista)
+  activo          Boolean    @default(true)
   bio             String?
   avatarUrl       String?    @map("avatar_url")
   googleId        String?    @unique @map("google_id")
   createdAt       DateTime   @default(now()) @map("created_at")
   updatedAt       DateTime   @updatedAt @map("updated_at")
 
-  negocio NegocioProfile?
+  negocios      NegocioProfile[]
+  notifications Notification[]
 
   @@map("users")
 }
 
 model NegocioProfile {
   id          String              @id @default(uuid()) @db.Uuid
-  userId      String              @unique @map("user_id") @db.Uuid
+  userId      String              @map("user_id") @db.Uuid
   user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   nombre      String
   categoria   String?
@@ -61,11 +71,35 @@ model NegocioProfile {
   sitioWeb    String?             @map("sitio_web")
   horario     String?
   portada     String?
+  galeria     String[]            @default([])
+  archivo360  String?             @map("archivo_360")
+  arMarcador  String?             @map("ar_marcador_url")
+  arGeo       String?             @map("ar_geo_url")
   estado      estado_negocio_enum @default(pendiente)
   revisadoPor String?             @map("revisado_por") @db.Uuid
   revisadoEn  DateTime?           @map("revisado_en")
   createdAt   DateTime            @default(now()) @map("created_at")
   updatedAt   DateTime            @updatedAt @map("updated_at")
 
+  @@index([userId])
   @@map("negocio_profiles")
+}
+
+/// Notificación puntual para una cuenta (admin o dueño de negocio). No hay
+/// destinatario "por rol" — al ocurrir un evento se crea una fila por cada
+/// admin vigente (fan-out simple, son pocas cuentas) o una sola fila para el
+/// dueño de un negocio puntual.
+model Notification {
+  id        String                 @id @default(uuid()) @db.Uuid
+  userId    String                 @map("user_id") @db.Uuid
+  user      User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tipo      notificacion_tipo_enum
+  titulo    String
+  cuerpo    String
+  negocioId String?                @map("negocio_id") @db.Uuid
+  leida     Boolean                @default(false)
+  createdAt DateTime               @default(now()) @map("created_at")
+
+  @@index([userId, leida])
+  @@map("notifications")
 }

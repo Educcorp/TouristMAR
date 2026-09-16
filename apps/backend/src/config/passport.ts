@@ -1,7 +1,7 @@
 import passport from 'passport'
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20'
 import { env, isGoogleAuthEnabled } from './env'
-import { findOrCreateGoogleUser, GoogleLoginNotAllowedError } from '../modules/auth/auth.service'
+import { findOrCreateGoogleUser, GoogleLoginNotAllowedError, AccountBlockedError } from '../modules/auth/auth.service'
 
 if (isGoogleAuthEnabled) {
   passport.use(
@@ -16,7 +16,7 @@ if (isGoogleAuthEnabled) {
           const user = await findOrCreateGoogleUser(profile)
           done(null, user)
         } catch (err) {
-          if (err instanceof GoogleLoginNotAllowedError) {
+          if (err instanceof GoogleLoginNotAllowedError || err instanceof AccountBlockedError) {
             return done(null, false, { message: err.message })
           }
           done(err as Error)

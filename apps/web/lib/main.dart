@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'pages/login_page.dart';
 import 'theme/app_theme.dart';
+import 'theme/theme_controller.dart';
 
 void main() {
   runApp(const TouristMarApp());
@@ -12,11 +13,20 @@ class TouristMarApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'TourisMAR — Iniciar sesión',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.light,
-      home: const LoginPage(),
+    // Sin `key: ValueKey(mode)`: cada pantalla se reconstruye a sí misma con
+    // `ThemedBuilder` (ver ese archivo) en vez de forzar la reconstrucción de
+    // toda la app — así el Navigator y la sesión actual sobreviven al cambio
+    // de tema, sin el parpadeo de vuelta al login que había antes.
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: ThemeController.mode,
+      builder: (context, mode, _) {
+        return MaterialApp(
+          title: 'TourisMAR — Iniciar sesión',
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.current,
+          home: LoginPage(),
+        );
+      },
     );
   }
 }

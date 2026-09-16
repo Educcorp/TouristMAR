@@ -5,6 +5,7 @@ import '../theme/app_theme.dart';
 import '../theme/breakpoints.dart';
 import '../widgets/app_button.dart';
 import '../widgets/app_shell.dart';
+import '../widgets/themed_builder.dart';
 import '../widgets/user_avatar.dart';
 import 'edit_profile_page.dart';
 
@@ -26,7 +27,9 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => ThemedBuilder(builder: _buildShell);
+
+  Widget _buildShell(BuildContext context) {
     final profile = widget.profile;
 
     return AppShell(
@@ -39,7 +42,7 @@ class _ProfilePageState extends State<ProfilePage> {
         visitedCount: profile.visited.length,
         reviewsCount: profile.reviews.length,
       ),
-      navItems: visitorNavItems(context, profile: profile),
+      navItems: visitorNavItems(context, profile: profile, current: VisitorSection.profile),
       body: SingleChildScrollView(
         child: Column(
           children: [
@@ -94,20 +97,21 @@ class _ProfilePageState extends State<ProfilePage> {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF14343F), AppColors.panelNavy, Color(0xFF3A2416)],
+          colors: [Color(0xFF14343F), AppColors.scrimDark, Color(0xFF3A2416)],
         ),
       ),
       child: Column(
         children: [
           UserAvatar(imageUrl: profile.avatarUrl, fallbackLetter: profile.name, radius: 44),
           const SizedBox(height: 14),
-          Text(profile.name, style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 22)),
+          Text(profile.name,
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 22, color: Colors.white)),
           const SizedBox(height: 4),
-          Text(profile.email, style: const TextStyle(color: AppColors.slate400, fontSize: 12)),
+          Text(profile.email, style: const TextStyle(color: Colors.white70, fontSize: 12)),
         ],
       ),
     );
@@ -124,7 +128,7 @@ class _ProfilePageState extends State<ProfilePage> {
       decoration: BoxDecoration(
         color: AppColors.panelNavySoft,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
+        border: Border.all(color: AppColors.overlay(0.08)),
       ),
       child: Row(
         children: stats.map((s) {
@@ -136,12 +140,12 @@ class _ProfilePageState extends State<ProfilePage> {
                 children: [
                   Icon(icon, size: 16, color: AppColors.brandTeal),
                   const SizedBox(height: 4),
-                  Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 17)),
+                  Text(value, style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700, fontSize: 17)),
                   const SizedBox(height: 2),
                   Text(
                     label,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(color: AppColors.slate400, fontSize: 10),
+                    style: TextStyle(color: AppColors.slate400, fontSize: 10),
                   ),
                 ],
               ),
@@ -159,17 +163,17 @@ class _ProfilePageState extends State<ProfilePage> {
       decoration: BoxDecoration(
         color: AppColors.panelNavySoft,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
+        border: Border.all(color: AppColors.overlay(0.08)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'SOBRE MÍ',
             style: TextStyle(color: AppColors.slate500, fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 1),
           ),
           const SizedBox(height: 8),
-          Text(profile.bio, style: const TextStyle(color: Colors.white70, fontSize: 14, height: 1.4)),
+          Text(profile.bio, style: TextStyle(color: AppColors.textSecondary, fontSize: 14, height: 1.4)),
         ],
       ),
     );
@@ -180,7 +184,7 @@ class _ProfilePageState extends State<ProfilePage> {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(title, style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 17)),
-        Text(trailing, style: const TextStyle(color: AppColors.slate400, fontSize: 12)),
+        Text(trailing, style: TextStyle(color: AppColors.slate400, fontSize: 12)),
       ],
     );
   }
@@ -241,7 +245,7 @@ class _VisitedPlaceCard extends StatelessWidget {
                     ),
                     child: Text(
                       place.category,
-                      style: const TextStyle(color: AppColors.panelNavy, fontSize: 10, fontWeight: FontWeight.w600),
+                      style: TextStyle(color: AppColors.panelNavy, fontSize: 10, fontWeight: FontWeight.w600),
                     ),
                   ),
                 ),
@@ -257,7 +261,7 @@ class _VisitedPlaceCard extends StatelessWidget {
                   place.name,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
+                  style: TextStyle(color: AppColors.textPrimary, fontSize: 13, fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 4),
                 Row(
@@ -268,10 +272,10 @@ class _VisitedPlaceCard extends StatelessWidget {
                         const Icon(Icons.star, size: 12, color: Colors.amber),
                         const SizedBox(width: 3),
                         Text(place.rating.toString(),
-                            style: const TextStyle(color: AppColors.slate300, fontSize: 11)),
+                            style: TextStyle(color: AppColors.slate300, fontSize: 11)),
                       ],
                     ),
-                    Text(place.dateLabel, style: const TextStyle(color: AppColors.slate500, fontSize: 10)),
+                    Text(place.dateLabel, style: TextStyle(color: AppColors.slate500, fontSize: 10)),
                   ],
                 ),
               ],
@@ -297,7 +301,7 @@ class _ReviewTile extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.panelNavySoft,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
+        border: Border.all(color: AppColors.overlay(0.08)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -309,8 +313,8 @@ class _ReviewTile extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(review.placeName,
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14)),
-                  Text(review.dateLabel, style: const TextStyle(color: AppColors.slate500, fontSize: 11)),
+                      style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
+                  Text(review.dateLabel, style: TextStyle(color: AppColors.slate500, fontSize: 11)),
                 ],
               ),
               Row(
@@ -319,14 +323,14 @@ class _ReviewTile extends StatelessWidget {
                   (i) => Icon(
                     Icons.star,
                     size: 13,
-                    color: i < review.rating ? Colors.amber : Colors.white.withOpacity(0.15),
+                    color: i < review.rating ? Colors.amber : AppColors.overlay(0.15),
                   ),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 8),
-          Text(review.text, style: const TextStyle(color: Colors.white70, fontSize: 13, height: 1.4)),
+          Text(review.text, style: TextStyle(color: AppColors.textSecondary, fontSize: 13, height: 1.4)),
         ],
       ),
     );

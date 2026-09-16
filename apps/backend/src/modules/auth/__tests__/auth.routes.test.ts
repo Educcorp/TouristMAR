@@ -7,8 +7,12 @@ vi.mock('../../../config/prisma', () => ({
   prisma: {
     user: {
       findUnique: vi.fn(),
+      findMany: vi.fn(),
       create: vi.fn(),
       update: vi.fn(),
+    },
+    notification: {
+      createMany: vi.fn(),
     },
   },
 }))
@@ -17,6 +21,7 @@ import { prisma } from '../../../config/prisma'
 import { authRouter } from '../auth.routes'
 
 const findUnique = vi.mocked(prisma.user.findUnique)
+const findMany = vi.mocked(prisma.user.findMany)
 const create = vi.mocked(prisma.user.create)
 
 function buildApp() {
@@ -28,13 +33,15 @@ function buildApp() {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  // Sin admins registrados en estos tests: notifyAdmins() se vuelve un no-op.
+  findMany.mockResolvedValue([])
 })
 
 describe('POST /api/auth/register', () => {
   it('crea la cuenta y devuelve token + usuario público (sin passwordHash)', async () => {
     findUnique.mockResolvedValue(null)
     create.mockImplementation(({ data }: any) =>
-      Promise.resolve({ id: 'user-1', avatarUrl: null, bio: null, negocio: null, ...data }) as any,
+      Promise.resolve({ id: 'user-1', avatarUrl: null, bio: null, ...data, negocios: data.negocios ?? [] }) as any,
     )
 
     const res = await request(buildApp()).post('/api/auth/register').send({
@@ -51,7 +58,7 @@ describe('POST /api/auth/register', () => {
       role: 'turista',
       avatarUrl: null,
       bio: null,
-      negocio: null,
+      negocios: [],
     })
     expect(res.body.user.passwordHash).toBeUndefined()
     expect(typeof res.body.token).toBe('string')
@@ -90,6 +97,7 @@ describe('POST /api/auth/login', () => {
       nombres: 'Ana',
       rol: 'turista',
       avatarUrl: null,
+      negocios: [],
     } as any)
 
     const res = await request(buildApp()).post('/api/auth/login').send({

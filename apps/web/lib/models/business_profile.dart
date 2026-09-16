@@ -44,6 +44,7 @@ const businessReviews = <BusinessReview>[
 ];
 
 class BusinessProfile {
+  final String id;
   String businessName;
   String ownerName;
   String email;
@@ -61,8 +62,13 @@ class BusinessProfile {
   String address;
   String hours;
   bool verified;
+  String estado;
+  String? archivo360;
+  String? arMarcador;
+  String? arGeo;
 
   BusinessProfile({
+    required this.id,
     required this.businessName,
     required this.ownerName,
     required this.email,
@@ -80,32 +86,40 @@ class BusinessProfile {
     required this.address,
     required this.hours,
     required this.verified,
+    required this.estado,
+    this.archivo360,
+    this.arMarcador,
+    this.arGeo,
   });
 
-  /// Perfil real de negocio devuelto por el backend. Las estadísticas
-  /// (calificación, visitas, reseñas, favoritos) aún no existen como feature
-  /// en el backend, así que se muestran en cero en vez de datos inventados.
-  factory BusinessProfile.fromAuthUser(AuthUser user) {
-    final negocio = user.negocio;
+  /// Un negocio puntual de una cuenta (una cuenta puede tener varios). Las
+  /// estadísticas (calificación, visitas, reseñas, favoritos) aún no existen
+  /// como feature en el backend, así que se muestran en cero en vez de datos
+  /// inventados.
+  factory BusinessProfile.fromNegocioInfo(AuthUser user, NegocioInfo negocio) {
     return BusinessProfile(
-      businessName: negocio?.nombre ?? user.name,
+      id: negocio.id,
+      businessName: negocio.nombre,
       ownerName: user.name,
       email: user.email,
-      category: negocio?.categoria ?? '',
-      description: negocio?.descripcion ?? '',
-      coverImage: negocio?.portada ?? 'assets/images/place-playa-audiencia.jpg',
-      gallery: const [],
+      category: negocio.categoria ?? '',
+      description: negocio.descripcion ?? '',
+      coverImage: negocio.portada ?? 'assets/images/place-playa-audiencia.jpg',
+      gallery: negocio.galeria,
       rating: 0,
       totalReviews: 0,
       monthlyVisits: 0,
       newReviews: 0,
       favorites: 0,
-      phone: negocio?.telefono ?? '',
-      website: negocio?.sitioWeb ?? '',
-      address: negocio?.direccion ?? '',
-      hours: negocio?.horario ?? '',
-      verified: negocio?.aprobado ?? false,
+      phone: negocio.telefono ?? '',
+      website: negocio.sitioWeb ?? '',
+      address: negocio.direccion ?? '',
+      hours: negocio.horario ?? '',
+      verified: negocio.aprobado,
+      estado: negocio.estado,
+      archivo360: negocio.archivo360,
+      arMarcador: negocio.arMarcador,
+      arGeo: negocio.arGeo,
     );
   }
-
 }

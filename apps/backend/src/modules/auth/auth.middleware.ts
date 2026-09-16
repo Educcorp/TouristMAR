@@ -8,7 +8,7 @@ export interface AuthedRequest extends Request {
   userId?: string
 }
 
-export function requireAuth(req: AuthedRequest, res: Response, next: NextFunction) {
+export async function requireAuth(req: AuthedRequest, res: Response, next: NextFunction) {
   const header = req.headers.authorization
   const token = header?.startsWith('Bearer ') ? header.slice('Bearer '.length) : null
 
@@ -16,13 +16,33 @@ export function requireAuth(req: AuthedRequest, res: Response, next: NextFunctio
     return res.status(401).json({ error: 'No autorizado' })
   }
 
+  let userId: string
   try {
     const payload = jwt.verify(token, env.JWT_SECRET) as { sub: string }
-    req.userId = payload.sub
-    next()
+    userId = payload.sub
   } catch {
     return res.status(401).json({ error: 'Token inválido o expirado' })
   }
+
+  // Un token firmado sigue siendo válido aunque un admin bloquee la cuenta a
+  // mitad de sesión — sin esta consulta, una cuenta bloqueada podría seguir
+  // usando la API hasta que el token expire por su cuenta. Se corta aquí,
+  // en cada request autenticado, en vez de confiar solo en el chequeo al
+  // hacer login.
+  try {
+    const user = await findUserById(userId)
+    if (!user) {
+      return res.status(401).json({ error: 'Token inválido o expirado' })
+    }
+    if (user.activo === false) {
+      return res.status(403).json({ error: 'Tu cuenta ha sido bloqueada por un administrador', code: 'blocked' })
+    }
+  } catch {
+    return res.status(500).json({ error: 'Error interno' })
+  }
+
+  req.userId = userId
+  next()
 }
 
 export function requireRole(...roles: rol_enum[]) {

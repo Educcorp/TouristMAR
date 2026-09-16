@@ -9,7 +9,7 @@ class RegisterPlaceBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.white.withOpacity(0.05),
+      color: AppColors.overlay(0.05),
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
@@ -18,7 +18,7 @@ class RegisterPlaceBanner extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.white.withOpacity(0.1)),
+            border: Border.all(color: AppColors.overlay(0.1)),
           ),
           child: Row(
             children: [
@@ -26,16 +26,16 @@ class RegisterPlaceBanner extends StatelessWidget {
                 width: 36,
                 height: 36,
                 decoration: BoxDecoration(color: AppColors.brandTeal.withOpacity(0.15), shape: BoxShape.circle),
-                child: const Icon(Icons.location_on_outlined, size: 18, color: AppColors.brandTeal),
+                child: Icon(Icons.location_on_outlined, size: 18, color: AppColors.brandTeal),
               ),
               const SizedBox(width: 12),
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       '¿Te gustaría registrar un lugar nuevo?',
-                      style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500),
+                      style: TextStyle(color: AppColors.textPrimary, fontSize: 14, fontWeight: FontWeight.w500),
                     ),
                     Text(
                       'Propón tu negocio o sitio turístico',
@@ -44,7 +44,7 @@ class RegisterPlaceBanner extends StatelessWidget {
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right, color: AppColors.slate400),
+              Icon(Icons.chevron_right, color: AppColors.slate400),
             ],
           ),
         ),

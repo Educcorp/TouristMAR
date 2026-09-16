@@ -50,7 +50,7 @@ class PlaceCard extends StatelessWidget {
                       ),
                       child: Text(
                         category,
-                        style: const TextStyle(color: AppColors.panelNavy, fontSize: 11, fontWeight: FontWeight.w600),
+                        style: TextStyle(color: AppColors.panelNavy, fontSize: 11, fontWeight: FontWeight.w600),
                       ),
                     ),
                   ),
@@ -79,7 +79,7 @@ class PlaceCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(name, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600)),
+                  Text(name, style: TextStyle(color: AppColors.textPrimary, fontSize: 15, fontWeight: FontWeight.w600)),
                   const SizedBox(height: 6),
                   Row(
                     children: [

@@ -11,9 +11,9 @@ class AppTextField extends StatelessWidget {
   final Widget? suffixIcon;
   final String? Function(String?)? validator;
   final Key? fieldKey;
-  final Color accentColor;
+  final Color? accentColor;
 
-  const AppTextField({
+  AppTextField({
     super.key,
     required this.label,
     required this.icon,
@@ -24,7 +24,7 @@ class AppTextField extends StatelessWidget {
     this.suffixIcon,
     this.validator,
     this.fieldKey,
-    this.accentColor = AppColors.brandTeal,
+    this.accentColor,
   });
 
   @override
@@ -32,7 +32,7 @@ class AppTextField extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(color: AppColors.slate300, fontSize: 14)),
+        Text(label, style: TextStyle(color: AppColors.slate300, fontSize: 14)),
         const SizedBox(height: 8),
         TextFormField(
           key: fieldKey,
@@ -40,10 +40,10 @@ class AppTextField extends StatelessWidget {
           obscureText: obscureText,
           keyboardType: keyboardType,
           validator: validator,
-          style: const TextStyle(color: Colors.white, fontSize: 14),
+          style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
           decoration: InputDecoration(
             hintText: hintText,
-            hintStyle: const TextStyle(color: AppColors.slate500),
+            hintStyle: TextStyle(color: AppColors.slate500),
             prefixIcon: Icon(icon, size: 18, color: AppColors.slate500),
             suffixIcon: suffixIcon,
             filled: true,
@@ -51,23 +51,23 @@ class AppTextField extends StatelessWidget {
             contentPadding: const EdgeInsets.symmetric(vertical: 12),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
+              borderSide: BorderSide(color: AppColors.overlay(0.1)),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
+              borderSide: BorderSide(color: AppColors.overlay(0.1)),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: accentColor),
+              borderSide: BorderSide(color: accentColor ?? AppColors.brandTeal),
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: AppColors.errorRed),
+              borderSide: BorderSide(color: AppColors.errorRed),
             ),
             focusedErrorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: AppColors.errorRed),
+              borderSide: BorderSide(color: AppColors.errorRed),
             ),
           ),
         ),
