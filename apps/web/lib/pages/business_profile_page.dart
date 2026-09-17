@@ -141,16 +141,18 @@ class _BusinessProfileContentState extends State<BusinessProfileContent> {
                             Text('(${business.totalReviews} reseñas)', style: TextStyle(color: AppColors.slate400, fontSize: 12)),
                           ],
                         ),
-                        AppButton(
-                          variant: AppButtonVariant.ghost,
-                          onPressed: _openEdit,
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.edit_outlined, size: 13),
-                              SizedBox(width: 6),
-                              Text('Editar'),
-                            ],
+                        IntrinsicWidth(
+                          child: AppButton(
+                            variant: AppButtonVariant.ghost,
+                            onPressed: _openEdit,
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.edit_outlined, size: 13),
+                                SizedBox(width: 6),
+                                Text('Editar'),
+                              ],
+                            ),
                           ),
                         ),
                       ],
