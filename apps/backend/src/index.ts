@@ -15,6 +15,7 @@ const hasFrontendBuild = fs.existsSync(path.join(publicDir, 'index.html'))
 app.use(
   helmet({
     contentSecurityPolicy: false,
+    frameguard: false,
   }),
 )
 app.use(cors({ origin: env.CORS_ORIGIN, credentials: true }))
