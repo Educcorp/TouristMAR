@@ -36,6 +36,12 @@ dependencies:
   cupertino_icons: ^1.0.8
   google_sign_in: ^7.2.0
   http: ^1.6.0
+  shared_preferences: ^2.3.0
+
+  # Páginas, widgets, tema y modelos de la web: la app móvil los reutiliza tal
+  # cual para que un cambio de diseño en apps/web se vea también en el móvil.
+  touristmar_web:
+    path: ../web
 
 dev_dependencies:
   flutter_test:
@@ -59,10 +65,16 @@ flutter:
   # the material Icons class.
   uses-material-design: true
 
-  # To add assets to your application, add an assets section, like this:
-  # assets:
-  #   - images/a_dot_burr.jpeg
-  #   - images/a_dot_ham.jpeg
+  # Copia de los assets de apps/web (el código de la web los pide como
+  # 'assets/...' y Flutter no los resuelve desde otro paquete). Se mantienen
+  # al día con scripts/sync-mobile-assets.js.
+  assets:
+    - assets/images/hero-manzanillo.jpg
+    - assets/images/place-playa-audiencia.jpg
+    - assets/images/place-cerro-vigia.jpg
+    - assets/images/place-laguna-cuyutlan.jpg
+    - assets/images/admin-hero-bahia.webp
+    - assets/icons/google_logo.svg
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
