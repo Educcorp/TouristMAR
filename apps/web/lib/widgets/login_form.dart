@@ -91,11 +91,17 @@ class _LoginFormState extends State<LoginForm> {
       SessionStorage.saveToken(token);
       if (!mounted) return;
       _routeUser(restoredUser);
+      // No hacer más `setState` después de navegar: `pushReplacement` anima
+      // la transición y no desmonta esta pantalla al instante. Si acá se
+      // reactivara `_isRestoringSession` a false, este LoginForm se
+      // reconstruiría visible (mostrando el formulario completo) justo
+      // debajo de la ruta nueva mientras esta última termina de entrar —
+      // el parpadeo de vuelta al login antes de llegar al perfil.
+      return;
     } catch (_) {
       SessionStorage.clearToken();
-    } finally {
-      if (mounted) setState(() => _isRestoringSession = false);
     }
+    if (mounted) setState(() => _isRestoringSession = false);
   }
 
   /// Decide a dónde mandar al usuario según su rol y, si es negocio, su
@@ -150,13 +156,17 @@ class _LoginFormState extends State<LoginForm> {
             );
       SessionStorage.saveToken(response.token);
       _routeUser(response.user);
+      // Igual que en `_restoreSession`: no tocar el estado de este formulario
+      // después de navegar, para no reconstruirlo (con el botón vuelto a su
+      // texto normal) mientras la transición de `pushReplacement` todavía lo
+      // tiene visible debajo de la ruta nueva.
+      return;
     } catch (err) {
       setState(() {
         _error = err is AuthError ? err.message : 'No se pudo conectar con el servidor';
       });
-    } finally {
-      if (mounted) setState(() => _isSubmitting = false);
     }
+    if (mounted) setState(() => _isSubmitting = false);
   }
 
   void _logout() {

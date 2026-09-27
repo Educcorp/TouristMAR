@@ -10,7 +10,12 @@ import { apiRouter } from './routes'
 
 const app = express()
 const publicDir = path.join(__dirname, '../public')
-const hasFrontendBuild = fs.existsSync(path.join(publicDir, 'index.html'))
+// Solo en producción: en dev el frontend real corre aparte (Flutter en modo
+// desarrollo, ver el script `dev` en package.json). Si no se restringe por
+// entorno, un build de Flutter (o restos de builds viejos) que quede suelto
+// en `public/` se serviría igual en local y taparía el servidor de Flutter
+// real, mostrando una versión vieja o incorrecta del frontend.
+const hasFrontendBuild = env.NODE_ENV === 'production' && fs.existsSync(path.join(publicDir, 'index.html'))
 
 app.use(
   helmet({
