@@ -23,7 +23,7 @@ AdminSection? adminSectionForNotification(String tipo) {
 }
 
 /// Destinos disponibles en el panel admin.
-enum AdminSection { inicio, solicitudes, usuarios, negocios, admins, reportes, configuracion, ayuda }
+enum AdminSection { inicio, solicitudes, usuarios, negocios, realidadAumentada, admins, reportes, configuracion, ayuda }
 
 void adminLogout(BuildContext context) {
   SessionStorage.clearToken();
@@ -45,6 +45,7 @@ const _adminNavItems = [
   _AdminNavLeaf(AdminSection.solicitudes, Icons.report_gmailerrorred_outlined, 'Solicitudes'),
   _AdminNavLeaf(AdminSection.usuarios, Icons.group_outlined, 'Usuarios'),
   _AdminNavLeaf(AdminSection.negocios, Icons.apartment_outlined, 'Negocios'),
+  _AdminNavLeaf(AdminSection.realidadAumentada, Icons.view_in_ar_outlined, 'Realidad aumentada'),
   _AdminNavLeaf(AdminSection.admins, Icons.shield_outlined, 'Admins'),
   _AdminNavLeaf(AdminSection.reportes, Icons.bar_chart_outlined, 'Reportes'),
   _AdminNavLeaf(AdminSection.configuracion, Icons.settings_outlined, 'Configuración'),
@@ -363,12 +364,18 @@ class _AdminSidebarContent extends StatelessWidget {
                         children: [
                           Icon(item.icon, size: 18, color: color),
                           const SizedBox(width: 12),
-                          Text(
-                            item.label,
-                            style: TextStyle(
-                              color: active ? color : AppColors.overlay(0.85),
-                              fontSize: 14,
-                              fontWeight: active ? FontWeight.w600 : FontWeight.w500,
+                          // Flexible + ellipsis: una etiqueta larga (o la letra
+                          // agrandada por accesibilidad) no debe desbordar el menú.
+                          Flexible(
+                            child: Text(
+                              item.label,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: active ? color : AppColors.overlay(0.85),
+                                fontSize: 14,
+                                fontWeight: active ? FontWeight.w600 : FontWeight.w500,
+                              ),
                             ),
                           ),
                         ],

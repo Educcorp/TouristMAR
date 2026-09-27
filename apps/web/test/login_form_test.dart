@@ -1,101 +1,214 @@
+// Usa dart:html (SessionStorage, redirect de Google), así que solo corre en
+// navegador: `flutter test --platform chrome` (ver `npm test` en la raíz).
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:touristmar_web/pages/admin/admin_dashboard_page.dart';
+import 'package:touristmar_web/pages/business_home_page.dart';
+import 'package:touristmar_web/pages/home_page.dart';
 import 'package:touristmar_web/services/auth_service.dart';
+import 'package:touristmar_web/services/session_storage.dart';
 import 'package:touristmar_web/widgets/login_form.dart';
 
 Widget _wrap(Widget child) => MaterialApp(home: Scaffold(body: child));
 
-Map<String, dynamic> _user({String id = '1', String email = 'ana@correo.com', String name = 'Ana'}) => {
+Map<String, dynamic> _negocio({String estado = 'pendiente', String nombre = 'Café del Puerto'}) => {
+      'id': 'n-1',
+      'nombre': nombre,
+      'categoria': 'Restaurantes',
+      'estado': estado,
+      'createdAt': '2026-09-01T00:00:00.000Z',
+    };
+
+Map<String, dynamic> _user({
+  String id = '1',
+  String email = 'ana@correo.com',
+  String name = 'Ana',
+  String role = 'turista',
+  List<Map<String, dynamic>> negocios = const [],
+}) =>
+    {
       'id': id,
       'email': email,
       'name': name,
-      'role': 'usuario',
+      'role': role,
       'avatarUrl': null,
+      'negocios': negocios,
     };
 
+/// Cliente falso que responde login/register con [user] y guarda los
+/// cuerpos enviados para poder revisarlos.
+MockClient _authClient(Map<String, dynamic> user, {List<Map<String, dynamic>>? bodies}) {
+  return MockClient((request) async {
+    if (request.url.path.endsWith('/auth/login') || request.url.path.endsWith('/auth/register')) {
+      bodies?.add(jsonDecode(request.body) as Map<String, dynamic>);
+      return http.Response(jsonEncode({'token': 'jwt-token', 'user': user}), 200);
+    }
+    return http.Response('{}', 404);
+  });
+}
+
+Future<void> _pumpLoginForm(WidgetTester tester, AuthService authService) async {
+  // Pantalla de escritorio: con el tamaño por defecto (800×600) los botones
+  // del formulario quedan fuera de la vista y los taps no les llegan.
+  tester.view.physicalSize = const Size(1440, 1200);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.reset);
+
+  await tester.pumpWidget(_wrap(LoginForm(authService: authService)));
+  await tester.pumpAndSettle();
+}
+
+Future<void> _tapText(WidgetTester tester, String text) async {
+  final finder = find.text(text);
+  await tester.ensureVisible(finder);
+  await tester.tap(finder);
+}
+
+Future<void> _submitLogin(WidgetTester tester, {String password = 'password123'}) async {
+  await tester.enterText(find.byKey(const ValueKey('email-field')), 'ana@correo.com');
+  await tester.enterText(find.byKey(const ValueKey('password-field')), password);
+  await _tapText(tester, 'Iniciar sesión');
+}
+
+/// Deja que termine la transición de `pushReplacement`. No se usa
+/// `pumpAndSettle` porque las pantallas de destino (campana de
+/// notificaciones, SessionGuard) arrancan temporizadores periódicos.
+Future<void> _pumpNavigation(WidgetTester tester) async {
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 500));
+}
+
+/// Desmonta el árbol para cancelar los temporizadores de la pantalla de
+/// destino antes de que el test termine.
+Future<void> _disposeTree(WidgetTester tester) async {
+  await tester.pumpWidget(const SizedBox());
+  await tester.pump(const Duration(seconds: 1));
+}
+
 void main() {
-  testWidgets('inicia sesión con email/password y muestra el saludo de bienvenida', (tester) async {
-    final client = MockClient((request) async {
-      if (request.url.path.endsWith('/auth/login')) {
-        return http.Response(jsonEncode({'token': 'jwt-token', 'user': _user()}), 200);
-      }
-      return http.Response('{}', 404);
-    });
+  setUp(SessionStorage.clearToken);
 
-    await tester.pumpWidget(_wrap(LoginForm(authService: AuthService(client: client))));
+  testWidgets('un turista inicia sesión, se guarda el token y entra al inicio de visitante', (tester) async {
+    await _pumpLoginForm(tester, AuthService(client: _authClient(_user())));
+
+    await _submitLogin(tester);
+    await _pumpNavigation(tester);
+
+    expect(SessionStorage.token, 'jwt-token');
+    expect(find.byType(HomePage), findsOneWidget);
+    expect(find.byType(LoginForm), findsNothing);
+    await _disposeTree(tester);
+  });
+
+  testWidgets('un admin entra al panel de administración', (tester) async {
+    await _pumpLoginForm(tester, AuthService(client: _authClient(_user(role: 'admin'))));
+
+    await _submitLogin(tester);
+    await _pumpNavigation(tester);
+
+    expect(find.byType(AdminDashboardPage), findsOneWidget);
+    await _disposeTree(tester);
+  });
+
+  testWidgets('un negocio con al menos un negocio aprobado entra a su panel', (tester) async {
+    final user = _user(role: 'negocio', negocios: [_negocio(estado: 'aprobado')]);
+    await _pumpLoginForm(tester, AuthService(client: _authClient(user)));
+
+    await _submitLogin(tester);
+    await _pumpNavigation(tester);
+
+    expect(find.byType(BusinessHomePage), findsOneWidget);
+    await _disposeTree(tester);
+  });
+
+  testWidgets('un negocio pendiente no entra al panel: ve su estado y puede cerrar sesión', (tester) async {
+    final user = _user(role: 'negocio', negocios: [_negocio()]);
+    await _pumpLoginForm(tester, AuthService(client: _authClient(user)));
+
+    await _submitLogin(tester);
     await tester.pumpAndSettle();
 
-    await tester.enterText(find.byKey(const ValueKey('email-field')), 'ana@correo.com');
-    await tester.enterText(find.byKey(const ValueKey('password-field')), 'password123');
-    await tester.tap(find.text('Iniciar sesión'));
+    expect(find.byType(BusinessHomePage), findsNothing);
+    expect(find.text('Tu negocio está en revisión'), findsOneWidget);
+    expect(find.text('Café del Puerto'), findsOneWidget);
+
+    await _tapText(tester, 'Cerrar sesión');
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('Ana'), findsWidgets);
+    expect(SessionStorage.token, isNull);
+    expect(find.byKey(const ValueKey('email-field')), findsOneWidget);
+  });
+
+  testWidgets('un negocio rechazado ve el aviso de registro no aprobado', (tester) async {
+    final user = _user(role: 'negocio', negocios: [_negocio(estado: 'rechazado')]);
+    await _pumpLoginForm(tester, AuthService(client: _authClient(user)));
+
+    await _submitLogin(tester);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Registro no aprobado'), findsOneWidget);
   });
 
   testWidgets('muestra un error inline cuando el login falla', (tester) async {
     final client = MockClient((request) async {
       return http.Response(jsonEncode({'error': 'Correo o contraseña incorrectos'}), 401);
     });
+    await _pumpLoginForm(tester, AuthService(client: client));
 
-    await tester.pumpWidget(_wrap(LoginForm(authService: AuthService(client: client))));
-    await tester.pumpAndSettle();
-
-    await tester.enterText(find.byKey(const ValueKey('email-field')), 'ana@correo.com');
-    await tester.enterText(find.byKey(const ValueKey('password-field')), 'incorrecta');
-    await tester.tap(find.text('Iniciar sesión'));
+    await _submitLogin(tester, password: 'incorrecta');
     await tester.pumpAndSettle();
 
     expect(find.text('Correo o contraseña incorrectos'), findsOneWidget);
+    expect(find.byType(LoginForm), findsOneWidget);
+    expect(SessionStorage.token, isNull);
   });
 
-  testWidgets('cambia a modo registro, pide el campo nombre y llama a register', (tester) async {
-    final client = MockClient((request) async {
-      if (request.url.path.endsWith('/auth/register')) {
-        return http.Response(jsonEncode({'token': 'jwt-token-2', 'user': _user(id: '2', email: 'nueva@correo.com', name: 'Nueva')}), 200);
-      }
-      return http.Response('{}', 404);
-    });
+  testWidgets('registro de visitante: pide el nombre, manda rol turista y entra al inicio', (tester) async {
+    final bodies = <Map<String, dynamic>>[];
+    final user = _user(id: '2', email: 'nueva@correo.com', name: 'Nueva');
+    await _pumpLoginForm(tester, AuthService(client: _authClient(user, bodies: bodies)));
 
-    await tester.pumpWidget(_wrap(LoginForm(authService: AuthService(client: client))));
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.text('Regístrate gratis'));
+    await _tapText(tester, 'Regístrate gratis');
     await tester.pumpAndSettle();
 
     expect(find.byKey(const ValueKey('name-field')), findsOneWidget);
+    expect(find.byKey(const ValueKey('category-field')), findsNothing);
 
     await tester.enterText(find.byKey(const ValueKey('name-field')), 'Nueva');
     await tester.enterText(find.byKey(const ValueKey('email-field')), 'nueva@correo.com');
     await tester.enterText(find.byKey(const ValueKey('password-field')), 'password123');
-    await tester.tap(find.text('Crear cuenta'));
-    await tester.pumpAndSettle();
+    await _tapText(tester, 'Crear cuenta');
+    await _pumpNavigation(tester);
 
-    expect(find.textContaining('Nueva'), findsWidgets);
+    expect(bodies.single, containsPair('rol', 'turista'));
+    expect(bodies.single, containsPair('name', 'Nueva'));
+    expect(find.byType(HomePage), findsOneWidget);
+    await _disposeTree(tester);
   });
 
-  testWidgets('cierra sesión desde el menú del avatar y vuelve al formulario', (tester) async {
-    final client = MockClient((request) async {
-      return http.Response(jsonEncode({'token': 'jwt-token', 'user': _user()}), 200);
-    });
+  testWidgets('registro de empresa: manda rol negocio + categoría y queda en revisión', (tester) async {
+    final bodies = <Map<String, dynamic>>[];
+    final user = _user(role: 'negocio', name: 'Café del Puerto', negocios: [_negocio()]);
+    await _pumpLoginForm(tester, AuthService(client: _authClient(user, bodies: bodies)));
 
-    await tester.pumpWidget(_wrap(LoginForm(authService: AuthService(client: client))));
+    await _tapText(tester, 'Empresa');
+    await tester.pumpAndSettle();
+    await _tapText(tester, 'Registra tu negocio');
     await tester.pumpAndSettle();
 
-    await tester.enterText(find.byKey(const ValueKey('email-field')), 'ana@correo.com');
+    await tester.enterText(find.byKey(const ValueKey('name-field')), 'Café del Puerto');
+    await tester.enterText(find.byKey(const ValueKey('category-field')), 'Restaurantes');
+    await tester.enterText(find.byKey(const ValueKey('email-field')), 'cafe@correo.com');
     await tester.enterText(find.byKey(const ValueKey('password-field')), 'password123');
-    await tester.tap(find.text('Iniciar sesión'));
+    await _tapText(tester, 'Solicitar registro');
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byType(PopupMenuButton<String>));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Cerrar sesión'));
-    await tester.pumpAndSettle();
-
-    expect(find.byKey(const ValueKey('email-field')), findsOneWidget);
+    expect(bodies.single, containsPair('rol', 'negocio'));
+    expect(bodies.single, containsPair('categoria', 'Restaurantes'));
+    expect(find.text('Tu negocio está en revisión'), findsOneWidget);
   });
 }

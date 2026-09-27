@@ -11,6 +11,7 @@ import '../../widgets/admin/ds_section_card.dart';
 import '../../widgets/admin/ds_stat_card.dart';
 import '../../widgets/themed_builder.dart';
 import 'admin_admins_page.dart';
+import 'admin_ar_page.dart';
 import 'admin_businesses_page.dart';
 import 'admin_help_page.dart';
 import 'admin_reports_page.dart';
@@ -63,6 +64,8 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
         return AdminUsersPage(authService: widget.authService);
       case AdminSection.negocios:
         return AdminBusinessesPage(authService: widget.authService);
+      case AdminSection.realidadAumentada:
+        return AdminArPage(authService: widget.authService);
       case AdminSection.admins:
         return AdminAdminsPage(currentAdmin: widget.admin, authService: widget.authService);
       case AdminSection.reportes:

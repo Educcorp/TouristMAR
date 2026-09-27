@@ -36,6 +36,17 @@ enum notificacion_tipo_enum {
   usuario_nuevo
 }
 
+/// Qué muestra la app cuando la cámara reconoce un marcador. Por ahora el
+/// módulo de Unity solo pinta `texto` (tarjeta flotante con TextMeshPro); los
+/// demás quedan listos para cuando se agreguen modelos 3D, imágenes o videos
+/// encima del marcador (el archivo va en `contenido_url`).
+enum ar_contenido_enum {
+  texto
+  imagen
+  modelo_3d
+  video
+}
+
 model User {
   id              String     @id @default(uuid()) @db.Uuid
   email           String     @unique
@@ -55,6 +66,8 @@ model User {
 
   negocios      NegocioProfile[]
   notifications Notification[]
+  arMarcadores  ArMarcador[]
+  arEscaneos    ArEscaneo[]
 
   @@map("users")
 }
@@ -81,6 +94,8 @@ model NegocioProfile {
   createdAt   DateTime            @default(now()) @map("created_at")
   updatedAt   DateTime            @updatedAt @map("updated_at")
 
+  arMarcadores ArMarcador[]
+
   @@index([userId])
   @@map("negocio_profiles")
 }
@@ -102,4 +117,60 @@ model Notification {
 
   @@index([userId, leida])
   @@map("notifications")
+}
+
+/// Imagen que la cámara AR reconoce (una gaviota, un barco, un letrero…) más
+/// la información que se muestra flotando encima. Lo dan de alta los admins
+/// desde el panel web; el módulo de Unity descarga la lista pública
+/// (`GET /api/ar/marcadores`) y agrega cada imagen a su biblioteca de rastreo
+/// en tiempo de ejecución, sin recompilar la app.
+///
+/// El `id` es también el nombre con el que la imagen se registra en la
+/// `MutableRuntimeReferenceImageLibrary` de Unity — así, al detectar una
+/// imagen, Unity sabe exactamente a qué fila corresponde.
+model ArMarcador {
+  id            String            @id @default(uuid()) @db.Uuid
+  /// Opcional: un marcador puede pertenecer a un negocio (su letrero, su
+  /// menú) o ser del destino en general (un monumento, la bahía).
+  negocioId     String?           @map("negocio_id") @db.Uuid
+  negocio       NegocioProfile?   @relation(fields: [negocioId], references: [id], onDelete: Cascade)
+  nombre        String
+  imagenUrl     String            @map("imagen_url")
+  /// Ruta dentro del bucket (sin el `?v=`) — hace falta para borrar el
+  /// archivo de Storage al eliminar el marcador.
+  imagenPath    String            @map("imagen_path")
+  /// Ancho físico real de la imagen impresa, en metros. ARCore/ARKit lo usan
+  /// para estimar la escala y detectar más rápido; null = desconocido.
+  anchoMetros   Float?            @map("ancho_metros")
+  titulo        String
+  texto         String
+  tipoContenido ar_contenido_enum @default(texto) @map("tipo_contenido")
+  contenidoUrl  String?           @map("contenido_url")
+  activo        Boolean           @default(true)
+  creadoPor     String?           @map("creado_por") @db.Uuid
+  autor         User?             @relation(fields: [creadoPor], references: [id], onDelete: SetNull)
+  createdAt     DateTime          @default(now()) @map("created_at")
+  updatedAt     DateTime          @updatedAt @map("updated_at")
+
+  escaneos ArEscaneo[]
+
+  @@index([activo])
+  @@index([negocioId])
+  @@map("ar_marcadores")
+}
+
+/// Un registro cada vez que la cámara reconoce un marcador (una vez por
+/// marcador por sesión de AR, lo controla Unity). Alimenta las estadísticas
+/// del panel; `userId` solo se llena si la app mandó el token del turista.
+model ArEscaneo {
+  id         String     @id @default(uuid()) @db.Uuid
+  marcadorId String     @map("marcador_id") @db.Uuid
+  marcador   ArMarcador @relation(fields: [marcadorId], references: [id], onDelete: Cascade)
+  userId     String?    @map("user_id") @db.Uuid
+  user       User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
+  plataforma String?
+  createdAt  DateTime   @default(now()) @map("created_at")
+
+  @@index([marcadorId, createdAt])
+  @@map("ar_escaneos")
 }
