@@ -13,12 +13,14 @@ class BusinessDashboardContent extends StatefulWidget {
   final BusinessProfile business;
   final VoidCallback onNegocioUpdated;
   final VoidCallback onOpenReviews;
+  final VoidCallback onOpenExperiencias;
 
   const BusinessDashboardContent({
     super.key,
     required this.business,
     required this.onNegocioUpdated,
     required this.onOpenReviews,
+    required this.onOpenExperiencias,
   });
 
   @override
@@ -241,6 +243,7 @@ class _BusinessDashboardContentState extends State<BusinessDashboardContent> {
     final actions = [
       (Icons.edit_outlined, 'Editar información', AppColors.brandTeal, _openEdit),
       (Icons.image_outlined, 'Gestionar fotos', AppColors.businessOrange, _openGallery),
+      (Icons.view_in_ar_outlined, 'Mapa y experiencias', AppColors.emerald, widget.onOpenExperiencias),
     ];
 
     return LayoutBuilder(

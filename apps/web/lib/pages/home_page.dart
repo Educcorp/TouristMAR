@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/visitor_profile.dart';
 import '../services/auth_service.dart';
+import '../services/lugares_service.dart';
 import '../theme/app_theme.dart';
 import '../theme/breakpoints.dart';
 import '../widgets/app_shell.dart';
@@ -10,21 +11,24 @@ import '../widgets/quick_action_card.dart';
 import '../widgets/register_place_banner.dart';
 import '../widgets/themed_builder.dart';
 import '../widgets/user_avatar.dart';
+import 'lugar_detalle_page.dart';
 
 class _QuickAction {
   final IconData icon;
   final String label;
   final Color accent;
-  const _QuickAction(this.icon, this.label, this.accent);
+  final VoidCallback? onTap;
+  const _QuickAction(this.icon, this.label, this.accent, [this.onTap]);
 }
 
 class _FeaturedPlace {
+  final String lugarId;
   final String image;
   final String category;
   final String name;
   final double rating;
   bool favorite;
-  _FeaturedPlace(this.image, this.category, this.name, this.rating, this.favorite);
+  _FeaturedPlace(this.lugarId, this.image, this.category, this.name, this.rating, this.favorite);
 }
 
 class HomePage extends StatefulWidget {
@@ -39,18 +43,25 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   late final VisitorProfile _profile = VisitorProfile.fromAuthUser(widget.user);
 
-  final _quickActions = [
-    _QuickAction(Icons.map_outlined, 'Explorar mapa', AppColors.brandTeal),
+  late final _quickActions = [
+    _QuickAction(Icons.map_outlined, 'Explorar mapa', AppColors.brandTeal, () => openVisitorMap(context, _profile)),
     _QuickAction(Icons.favorite_border, 'Mis favoritos', AppColors.orange),
     _QuickAction(Icons.add, 'Proponer lugar', AppColors.brandTeal),
     _QuickAction(Icons.notifications_outlined, 'Notificaciones', AppColors.amber),
   ];
 
   late final List<_FeaturedPlace> _places = [
-    _FeaturedPlace('assets/images/place-playa-audiencia.jpg', 'Playas', 'Playa Audiencia', 4.9, false),
-    _FeaturedPlace('assets/images/place-cerro-vigia.jpg', 'Miradores', 'Cerro del Vigía', 4.8, true),
-    _FeaturedPlace('assets/images/place-laguna-cuyutlan.jpg', 'Recreación', 'Laguna de Cuyutlán', 4.6, false),
+    _FeaturedPlace('demo-audiencia', 'assets/images/place-playa-audiencia.jpg', 'Playas', 'Playa Audiencia', 4.9, false),
+    _FeaturedPlace('demo-vigia', 'assets/images/place-cerro-vigia.jpg', 'Miradores', 'Cerro del Vigía', 4.8, true),
+    _FeaturedPlace('demo-cuyutlan', 'assets/images/place-laguna-cuyutlan.jpg', 'Recreación', 'Laguna de Cuyutlán', 4.6, false),
   ];
+
+  Future<void> _openPlace(String lugarId) async {
+    final lugares = await const LugaresService().listarPublicos();
+    final lugar = lugares.where((l) => l.id == lugarId).firstOrNull;
+    if (lugar == null || !mounted) return;
+    Navigator.of(context).push(MaterialPageRoute(builder: (_) => LugarDetallePage(lugar: lugar)));
+  }
 
   String get _greeting {
     final hour = DateTime.now().hour;
@@ -209,7 +220,12 @@ class _HomePageState extends State<HomePage> {
           crossAxisSpacing: 12,
           childAspectRatio: 1.05,
           children: _quickActions
-              .map((action) => QuickActionCard(icon: action.icon, label: action.label, accent: action.accent))
+              .map((action) => QuickActionCard(
+                    icon: action.icon,
+                    label: action.label,
+                    accent: action.accent,
+                    onTap: action.onTap,
+                  ))
               .toList(),
         );
       },
@@ -235,6 +251,7 @@ class _HomePageState extends State<HomePage> {
                     name: place.name,
                     rating: place.rating,
                     isFavorite: place.favorite,
+                    onTap: () => _openPlace(place.lugarId),
                     onToggleFavorite: () => setState(() => place.favorite = !place.favorite),
                   ),
                 ),

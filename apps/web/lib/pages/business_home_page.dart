@@ -5,6 +5,7 @@ import '../services/auth_service.dart';
 import '../widgets/business/business_shell.dart';
 import '../widgets/themed_builder.dart';
 import 'business_dashboard_page.dart';
+import 'business_experiencias_page.dart';
 import 'business_profile_page.dart';
 import 'business_reviews_page.dart';
 import 'business_suggest_page.dart';
@@ -95,6 +96,7 @@ class _BusinessHomePageState extends State<BusinessHomePage> {
           business: _selected,
           onNegocioUpdated: _refreshSelected,
           onOpenReviews: () => _selectSection(BusinessSection.resenas),
+          onOpenExperiencias: () => _selectSection(BusinessSection.experiencias),
         );
       case BusinessSection.perfil:
         return BusinessProfileContent(
@@ -103,6 +105,8 @@ class _BusinessHomePageState extends State<BusinessHomePage> {
           onNegocioUpdated: _refreshSelected,
           onOpenReviews: () => _selectSection(BusinessSection.resenas),
         );
+      case BusinessSection.experiencias:
+        return BusinessExperienciasContent(key: ValueKey(_selectedId), business: _selected);
       case BusinessSection.resenas:
         return BusinessReviewsContent(key: ValueKey(_selectedId), business: _selected);
     }

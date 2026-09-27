@@ -13,6 +13,7 @@ import '../../widgets/themed_builder.dart';
 import 'admin_admins_page.dart';
 import 'admin_businesses_page.dart';
 import 'admin_help_page.dart';
+import 'admin_mapa_page.dart';
 import 'admin_reports_page.dart';
 import 'admin_requests_page.dart';
 import 'admin_settings_page.dart';
@@ -63,6 +64,8 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
         return AdminUsersPage(authService: widget.authService);
       case AdminSection.negocios:
         return AdminBusinessesPage(authService: widget.authService);
+      case AdminSection.mapa:
+        return AdminMapaPage(admin: widget.admin, authService: widget.authService);
       case AdminSection.admins:
         return AdminAdminsPage(currentAdmin: widget.admin, authService: widget.authService);
       case AdminSection.reportes:
@@ -295,6 +298,7 @@ class _SectionsGrid extends StatelessWidget {
       (Icons.report_gmailerrorred_outlined, 'Solicitudes', AppColors.amber, AdminSection.solicitudes),
       (Icons.group_outlined, 'Usuarios', AppColors.brandTeal, AdminSection.usuarios),
       (Icons.apartment_outlined, 'Negocios', AppColors.businessOrange, AdminSection.negocios),
+      (Icons.view_in_ar_outlined, 'Mapa y RA', AppColors.emerald, AdminSection.mapa),
       (Icons.shield_outlined, 'Admins', AppColors.adminViolet, AdminSection.admins),
     ];
 

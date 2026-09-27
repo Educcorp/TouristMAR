@@ -23,7 +23,7 @@ AdminSection? adminSectionForNotification(String tipo) {
 }
 
 /// Destinos disponibles en el panel admin.
-enum AdminSection { inicio, solicitudes, usuarios, negocios, admins, reportes, configuracion, ayuda }
+enum AdminSection { inicio, solicitudes, usuarios, negocios, mapa, admins, reportes, configuracion, ayuda }
 
 void adminLogout(BuildContext context) {
   SessionStorage.clearToken();
@@ -45,6 +45,7 @@ const _adminNavItems = [
   _AdminNavLeaf(AdminSection.solicitudes, Icons.report_gmailerrorred_outlined, 'Solicitudes'),
   _AdminNavLeaf(AdminSection.usuarios, Icons.group_outlined, 'Usuarios'),
   _AdminNavLeaf(AdminSection.negocios, Icons.apartment_outlined, 'Negocios'),
+  _AdminNavLeaf(AdminSection.mapa, Icons.view_in_ar_outlined, 'Mapa y RA'),
   _AdminNavLeaf(AdminSection.admins, Icons.shield_outlined, 'Admins'),
   _AdminNavLeaf(AdminSection.reportes, Icons.bar_chart_outlined, 'Reportes'),
   _AdminNavLeaf(AdminSection.configuracion, Icons.settings_outlined, 'Configuración'),

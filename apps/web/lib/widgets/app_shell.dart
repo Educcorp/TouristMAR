@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/visitor_profile.dart';
+import '../pages/explorar_mapa_page.dart';
 import '../pages/login_page.dart';
 import '../pages/profile_page.dart';
 import '../services/session_storage.dart';
@@ -52,7 +53,14 @@ void _logout(BuildContext context) {
 /// Qué página del flujo de visitante está activa — decide qué ítem del nav
 /// se resalta. Antes el resaltado era fijo por ítem ("Mi perfil" siempre
 /// marcado); ahora cada página que arma la lista dice cuál es, vía [current].
-enum VisitorSection { home, profile }
+enum VisitorSection { home, mapa, profile }
+
+/// Abre el mapa del visitante (sin animación, como un cambio de pestaña).
+/// Desde el propio mapa no hace nada, para no apilar otra copia.
+void openVisitorMap(BuildContext context, VisitorProfile profile, {VisitorSection? from}) {
+  if (from == VisitorSection.mapa) return;
+  Navigator.of(context).push(_instantRoute((_) => ExplorarMapaPage(profile: profile)));
+}
 
 List<NavItem> visitorNavItems(
   BuildContext context, {
@@ -66,7 +74,12 @@ List<NavItem> visitorNavItems(
       highlight: current == VisitorSection.home,
       onTap: () => Navigator.of(context).popUntil((r) => r.isFirst),
     ),
-    NavItem(icon: Icons.map_outlined, label: 'Explorar mapa', onTap: () => _comingSoon(context)),
+    NavItem(
+      icon: Icons.map_outlined,
+      label: 'Explorar mapa',
+      highlight: current == VisitorSection.mapa,
+      onTap: () => openVisitorMap(context, profile, from: current),
+    ),
     NavItem(icon: Icons.favorite_border, label: 'Mis favoritos', onTap: () => _comingSoon(context)),
     NavItem(
       icon: Icons.person_outline,

@@ -10,7 +10,7 @@ import '../notification_bell.dart';
 import '../theme_toggle_tile.dart';
 
 /// Secciones persistentes del panel de empresa.
-enum BusinessSection { dashboard, perfil, resenas }
+enum BusinessSection { dashboard, perfil, experiencias, resenas }
 
 void businessLogout(BuildContext context) {
   SessionStorage.clearToken();
@@ -30,6 +30,7 @@ class _BusinessNavLeaf {
 const _businessNavItems = [
   _BusinessNavLeaf(BusinessSection.dashboard, Icons.bar_chart, 'Dashboard'),
   _BusinessNavLeaf(BusinessSection.perfil, Icons.apartment, 'Mi negocio'),
+  _BusinessNavLeaf(BusinessSection.experiencias, Icons.view_in_ar_outlined, 'Mapa y experiencias'),
   _BusinessNavLeaf(BusinessSection.resenas, Icons.forum_outlined, 'Reseñas'),
   _BusinessNavLeaf(null, Icons.trending_up, 'Estadísticas'),
   _BusinessNavLeaf(null, Icons.settings_outlined, 'Configuración'),
