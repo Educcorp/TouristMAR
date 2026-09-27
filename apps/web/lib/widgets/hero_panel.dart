@@ -68,7 +68,7 @@ class HeroPanel extends StatelessWidget {
                   ),
                   const SizedBox(width: 8),
                   const Text(
-                    'TOURISMAR',
+                    'TOURISTMAR',
                     style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, letterSpacing: 3, fontSize: 14),
                   ),
                 ],

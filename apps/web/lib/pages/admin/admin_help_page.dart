@@ -81,7 +81,7 @@ class AdminHelpPage extends StatelessWidget {
                       children: [
                         Text('¿Necesitas más ayuda?', style: AppTypography.h3),
                         const SizedBox(height: 4),
-                        Text('Contacta al equipo técnico de TourisMAR a través de tus canales internos habituales.', style: AppTypography.body),
+                        Text('Contacta al equipo técnico de TouristMAR a través de tus canales internos habituales.', style: AppTypography.body),
                       ],
                     ),
                   ),

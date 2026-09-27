@@ -296,7 +296,7 @@ class _TopBar extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           Text(
-            'TOURISMAR',
+            'TOURISTMAR',
             style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, letterSpacing: 2, fontSize: 13),
           ),
           if (badgeText != null) ...[
@@ -408,7 +408,7 @@ class _SidebarContent extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Text(
-                'TOURISMAR',
+                'TOURISTMAR',
                 style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700, fontSize: 12, letterSpacing: 1.5),
               ),
               if (badgeText != null) ...[

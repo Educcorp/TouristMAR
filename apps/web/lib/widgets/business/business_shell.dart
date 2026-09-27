@@ -184,7 +184,7 @@ class _BusinessTopBar extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           Text(
-            'TOURISMAR',
+            'TOURISTMAR',
             style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, letterSpacing: 2, fontSize: 13),
           ),
           const SizedBox(width: 8),
@@ -393,7 +393,7 @@ class _BusinessSidebarContent extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Text(
-                'TOURISMAR',
+                'TOURISTMAR',
                 style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700, fontSize: 12, letterSpacing: 1.5),
               ),
               const SizedBox(width: 6),

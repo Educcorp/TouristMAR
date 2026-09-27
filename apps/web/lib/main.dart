@@ -21,7 +21,7 @@ class TouristMarApp extends StatelessWidget {
       valueListenable: ThemeController.mode,
       builder: (context, mode, _) {
         return MaterialApp(
-          title: 'TourisMAR — Iniciar sesión',
+          title: 'TouristMAR — Iniciar sesión',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.current,
           home: LoginPage(),

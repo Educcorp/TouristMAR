@@ -192,7 +192,7 @@ class _AdminAdminsPageState extends State<AdminAdminsPage> {
               label: 'Correo electrónico',
               icon: Icons.mail_outline,
               controller: _emailController,
-              hintText: 'admin@tourismar.mx',
+              hintText: 'admin@touristmar.mx',
               keyboardType: TextInputType.emailAddress,
               accentColor: AppColors.adminViolet,
               validator: (v) => (v == null || !v.contains('@')) ? 'Ingresa un correo válido' : null,

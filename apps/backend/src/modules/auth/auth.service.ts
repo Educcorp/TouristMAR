@@ -417,7 +417,7 @@ export async function reviewNegocio(negocioId: string, decision: 'aprobado' | 'r
       decision === 'aprobado' ? 'negocio_aprobado' : 'negocio_rechazado',
       decision === 'aprobado' ? '¡Tu negocio fue aprobado!' : 'Tu negocio fue rechazado',
       decision === 'aprobado'
-        ? `"${negocio.nombre}" ya está activo en TourisMAR.`
+        ? `"${negocio.nombre}" ya está activo en TouristMAR.`
         : `Tu solicitud para "${negocio.nombre}" fue rechazada.`,
       negocio.id,
     )

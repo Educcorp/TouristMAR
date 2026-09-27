@@ -210,7 +210,7 @@ class _Hero extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: AppSpacing.xs),
-                    Text('TourisMAR — Admin', style: AppTypography.h1.copyWith(fontSize: 24, color: Colors.white)),
+                    Text('TouristMAR — Admin', style: AppTypography.h1.copyWith(fontSize: 24, color: Colors.white)),
                     const SizedBox(height: 2),
                     const Text('Gestión central del sistema turístico',
                         style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.4)),

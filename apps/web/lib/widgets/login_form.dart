@@ -217,8 +217,8 @@ class _LoginFormState extends State<LoginForm> {
     final color = rechazado ? AppColors.errorRed : AppColors.businessOrange;
     final title = rechazado ? 'Registro no aprobado' : 'Tu negocio está en revisión';
     final message = rechazado
-        ? 'Un administrador de TourisMAR revisó tu solicitud y no fue aprobada. Si crees que es un error, contáctanos.'
-        : 'Un administrador de TourisMAR todavía tiene que revisar y aprobar tu cuenta antes de que puedas acceder a tu panel de negocio.';
+        ? 'Un administrador de TouristMAR revisó tu solicitud y no fue aprobada. Si crees que es un error, contáctanos.'
+        : 'Un administrador de TouristMAR todavía tiene que revisar y aprobar tu cuenta antes de que puedas acceder a tu panel de negocio.';
 
     return Center(
       child: SingleChildScrollView(
@@ -295,7 +295,7 @@ class _LoginFormState extends State<LoginForm> {
         const SizedBox(width: 8),
         Flexible(
           child: Text(
-            'TOURISMAR',
+            'TOURISTMAR',
             overflow: TextOverflow.ellipsis,
             style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, letterSpacing: 3),
           ),
@@ -378,7 +378,7 @@ class _LoginFormState extends State<LoginForm> {
                 Text(
                   isRegister
                       ? (_isBusiness
-                          ? 'Comienza a gestionar tu lugar en TourisMAR'
+                          ? 'Comienza a gestionar tu lugar en TouristMAR'
                           : 'Regístrate para guardar tus lugares favoritos')
                       : (_isBusiness
                           ? 'Gestiona tu negocio o lugar turístico'
@@ -465,7 +465,7 @@ class _LoginFormState extends State<LoginForm> {
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
-                            'Tu registro será revisado por un administrador de TourisMAR antes de aparecer en el mapa.',
+                            'Tu registro será revisado por un administrador de TouristMAR antes de aparecer en el mapa.',
                             style: TextStyle(color: AppColors.slate400, fontSize: 12, height: 1.4),
                           ),
                         ),
