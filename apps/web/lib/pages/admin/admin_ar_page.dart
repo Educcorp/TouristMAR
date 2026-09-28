@@ -349,7 +349,7 @@ class _MarcadorFormState extends State<_MarcadorForm> {
       ArMarcador saved;
       if (_isEdit) {
         saved = await widget.arService.updateMarcador(token, widget.marcador!.id, {
-          'nombre': _nombre.text.trim(),
+          'nombre': _nombre.text.trim().toLowerCase(),
           'titulo': _titulo.text.trim(),
           'texto': _texto.text.trim(),
           'anchoMetros': _anchoMetros(),
@@ -363,7 +363,7 @@ class _MarcadorFormState extends State<_MarcadorForm> {
           token,
           imagen: _imagen!,
           filename: _imagenNombre!,
-          nombre: _nombre.text.trim(),
+          nombre: _nombre.text.trim().toLowerCase(),
           titulo: _titulo.text.trim(),
           texto: _texto.text.trim(),
           anchoMetros: _anchoMetros(),
@@ -498,12 +498,18 @@ class _MarcadorFormState extends State<_MarcadorForm> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         AppTextField(
-          label: 'Nombre interno',
+          label: 'Identificador del marcador',
           icon: Icons.label_outline,
           controller: _nombre,
-          hintText: 'Ej. Letrero gaviota malecón',
+          hintText: 'Ej. gaviota_01',
           accentColor: AppColors.adminViolet,
-          validator: (v) => _required(v, 80),
+          validator: _validarNombre,
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Único. Es el "nombre" con el que la app de RA reconoce esta imagen: '
+          'solo minúsculas, números, _ o -.',
+          style: AppTypography.caption,
         ),
         const SizedBox(height: AppSpacing.md),
         AppTextField(
@@ -523,6 +529,11 @@ class _MarcadorFormState extends State<_MarcadorForm> {
           hintText: 'Texto que aparece flotando sobre la imagen (máx. 500 caracteres)',
           accentColor: AppColors.adminViolet,
           validator: (v) => _required(v, 500),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'En la cámara se muestra el título y, debajo, esta información.',
+          style: AppTypography.caption,
         ),
         const SizedBox(height: AppSpacing.md),
         AppTextField(
@@ -572,6 +583,17 @@ class _MarcadorFormState extends State<_MarcadorForm> {
         ),
       ],
     );
+  }
+
+  // Mismo formato que valida el backend (nombreSchema en ar.controller.ts).
+  static final _nombreValido = RegExp(r'^[a-z0-9_-]+$');
+
+  String? _validarNombre(String? v) {
+    final text = v?.trim().toLowerCase() ?? '';
+    if (text.isEmpty) return 'Campo requerido';
+    if (text.length > 60) return 'Máximo 60 caracteres';
+    if (!_nombreValido.hasMatch(text)) return 'Solo minúsculas, números, _ o - (ej. gaviota_01)';
+    return null;
   }
 
   String? _required(String? v, int max) {

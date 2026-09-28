@@ -122,19 +122,19 @@ model Notification {
 /// Imagen que la cámara AR reconoce (una gaviota, un barco, un letrero…) más
 /// la información que se muestra flotando encima. Lo dan de alta los admins
 /// desde el panel web; el módulo de Unity descarga la lista pública
-/// (`GET /api/ar/marcadores`) y agrega cada imagen a su biblioteca de rastreo
+/// (`GET /api/marcadores`) y agrega cada imagen a su biblioteca de rastreo
 /// en tiempo de ejecución, sin recompilar la app.
 ///
-/// El `id` es también el nombre con el que la imagen se registra en la
-/// `MutableRuntimeReferenceImageLibrary` de Unity — así, al detectar una
-/// imagen, Unity sabe exactamente a qué fila corresponde.
 model ArMarcador {
   id            String            @id @default(uuid()) @db.Uuid
   /// Opcional: un marcador puede pertenecer a un negocio (su letrero, su
   /// menú) o ser del destino en general (un monumento, la bahía).
   negocioId     String?           @map("negocio_id") @db.Uuid
   negocio       NegocioProfile?   @relation(fields: [negocioId], references: [id], onDelete: Cascade)
-  nombre        String
+  /// Identificador legible y único (p. ej. "gaviota_01"). Es el nombre con el
+  /// que Unity registra la imagen en su biblioteca de rastreo y la clave con
+  /// la que busca el texto al detectarla — ver GET /api/marcadores.
+  nombre        String            @unique
   imagenUrl     String            @map("imagen_url")
   /// Ruta dentro del bucket (sin el `?v=`) — hace falta para borrar el
   /// archivo de Storage al eliminar el marcador.

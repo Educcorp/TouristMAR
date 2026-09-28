@@ -11,10 +11,8 @@ namespace TouristMAR.AR
     /// </summary>
     public class InfoMarcadorUI : MonoBehaviour
     {
-        [SerializeField] private TMP_Text titulo;
+        [Tooltip("Donde se pinta textoParaMostrar (título + información en dos líneas).")]
         [SerializeField] private TMP_Text texto;
-        [Tooltip("Opcional: nombre del negocio dueño del marcador.")]
-        [SerializeField] private TMP_Text negocio;
 
         [Tooltip("Separación sobre la imagen, en metros (eje Y local del marcador).")]
         [SerializeField] private float altura = 0.05f;
@@ -23,19 +21,9 @@ namespace TouristMAR.AR
 
         private Transform camara;
 
-        public void Mostrar(DatosMarcador datos)
+        public void Mostrar(string textoParaMostrar)
         {
-            // Por ahora todos los tipos se pintan como texto. Cuando se agreguen
-            // modelos 3D / imágenes / videos, aquí se decide qué hijo activar
-            // según datos.tipoContenido y se carga datos.contenidoUrl.
-            if (titulo != null) titulo.text = datos.titulo;
-            if (texto != null) texto.text = datos.texto;
-            if (negocio != null)
-            {
-                negocio.text = datos.negocioNombre;
-                negocio.gameObject.SetActive(!string.IsNullOrEmpty(datos.negocioNombre));
-            }
-
+            if (texto != null) texto.text = textoParaMostrar;
             transform.localPosition = new Vector3(0f, altura, 0f);
         }
 

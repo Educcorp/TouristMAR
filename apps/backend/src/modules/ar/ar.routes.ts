@@ -11,12 +11,13 @@ import {
 } from './ar.controller'
 import { optionalAuth, requireAuth, requireRole } from '../auth/auth.middleware'
 
-/// Endpoints públicos que consume el módulo de Unity. Sin login: el turista
-/// puede usar la cámara AR aunque no tenga cuenta.
-export const arRouter = Router()
+/// Endpoints públicos que consume el módulo de Unity (se monta en
+/// /api/marcadores). Sin login: el turista puede usar la cámara AR aunque no
+/// tenga cuenta.
+export const marcadoresRouter = Router()
 
-arRouter.get('/marcadores', listMarcadoresPublic)
-arRouter.post('/marcadores/:id/escaneo', optionalAuth, createEscaneo)
+marcadoresRouter.get('/', listMarcadoresPublic)
+marcadoresRouter.post('/:nombre/escaneo', optionalAuth, createEscaneo)
 
 // Imágenes grandes rastrean igual de bien que medianas y tardan más en
 // descargarse en el celular; 5 MB alcanza de sobra para ~1000–2000 px.

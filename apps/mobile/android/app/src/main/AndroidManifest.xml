@@ -1,5 +1,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- RA con marcadores: la cámara reconoce las imágenes que da de alta el
+         admin (GET /api/marcadores). required="false" para que la app se pueda
+         instalar también en equipos sin cámara compatible (el resto funciona). -->
+    <uses-permission android:name="android.permission.CAMERA"/>
+    <uses-feature android:name="android.hardware.camera" android:required="false"/>
     <application
         android:label="TouristMAR"
         android:name="${applicationName}"

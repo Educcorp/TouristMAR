@@ -6,6 +6,7 @@ import { withDbGuard } from '../../config/db-guard'
 
 export class ArMarcadorNotFoundError extends Error {}
 export class ArImagenInvalidaError extends Error {}
+export class ArNombreDuplicadoError extends Error {}
 
 /// Solo PNG y JPG: son los únicos formatos que `UnityWebRequestTexture` sabe
 /// decodificar en Android/iOS. WEBP/GIF se verían bien en el panel pero Unity
@@ -95,6 +96,21 @@ function assertImagen(file: ImagenInput) {
   }
 }
 
+/// `nombre` es el identificador con el que Unity registra la imagen en su
+/// biblioteca y la reconoce al detectarla: dos marcadores con el mismo
+/// nombre se pisarían. La comparación ignora mayúsculas por si acaso, aunque
+/// el controller ya los normaliza a minúsculas.
+async function assertNombreLibre(nombre: string | undefined, exceptoId?: string) {
+  if (!nombre) return
+  const otro = await prisma.arMarcador.findFirst({
+    where: { nombre: { equals: nombre, mode: 'insensitive' }, ...(exceptoId ? { NOT: { id: exceptoId } } : {}) },
+    select: { id: true },
+  })
+  if (otro) {
+    throw new ArNombreDuplicadoError(`Ya existe un marcador con el nombre "${nombre}"`)
+  }
+}
+
 async function assertNegocioExiste(negocioId: string | null | undefined) {
   if (!negocioId) return
   const negocio = await prisma.negocioProfile.findUnique({ where: { id: negocioId }, select: { id: true } })
@@ -108,9 +124,10 @@ export async function createMarcador(input: ArMarcadorInput, file: ImagenInput, 
 
   return withDbGuard(async () => {
     await assertNegocioExiste(input.negocioId)
+    await assertNombreLibre(input.nombre)
 
     // El id se decide antes de subir la imagen porque forma parte de la ruta
-    // en Storage (y es el nombre con el que Unity registra la imagen).
+    // en Storage.
     const id = randomUUID()
     const imagen = await uploadImagen(id, file)
 
@@ -128,6 +145,7 @@ export async function updateMarcador(id: string, input: Partial<ArMarcadorInput>
       throw new ArMarcadorNotFoundError('No se encontró ese marcador')
     }
     await assertNegocioExiste(input.negocioId)
+    await assertNombreLibre(input.nombre, id)
 
     return prisma.arMarcador.update({
       where: { id },
@@ -169,12 +187,16 @@ export async function deleteMarcador(id: string) {
   })
 }
 
-export async function registerEscaneo(marcadorId: string, userId: string | undefined, plataforma: string | undefined) {
+/// Unity solo conoce el `nombre` del marcador (es lo único que viaja en el
+/// JSON público), así que el escaneo se registra por nombre.
+export async function registerEscaneo(nombre: string, userId: string | undefined, plataforma: string | undefined) {
   return withDbGuard(async () => {
-    const marcador = await prisma.arMarcador.findUnique({ where: { id: marcadorId }, select: { activo: true } })
+    const marcador = await prisma.arMarcador.findUnique({ where: { nombre }, select: { id: true, activo: true } })
     if (!marcador || !marcador.activo) {
       throw new ArMarcadorNotFoundError('No se encontró ese marcador')
     }
-    await prisma.arEscaneo.create({ data: { marcadorId, userId: userId ?? null, plataforma: plataforma ?? null } })
+    await prisma.arEscaneo.create({
+      data: { marcadorId: marcador.id, userId: userId ?? null, plataforma: plataforma ?? null },
+    })
   })
 }

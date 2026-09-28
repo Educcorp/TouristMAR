@@ -99,8 +99,11 @@ class _BusinessExperienciasContentState extends State<BusinessExperienciasConten
                 const SizedBox(height: AppSpacing.xl),
                 Text('Experiencias inmersivas', style: AppTypography.h2),
                 const SizedBox(height: 4),
-                Text('Cada experiencia es opcional. Las que no subas aparecerán como "no disponible".',
-                    style: AppTypography.bodySmall),
+                Text(
+                  'Cada experiencia es opcional. Las que no subas aparecerán como "no disponible". '
+                  'Los marcadores de RA los gestiona la administración de TouristMAR.',
+                  style: AppTypography.bodySmall,
+                ),
                 const SizedBox(height: AppSpacing.md),
                 for (final tipo in ExperienciaTipo.values) ...[
                   _RecursoCard(
@@ -304,10 +307,16 @@ class _RecursoCard extends StatelessWidget {
     this.extra,
   });
 
+  /// Los marcadores de RA (imagen + texto que reconoce la cámara) solo los
+  /// da de alta un admin, en la sección "Realidad aumentada" del panel. Aquí
+  /// el negocio solo ve la información, sin botones para subir o quitar.
+  static bool gestionadoPorAdmin(ExperienciaTipo tipo) => tipo == ExperienciaTipo.arMarcador;
+
   static List<String> requisitos(ExperienciaTipo tipo) => switch (tipo) {
         ExperienciaTipo.arMarcador => [
-            'Imagen del marcador: PNG o JPG, alto contraste, mínimo 1000 px por lado.',
-            'Contenido 3D que aparecerá sobre el marcador (lo integra el equipo de RA).',
+            'Los marcadores (la imagen que reconoce la cámara y su información) los da de alta '
+                'la administración de TouristMAR.',
+            'Si quieres uno para tu negocio, solicítalo a un administrador.',
           ],
         ExperienciaTipo.arGeo => [
             'Contenido 3D que aparecerá en el lugar (lo integra el equipo de RA).',
@@ -322,12 +331,15 @@ class _RecursoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final info = ExperienciaInfo.of(tipo);
-    final (badgeText, tone) = switch (estado) {
-      RecursoEstado.sinArchivo => ('Sin archivo', BadgeTone.neutral),
-      RecursoEstado.enRevision => ('En revisión', BadgeTone.warning),
-      RecursoEstado.publicado => ('Publicado', BadgeTone.success),
-      RecursoEstado.rechazado => ('Rechazado', BadgeTone.danger),
-    };
+    final soloAdmin = gestionadoPorAdmin(tipo);
+    final (badgeText, tone) = soloAdmin
+        ? ('Lo gestiona TouristMAR', BadgeTone.info)
+        : switch (estado) {
+            RecursoEstado.sinArchivo => ('Sin archivo', BadgeTone.neutral),
+            RecursoEstado.enRevision => ('En revisión', BadgeTone.warning),
+            RecursoEstado.publicado => ('Publicado', BadgeTone.success),
+            RecursoEstado.rechazado => ('Rechazado', BadgeTone.danger),
+          };
 
     return DsCard(
       child: LayoutBuilder(
@@ -338,7 +350,9 @@ class _RecursoCard extends StatelessWidget {
             child: ExperienciaViewport(
               tipo: tipo,
               aspectRatio: 4 / 3,
-              mensaje: estado == RecursoEstado.sinArchivo ? 'Sin contenido' : 'Vista previa del recurso',
+              mensaje: soloAdmin
+                  ? 'Gestionado por administración'
+                  : (estado == RecursoEstado.sinArchivo ? 'Sin contenido' : 'Vista previa del recurso'),
             ),
           );
 
@@ -375,26 +389,28 @@ class _RecursoCard extends StatelessWidget {
                 const SizedBox(height: AppSpacing.md),
                 extra!,
               ],
-              const SizedBox(height: AppSpacing.md),
-              Wrap(
-                spacing: AppSpacing.sm,
-                runSpacing: AppSpacing.sm,
-                children: [
-                  DsButton(
-                    label: estado == RecursoEstado.sinArchivo ? 'Subir archivo' : 'Reemplazar archivo',
-                    icon: Icons.upload_file,
-                    accent: info.color,
-                    onPressed: ocupado ? null : onSubir,
-                  ),
-                  if (estado != RecursoEstado.sinArchivo)
+              if (!soloAdmin) ...[
+                const SizedBox(height: AppSpacing.md),
+                Wrap(
+                  spacing: AppSpacing.sm,
+                  runSpacing: AppSpacing.sm,
+                  children: [
                     DsButton(
-                      label: 'Quitar',
-                      icon: Icons.delete_outline,
-                      variant: DsButtonVariant.danger,
-                      onPressed: ocupado ? null : onQuitar,
+                      label: estado == RecursoEstado.sinArchivo ? 'Subir archivo' : 'Reemplazar archivo',
+                      icon: Icons.upload_file,
+                      accent: info.color,
+                      onPressed: ocupado ? null : onSubir,
                     ),
-                ],
-              ),
+                    if (estado != RecursoEstado.sinArchivo)
+                      DsButton(
+                        label: 'Quitar',
+                        icon: Icons.delete_outline,
+                        variant: DsButtonVariant.danger,
+                        onPressed: ocupado ? null : onQuitar,
+                      ),
+                  ],
+                ),
+              ],
             ],
           );
 

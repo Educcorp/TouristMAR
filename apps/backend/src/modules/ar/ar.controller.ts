@@ -11,6 +11,7 @@ import {
   registerEscaneo,
   ArMarcadorNotFoundError,
   ArImagenInvalidaError,
+  ArNombreDuplicadoError,
 } from './ar.service'
 import { DatabaseNotReadyError } from '../../config/db-guard'
 import type { AuthedRequest } from '../auth/auth.middleware'
@@ -20,23 +21,19 @@ type MarcadorConRelaciones = ArMarcador & {
   _count?: { escaneos: number }
 }
 
-/// Formato pensado para `JsonUtility.FromJson` de Unity: un objeto raíz (no
-/// un arreglo suelto), sin `null` (Unity no tiene tipos anulables ahí, así que
-/// los textos vacíos van como "" y el ancho desconocido como 0). Si cambias
-/// algún campo, actualiza también `ModelosMarcador.cs` en apps/ar-module.
-function toUnityMarcador(m: MarcadorConRelaciones) {
+/// Contrato acordado con el equipo de Unity — EXACTAMENTE estos tres campos
+/// (su script `MarcadorDinamico` los lee con `JsonUtility.FromJson` a
+/// `DatosMarcador`, que mapea por nombre de campo). No agregar ni renombrar
+/// sin avisarles; si cambia, actualizar también `ModelosMarcador.cs` en
+/// apps/ar-module.
+///
+/// `textoParaMostrar` junta el título y la información que captura el admin
+/// en dos líneas: Unity pinta un solo texto sobre el marcador.
+function toUnityMarcador(m: ArMarcador) {
   return {
-    id: m.id,
     nombre: m.nombre,
-    imagenUrl: m.imagenUrl,
-    anchoMetros: m.anchoMetros ?? 0,
-    titulo: m.titulo,
-    texto: m.texto,
-    tipoContenido: m.tipoContenido,
-    contenidoUrl: m.contenidoUrl ?? '',
-    negocioId: m.negocioId ?? '',
-    negocioNombre: m.negocio?.nombre ?? '',
-    actualizadoEn: m.updatedAt.toISOString(),
+    urlImagen: m.imagenUrl,
+    textoParaMostrar: `${m.titulo}\n${m.texto}`,
   }
 }
 
@@ -69,6 +66,9 @@ function handleError(err: unknown, res: Response) {
   if (err instanceof ArImagenInvalidaError) {
     return res.status(400).json({ error: err.message })
   }
+  if (err instanceof ArNombreDuplicadoError) {
+    return res.status(409).json({ error: err.message })
+  }
   return res.status(500).json({ error: 'Error interno' })
 }
 
@@ -76,8 +76,19 @@ const uuid = z.string().uuid()
 
 // Los campos llegan como texto cuando vienen en un multipart (alta con
 // imagen), por eso los números/booleanos se coercionan.
+// Identificador para Unity (ver toUnityMarcador): se normaliza a minúsculas
+// y solo admite caracteres seguros para usarlo como nombre de imagen y en la
+// URL del escaneo, p. ej. "gaviota_01".
+const nombreSchema = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .min(1)
+  .max(60)
+  .regex(/^[a-z0-9_-]+$/, 'Usa solo minúsculas, números, guion bajo o guion (ej. gaviota_01)')
+
 const marcadorBaseSchema = z.object({
-  nombre: z.string().trim().min(1).max(80),
+  nombre: nombreSchema,
   titulo: z.string().trim().min(1).max(80),
   texto: z.string().trim().min(1).max(500),
   anchoMetros: z.coerce.number().positive().max(20).nullable().optional(),
@@ -102,22 +113,25 @@ const escaneoSchema = z.object({
 
 // --- Público (lo consume Unity) -------------------------------------------
 
+/// La "lista de tareas" de Unity: se arma en cada petición con lo que hay en
+/// la base, así que refleja al instante lo que un admin guarda en el panel
+/// (no hace falta generar ningún archivo JSON aparte).
 export async function listMarcadoresPublic(_req: Request, res: Response) {
   try {
     const marcadores = await listPublicMarcadores()
-    // `version` le permite a Unity saber de un vistazo si algo cambió desde
-    // la última descarga sin comparar marcador por marcador.
-    const version = marcadores.reduce((max, m) => (m.updatedAt > max ? m.updatedAt : max), new Date(0))
-    return res.json({ version: version.toISOString(), marcadores: marcadores.map(toUnityMarcador) })
+    // Que ningún proxy/CDN guarde una versión vieja: Unity debe ver siempre
+    // los marcadores recién dados de alta.
+    res.set('Cache-Control', 'no-cache')
+    return res.json({ marcadores: marcadores.map(toUnityMarcador) })
   } catch (err) {
     return handleError(err, res)
   }
 }
 
 export async function createEscaneo(req: AuthedRequest, res: Response) {
-  const id = uuid.safeParse(req.params.id)
+  const nombre = nombreSchema.safeParse(req.params.nombre)
   const body = escaneoSchema.safeParse(req.body ?? {})
-  if (!id.success) {
+  if (!nombre.success) {
     return res.status(404).json({ error: 'No se encontró ese marcador' })
   }
   if (!body.success) {
@@ -125,7 +139,7 @@ export async function createEscaneo(req: AuthedRequest, res: Response) {
   }
 
   try {
-    await registerEscaneo(id.data, req.userId, body.data.plataforma)
+    await registerEscaneo(nombre.data, req.userId, body.data.plataforma)
     return res.status(204).send()
   } catch (err) {
     return handleError(err, res)

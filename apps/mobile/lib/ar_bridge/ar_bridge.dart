@@ -16,8 +16,8 @@ import 'dart:convert';
 ///   },
 ///   onUnityMessage: (raw) {
 ///     final evento = ArEvento.parse(raw.toString());
-///     if (evento is ArMarcadorDetectado && evento.negocioId != null) {
-///       // p. ej. mostrar un botón "Ver negocio"
+///     if (evento is ArMarcadorDetectado) {
+///       // p. ej. mostrar evento.texto en un panel de la app
 ///     }
 ///   },
 /// )
@@ -71,11 +71,7 @@ sealed class ArEvento {
     return switch (json['evento']) {
       'listo' => const ArListo(),
       'marcadoresCargados' => ArMarcadoresCargados((json['total'] as num?)?.toInt() ?? 0),
-      'marcadorDetectado' => ArMarcadorDetectado(
-          marcadorId: str('marcadorId') ?? '',
-          titulo: str('titulo') ?? '',
-          negocioId: str('negocioId'),
-        ),
+      'marcadorDetectado' => ArMarcadorDetectado(nombre: str('nombre') ?? '', texto: str('texto') ?? ''),
       'error' => ArError(str('mensaje') ?? 'Error desconocido en el módulo AR'),
       _ => ArDesconocido(raw),
     };
@@ -92,12 +88,13 @@ class ArMarcadoresCargados extends ArEvento {
   const ArMarcadoresCargados(this.total);
 }
 
-/// Se manda una sola vez por marcador en cada sesión de cámara.
+/// Se manda una sola vez por marcador en cada sesión de cámara. [nombre] es
+/// el identificador del marcador (ej. "gaviota_01") y [texto] su
+/// `textoParaMostrar`, tal como vienen de GET /api/marcadores.
 class ArMarcadorDetectado extends ArEvento {
-  final String marcadorId;
-  final String titulo;
-  final String? negocioId;
-  const ArMarcadorDetectado({required this.marcadorId, required this.titulo, this.negocioId});
+  final String nombre;
+  final String texto;
+  const ArMarcadorDetectado({required this.nombre, required this.texto});
 }
 
 class ArError extends ArEvento {

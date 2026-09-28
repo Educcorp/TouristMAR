@@ -4,4 +4,8 @@
          to allow setting breakpoints, to provide hot reload, etc.
     -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Solo en debug: el backend local se sirve por http://<IP-de-tu-PC>:4000
+         y Android bloquea el tráfico sin cifrar por defecto. Los builds de
+         release no heredan esto: en producción la API va por https. -->
+    <application android:usesCleartextTraffic="true"/>
 </manifest>

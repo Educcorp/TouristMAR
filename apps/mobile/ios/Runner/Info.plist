@@ -47,6 +47,15 @@
 			</array>
 		</dict>
 	</dict>
+	<key>NSCameraUsageDescription</key>
+	<string>TouristMAR usa la cámara para reconocer los marcadores y mostrar su información en realidad aumentada.</string>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<!-- Permite http:// solo hacia la red local (backend de desarrollo en
+		     http://IP-de-tu-PC:4000). Internet sigue exigiendo https. -->
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>

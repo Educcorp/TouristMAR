@@ -2,7 +2,7 @@ import { Router } from 'express'
 import { authRouter } from '../modules/auth/auth.routes'
 import { adminRouter } from '../modules/admin/admin.routes'
 import { notificationRouter } from '../modules/notifications/notification.routes'
-import { arRouter, arAdminRouter } from '../modules/ar/ar.routes'
+import { marcadoresRouter, arAdminRouter } from '../modules/ar/ar.routes'
 
 export const apiRouter = Router()
 
@@ -11,5 +11,6 @@ apiRouter.use('/auth', authRouter)
 // por él, y el de AR ya trae el mismo (requireAuth + admin/super_admin).
 apiRouter.use('/admin/ar', arAdminRouter)
 apiRouter.use('/admin', adminRouter)
-apiRouter.use('/ar', arRouter)
+// Contrato con Unity: GET /api/marcadores (ver ar.controller.ts).
+apiRouter.use('/marcadores', marcadoresRouter)
 apiRouter.use('/notifications', notificationRouter)

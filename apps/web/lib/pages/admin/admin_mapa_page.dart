@@ -419,6 +419,30 @@ class _RevisionDialog extends StatelessWidget {
                 Builder(builder: (context) {
                   final info = ExperienciaInfo.of(tipo);
                   final activo = tiene(tipo);
+                  // Los marcadores no los sube el negocio: los da de alta un
+                  // admin en la sección "Realidad aumentada" (no hay nada que
+                  // aprobar o rechazar aquí).
+                  if (tipo == ExperienciaTipo.arMarcador) {
+                    return DsCard(
+                      child: Row(
+                        children: [
+                          Icon(info.icon, color: info.color),
+                          const SizedBox(width: AppSpacing.md),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(info.tituloCorto, style: AppTypography.h3.copyWith(fontSize: 14)),
+                                Text('Se gestionan en la sección "Realidad aumentada" del panel.',
+                                    style: AppTypography.bodySmall),
+                              ],
+                            ),
+                          ),
+                          const DsBadge(text: 'Solo admin', tone: BadgeTone.info, icon: Icons.shield_outlined),
+                        ],
+                      ),
+                    );
+                  }
                   return DsCard(
                     child: Row(
                       children: [

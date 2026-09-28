@@ -3,39 +3,29 @@ using System;
 namespace TouristMAR.AR
 {
     /// <summary>
-    /// Un marcador tal como lo devuelve GET /api/ar/marcadores.
-    /// Los nombres de los campos tienen que coincidir EXACTO con el JSON del
-    /// backend (apps/backend/src/modules/ar/ar.controller.ts → toUnityMarcador),
-    /// porque JsonUtility mapea por nombre y en silencio deja en default lo que
-    /// no encuentra.
+    /// Un marcador tal como lo devuelve GET /api/marcadores. Contrato acordado
+    /// con el backend (apps/backend/src/modules/ar/ar.controller.ts →
+    /// toUnityMarcador): JsonUtility mapea por nombre de campo y deja en default,
+    /// sin avisar, lo que no encuentra, así que estos nombres tienen que
+    /// coincidir EXACTO con el JSON.
     /// </summary>
     [Serializable]
     public class DatosMarcador
     {
-        /// <summary>UUID; también es el nombre con el que la imagen se registra en la biblioteca de rastreo.</summary>
-        public string id;
+        /// <summary>Identificador único (ej. "gaviota_01"). Es el nombre de la imagen en la biblioteca de rastreo.</summary>
         public string nombre;
-        public string imagenUrl;
-        /// <summary>Ancho físico de la imagen impresa en metros. 0 = desconocido.</summary>
-        public float anchoMetros;
-        public string titulo;
-        public string texto;
-        /// <summary>"texto" | "imagen" | "modelo_3d" | "video". Hoy solo se pinta "texto".</summary>
-        public string tipoContenido;
-        public string contenidoUrl;
-        public string negocioId;
-        public string negocioNombre;
-        public string actualizadoEn;
+        public string urlImagen;
+        /// <summary>Título y descripción en dos líneas, listo para ponerlo en el TextMeshPro.</summary>
+        public string textoParaMostrar;
     }
 
     /// <summary>
-    /// Raíz de la respuesta. JsonUtility no deserializa un arreglo suelto, por
-    /// eso el backend envuelve la lista en un objeto.
+    /// Raíz de la respuesta: { "marcadores": [ ... ] }. JsonUtility no
+    /// deserializa un arreglo suelto, por eso viene envuelto en un objeto.
     /// </summary>
     [Serializable]
     public class ListaDesdeAdmin
     {
-        public string version;
         public DatosMarcador[] marcadores;
     }
 
@@ -55,9 +45,8 @@ namespace TouristMAR.AR
     {
         /// <summary>"listo" | "marcadoresCargados" | "marcadorDetectado" | "error"</summary>
         public string evento;
-        public string marcadorId;
-        public string titulo;
-        public string negocioId;
+        public string nombre;
+        public string texto;
         public int total;
         public string mensaje;
     }

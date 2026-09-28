@@ -36,9 +36,9 @@ namespace TouristMAR.AR
         private ConfigAR config;
         private PuenteApp puente;
 
-        // Contenido por nombre de imagen (= id del marcador). Se refresca en cada
-        // recarga, así los cambios de texto se ven sin reiniciar.
-        private readonly Dictionary<string, DatosMarcador> contenidos = new();
+        // Diccionario de contenidos: nombre del marcador → textoParaMostrar. Se
+        // refresca en cada recarga, así los cambios de texto se ven sin reiniciar.
+        private readonly Dictionary<string, string> contenidos = new();
         // Imágenes ya agregadas a la biblioteca. Una biblioteca mutable no permite
         // quitar ni reemplazar imágenes, así que si un admin cambia la imagen de
         // un marcador, la nueva se usa en la siguiente sesión de AR.
@@ -96,7 +96,7 @@ namespace TouristMAR.AR
             if (!PrepararBiblioteca()) yield break;
 
             ListaDesdeAdmin lista = null;
-            using (var req = UnityWebRequest.Get($"{config.apiBaseUrl.TrimEnd('/')}/ar/marcadores"))
+            using (var req = UnityWebRequest.Get($"{config.apiBaseUrl.TrimEnd('/')}/marcadores"))
             {
                 yield return req.SendWebRequest();
                 if (req.result != UnityWebRequest.Result.Success)
@@ -112,13 +112,14 @@ namespace TouristMAR.AR
 
             foreach (var marcador in lista.marcadores)
             {
-                contenidos[marcador.id] = marcador;
+                if (string.IsNullOrEmpty(marcador.nombre)) continue;
+                contenidos[marcador.nombre] = marcador.textoParaMostrar;
             }
 
             // Uno por uno: son pocos y así no se satura la red del teléfono.
             foreach (var marcador in lista.marcadores)
             {
-                if (registrados.Contains(marcador.id)) continue;
+                if (string.IsNullOrEmpty(marcador.nombre) || registrados.Contains(marcador.nombre)) continue;
                 yield return RegistrarMarcador(marcador);
             }
 
@@ -126,9 +127,9 @@ namespace TouristMAR.AR
             foreach (var par in instancias)
             {
                 if (manager.trackables.TryGetTrackable(par.Key, out var imagen) &&
-                    contenidos.TryGetValue(imagen.referenceImage.name, out var datos))
+                    contenidos.TryGetValue(imagen.referenceImage.name, out var texto))
                 {
-                    par.Value.Mostrar(datos);
+                    par.Value.Mostrar(texto);
                 }
             }
 
@@ -161,7 +162,7 @@ namespace TouristMAR.AR
         private IEnumerator RegistrarMarcador(DatosMarcador marcador)
         {
             byte[] bytes = null;
-            var rutaCache = RutaCache(marcador.imagenUrl);
+            var rutaCache = RutaCache(marcador.urlImagen);
 
             if (usarCache && File.Exists(rutaCache))
             {
@@ -169,7 +170,7 @@ namespace TouristMAR.AR
             }
             else
             {
-                using var req = UnityWebRequest.Get(marcador.imagenUrl);
+                using var req = UnityWebRequest.Get(marcador.urlImagen);
                 yield return req.SendWebRequest();
                 if (req.result != UnityWebRequest.Result.Success)
                 {
@@ -189,14 +190,14 @@ namespace TouristMAR.AR
             }
             textura = AsegurarFormato(textura);
 
-            float? ancho = marcador.anchoMetros > 0 ? marcador.anchoMetros : null;
-            var trabajo = biblioteca.ScheduleAddImageWithValidationJob(textura, marcador.id, ancho);
+            // Sin ancho físico (el contrato no lo incluye): ARCore/ARKit lo estiman.
+            var trabajo = biblioteca.ScheduleAddImageWithValidationJob(textura, marcador.nombre, null);
             yield return new WaitUntil(() => trabajo.jobHandle.IsCompleted);
             trabajo.jobHandle.Complete();
 
             if (trabajo.status == AddReferenceImageJobStatus.Success)
             {
-                registrados.Add(marcador.id);
+                registrados.Add(marcador.nombre);
             }
             else
             {
@@ -234,12 +235,12 @@ namespace TouristMAR.AR
         private void Actualizar(ARTrackedImage imagen)
         {
             var nombre = imagen.referenceImage.name;
-            if (!contenidos.TryGetValue(nombre, out var datos)) return;
+            if (!contenidos.TryGetValue(nombre, out var texto)) return;
 
             if (!instancias.TryGetValue(imagen.trackableId, out var ui))
             {
                 ui = Instantiate(prefabInfo, imagen.transform);
-                ui.Mostrar(datos);
+                ui.Mostrar(texto);
                 instancias[imagen.trackableId] = ui;
             }
 
@@ -250,21 +251,16 @@ namespace TouristMAR.AR
 
             if (visible && detectados.Add(nombre))
             {
-                puente?.Enviar(new EventoAR
-                {
-                    evento = "marcadorDetectado",
-                    marcadorId = datos.id,
-                    titulo = datos.titulo,
-                    negocioId = datos.negocioId,
-                });
-                StartCoroutine(RegistrarEscaneo(datos.id));
+                puente?.Enviar(new EventoAR { evento = "marcadorDetectado", nombre = nombre, texto = texto });
+                StartCoroutine(RegistrarEscaneo(nombre));
             }
         }
 
-        private IEnumerator RegistrarEscaneo(string marcadorId)
+        private IEnumerator RegistrarEscaneo(string nombre)
         {
             var cuerpo = JsonUtility.ToJson(new EscaneoBody { plataforma = Plataforma() });
-            using var req = new UnityWebRequest($"{config.apiBaseUrl.TrimEnd('/')}/ar/marcadores/{marcadorId}/escaneo", "POST")
+            var url = $"{config.apiBaseUrl.TrimEnd('/')}/marcadores/{UnityWebRequest.EscapeURL(nombre)}/escaneo";
+            using var req = new UnityWebRequest(url, "POST")
             {
                 uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(cuerpo)),
                 downloadHandler = new DownloadHandlerBuffer(),

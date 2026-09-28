@@ -10,6 +10,7 @@ vi.mock('../../../config/prisma', () => ({
     arMarcador: {
       findMany: vi.fn(),
       findUnique: vi.fn(),
+      findFirst: vi.fn(),
       create: vi.fn(),
       update: vi.fn(),
       delete: vi.fn(),
@@ -36,11 +37,13 @@ vi.mock('../../../config/supabase', () => ({
 }))
 
 import { prisma } from '../../../config/prisma'
-import { arRouter, arAdminRouter } from '../ar.routes'
+import { marcadoresRouter, arAdminRouter } from '../ar.routes'
 
 const userFind = vi.mocked(prisma.user.findUnique)
 const marcadorFindMany = vi.mocked(prisma.arMarcador.findMany)
 const marcadorFind = vi.mocked(prisma.arMarcador.findUnique)
+const marcadorFindFirst = vi.mocked(prisma.arMarcador.findFirst)
+const marcadorUpdate = vi.mocked(prisma.arMarcador.update)
 const marcadorCreate = vi.mocked(prisma.arMarcador.create)
 const escaneoCreate = vi.mocked(prisma.arEscaneo.create)
 
@@ -50,7 +53,7 @@ function buildApp() {
   const app = express()
   app.use(express.json())
   app.use('/api/admin/ar', arAdminRouter)
-  app.use('/api/ar', arRouter)
+  app.use('/api/marcadores', marcadoresRouter)
   return app
 }
 
@@ -63,7 +66,7 @@ function marcadorRow(overrides: Record<string, unknown> = {}) {
     id: MARCADOR_ID,
     negocioId: null,
     negocio: null,
-    nombre: 'Gaviota',
+    nombre: 'gaviota_01',
     imagenUrl: 'https://cdn/ar-marcadores/x/marcador?v=1',
     imagenPath: `${MARCADOR_ID}/marcador`,
     anchoMetros: null,
@@ -84,37 +87,32 @@ beforeEach(() => {
   vi.clearAllMocks()
   storageBucket.upload.mockResolvedValue({ error: null })
   storageBucket.getPublicUrl.mockReturnValue({ data: { publicUrl: 'https://cdn/ar-marcadores/x/marcador' } })
+  marcadorFindFirst.mockResolvedValue(null)
 })
 
-describe('GET /api/ar/marcadores', () => {
-  it('es público y devuelve un objeto raíz sin nulls (compatible con JsonUtility)', async () => {
+describe('GET /api/marcadores', () => {
+  it('es público y devuelve EXACTAMENTE el contrato acordado con Unity', async () => {
     marcadorFindMany.mockResolvedValue([marcadorRow()] as any)
 
-    const res = await request(buildApp()).get('/api/ar/marcadores')
+    const res = await request(buildApp()).get('/api/marcadores')
 
     expect(res.status).toBe(200)
-    expect(res.body.version).toBe('2026-09-02T00:00:00.000Z')
-    expect(res.body.marcadores).toEqual([
-      {
-        id: MARCADOR_ID,
-        nombre: 'Gaviota',
-        imagenUrl: 'https://cdn/ar-marcadores/x/marcador?v=1',
-        anchoMetros: 0,
-        titulo: 'Gaviota patiamarilla',
-        texto: 'Ave común en la bahía de Manzanillo.',
-        tipoContenido: 'texto',
-        contenidoUrl: '',
-        negocioId: '',
-        negocioNombre: '',
-        actualizadoEn: '2026-09-02T00:00:00.000Z',
-      },
-    ])
+    expect(res.headers['cache-control']).toBe('no-cache')
+    expect(res.body).toEqual({
+      marcadores: [
+        {
+          nombre: 'gaviota_01',
+          urlImagen: 'https://cdn/ar-marcadores/x/marcador?v=1',
+          textoParaMostrar: 'Gaviota patiamarilla\nAve común en la bahía de Manzanillo.',
+        },
+      ],
+    })
   })
 
   it('solo pide marcadores activos y de negocios aprobados (o sin negocio)', async () => {
     marcadorFindMany.mockResolvedValue([])
 
-    await request(buildApp()).get('/api/ar/marcadores')
+    await request(buildApp()).get('/api/marcadores')
 
     expect(marcadorFindMany).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -124,22 +122,23 @@ describe('GET /api/ar/marcadores', () => {
   })
 })
 
-describe('POST /api/ar/marcadores/:id/escaneo', () => {
-  it('registra el escaneo anónimo', async () => {
-    marcadorFind.mockResolvedValue({ activo: true } as any)
+describe('POST /api/marcadores/:nombre/escaneo', () => {
+  it('registra el escaneo anónimo buscando el marcador por nombre', async () => {
+    marcadorFind.mockResolvedValue({ id: MARCADOR_ID, activo: true } as any)
 
-    const res = await request(buildApp()).post(`/api/ar/marcadores/${MARCADOR_ID}/escaneo`).send({ plataforma: 'android' })
+    const res = await request(buildApp()).post('/api/marcadores/gaviota_01/escaneo').send({ plataforma: 'android' })
 
     expect(res.status).toBe(204)
+    expect(marcadorFind).toHaveBeenCalledWith(expect.objectContaining({ where: { nombre: 'gaviota_01' } }))
     expect(escaneoCreate).toHaveBeenCalledWith({ data: { marcadorId: MARCADOR_ID, userId: null, plataforma: 'android' } })
   })
 
   it('asocia el escaneo al turista si viene un token válido', async () => {
-    marcadorFind.mockResolvedValue({ activo: true } as any)
+    marcadorFind.mockResolvedValue({ id: MARCADOR_ID, activo: true } as any)
     userFind.mockResolvedValue({ id: 'turista-1', rol: 'turista', activo: true, negocios: [] } as any)
 
     const res = await request(buildApp())
-      .post(`/api/ar/marcadores/${MARCADOR_ID}/escaneo`)
+      .post('/api/marcadores/gaviota_01/escaneo')
       .set('Authorization', `Bearer ${tokenFor('turista-1')}`)
       .send({})
 
@@ -148,9 +147,9 @@ describe('POST /api/ar/marcadores/:id/escaneo', () => {
   })
 
   it('404 si el marcador no existe o está desactivado', async () => {
-    marcadorFind.mockResolvedValue({ activo: false } as any)
+    marcadorFind.mockResolvedValue({ id: MARCADOR_ID, activo: false } as any)
 
-    const res = await request(buildApp()).post(`/api/ar/marcadores/${MARCADOR_ID}/escaneo`).send({})
+    const res = await request(buildApp()).post('/api/marcadores/gaviota_01/escaneo').send({})
 
     expect(res.status).toBe(404)
     expect(escaneoCreate).not.toHaveBeenCalled()
@@ -175,7 +174,7 @@ describe('/api/admin/ar/marcadores', () => {
     const res = await request(buildApp())
       .post('/api/admin/ar/marcadores')
       .set('Authorization', `Bearer ${tokenFor('admin-1')}`)
-      .field('nombre', 'Barco')
+      .field('nombre', 'Barco_02')
       .field('titulo', 'Barco pesquero')
       .field('texto', 'Flota tradicional del puerto.')
       .field('anchoMetros', '0.3')
@@ -188,8 +187,37 @@ describe('/api/admin/ar/marcadores', () => {
       upsert: true,
     })
     const data = marcadorCreate.mock.calls[0][0].data as any
-    expect(data).toMatchObject({ nombre: 'Barco', anchoMetros: 0.3, negocioId: null, creadoPor: 'admin-1' })
+    // El nombre se normaliza a minúsculas: es el identificador para Unity.
+    expect(data).toMatchObject({ nombre: 'barco_02', anchoMetros: 0.3, negocioId: null, creadoPor: 'admin-1' })
     expect(data.imagenPath).toBe(`${data.id}/marcador`)
+  })
+
+  it('rechaza un nombre repetido con 409 (Unity no distinguiría los marcadores)', async () => {
+    userFind.mockResolvedValue({ id: 'admin-1', rol: 'admin', activo: true, negocios: [] } as any)
+    marcadorFindFirst.mockResolvedValue({ id: 'otro' } as any)
+
+    const res = await request(buildApp())
+      .post('/api/admin/ar/marcadores')
+      .set('Authorization', `Bearer ${tokenFor('admin-1')}`)
+      .field('nombre', 'gaviota_01')
+      .field('titulo', 'Gaviota')
+      .field('texto', 'Texto')
+      .attach('file', Buffer.from('fake-png'), { filename: 'g.png', contentType: 'image/png' })
+
+    expect(res.status).toBe(409)
+    expect(storageBucket.upload).not.toHaveBeenCalled()
+  })
+
+  it('rechaza nombres con espacios o acentos', async () => {
+    userFind.mockResolvedValue({ id: 'admin-1', rol: 'admin', activo: true, negocios: [] } as any)
+
+    const res = await request(buildApp())
+      .patch(`/api/admin/ar/marcadores/${MARCADOR_ID}`)
+      .set('Authorization', `Bearer ${tokenFor('admin-1')}`)
+      .send({ nombre: 'Gaviota del pacífico' })
+
+    expect(res.status).toBe(400)
+    expect(marcadorUpdate).not.toHaveBeenCalled()
   })
 
   it('rechaza imágenes que Unity no puede decodificar (webp)', async () => {
