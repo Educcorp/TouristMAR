@@ -68,6 +68,7 @@ model User {
   notifications Notification[]
   arMarcadores  ArMarcador[]
   arEscaneos    ArEscaneo[]
+  recorridos360 Recorrido360[]
 
   @@map("users")
 }
@@ -94,7 +95,8 @@ model NegocioProfile {
   createdAt   DateTime            @default(now()) @map("created_at")
   updatedAt   DateTime            @updatedAt @map("updated_at")
 
-  arMarcadores ArMarcador[]
+  arMarcadores  ArMarcador[]
+  recorridos360 Recorrido360[]
 
   @@index([userId])
   @@map("negocio_profiles")
@@ -173,4 +175,58 @@ model ArEscaneo {
 
   @@index([marcadorId, createdAt])
   @@map("ar_escaneos")
+}
+
+/// Recorrido 360° de un lugar: exactamente 3 fotos 360° equirectangulares
+/// ("Foto 1", "Foto 2", "Foto 3", en ese orden). Lo da de alta un admin desde
+/// el panel web; el módulo de Unity descarga la lista pública
+/// (`GET /api/recorridos`) y baja cada foto cuando la necesita.
+model Recorrido360 {
+  id        String          @id @default(uuid()) @db.Uuid
+  /// Opcional: el recorrido puede ser de un negocio (su hotel, su
+  /// restaurante) o del destino en general (el Cerro del Vigía, la bahía).
+  negocioId String?         @map("negocio_id") @db.Uuid
+  negocio   NegocioProfile? @relation(fields: [negocioId], references: [id], onDelete: Cascade)
+  /// Identificador legible y único (p. ej. "cerro_vigia_360") con el que
+  /// Unity pide o reconoce el recorrido — ver GET /api/recorridos.
+  nombre    String          @unique
+  titulo    String
+  texto     String
+  activo    Boolean         @default(true)
+  creadoPor String?         @map("creado_por") @db.Uuid
+  autor     User?           @relation(fields: [creadoPor], references: [id], onDelete: SetNull)
+  createdAt DateTime        @default(now()) @map("created_at")
+  updatedAt DateTime        @updatedAt @map("updated_at")
+
+  escenas Recorrido360Escena[]
+
+  @@index([activo])
+  @@index([negocioId])
+  @@map("recorridos_360")
+}
+
+/// Una de las 3 fotos 360° del recorrido ("Foto 1", "Foto 2", "Foto 3").
+/// `orden` es la casilla (0 = Foto 1): el admin sube cada foto en su casilla,
+/// así el orden no depende de en qué orden se suban. El backend la guarda ya
+/// optimizada (JPG de máx. 4096×2048) más una miniatura para el panel.
+model Recorrido360Escena {
+  id            String       @id @default(uuid()) @db.Uuid
+  recorridoId   String       @map("recorrido_id") @db.Uuid
+  recorrido     Recorrido360 @relation(fields: [recorridoId], references: [id], onDelete: Cascade)
+  orden         Int
+  imagenUrl     String       @map("imagen_url")
+  /// Rutas dentro del bucket — hacen falta para borrar los archivos de
+  /// Storage al reemplazar la foto o eliminar el recorrido.
+  imagenPath    String       @map("imagen_path")
+  miniaturaUrl  String       @map("miniatura_url")
+  miniaturaPath String       @map("miniatura_path")
+  ancho         Int
+  alto          Int
+  /// Peso del JPG optimizado (lo que descarga el celular), en bytes.
+  pesoBytes     Int          @map("peso_bytes")
+  createdAt     DateTime     @default(now()) @map("created_at")
+  updatedAt     DateTime     @updatedAt @map("updated_at")
+
+  @@unique([recorridoId, orden])
+  @@map("recorrido_360_escenas")
 }

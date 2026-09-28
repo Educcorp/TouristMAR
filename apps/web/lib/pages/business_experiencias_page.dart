@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/business_profile.dart';
 import '../models/lugar.dart';
 import '../services/lugares_service.dart';
+import '../services/recorridos_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/admin/ds_badge.dart';
 import '../widgets/admin/ds_button.dart';
@@ -18,8 +19,14 @@ import 'lugar_detalle_page.dart';
 class BusinessExperienciasContent extends StatefulWidget {
   final BusinessProfile business;
   final LugaresService service;
+  final RecorridosService? recorridosService;
 
-  const BusinessExperienciasContent({super.key, required this.business, this.service = const LugaresService()});
+  const BusinessExperienciasContent({
+    super.key,
+    required this.business,
+    this.service = const LugaresService(),
+    this.recorridosService,
+  });
 
   @override
   State<BusinessExperienciasContent> createState() => _BusinessExperienciasContentState();
@@ -30,7 +37,27 @@ class _BusinessExperienciasContentState extends State<BusinessExperienciasConten
   double _radio = 50;
   bool _guardando = false;
 
+  /// Recorridos 360° publicados para este negocio (los sube un admin en
+  /// "Recorridos 360°"; el endpoint público solo lista los de negocios
+  /// aprobados). null = cargando o sin conexión.
+  List<RecorridoPublico>? _recorridos;
+
   BusinessProfile get _b => widget.business;
+
+  @override
+  void initState() {
+    super.initState();
+    _cargarRecorridos();
+  }
+
+  Future<void> _cargarRecorridos() async {
+    try {
+      final lista = await (widget.recorridosService ?? RecorridosService()).listPublicos(negocioId: _b.id);
+      if (mounted) setState(() => _recorridos = lista);
+    } catch (_) {
+      // Sin conexión: la tarjeta 360° solo muestra la información general.
+    }
+  }
 
   Lugar get _lugar => Lugar(
         id: _b.id,
@@ -45,7 +72,8 @@ class _BusinessExperienciasContentState extends State<BusinessExperienciasConten
         rating: _b.rating,
         totalResenas: _b.totalReviews,
         ubicacion: _ubicacion,
-        archivo360: _b.archivo360,
+        // La vista previa solo necesita saber si hay recorrido publicado.
+        archivo360: (_recorridos?.isNotEmpty ?? false) ? _recorridos!.first.urlPortada : null,
         arMarcador: _b.arMarcador,
         arGeo: _b.arGeo,
         radioDesbloqueo: _radio,
@@ -101,7 +129,7 @@ class _BusinessExperienciasContentState extends State<BusinessExperienciasConten
                 const SizedBox(height: 4),
                 Text(
                   'Cada experiencia es opcional. Las que no subas aparecerán como "no disponible". '
-                  'Los marcadores de RA los gestiona la administración de TouristMAR.',
+                  'Los marcadores de RA y los recorridos 360° los gestiona la administración de TouristMAR.',
                   style: AppTypography.bodySmall,
                 ),
                 const SizedBox(height: AppSpacing.md),
@@ -112,7 +140,11 @@ class _BusinessExperienciasContentState extends State<BusinessExperienciasConten
                     ocupado: _guardando,
                     onSubir: () => _ejecutar(() => widget.service.subirRecurso(_b.id, tipo)),
                     onQuitar: () => _ejecutar(() => widget.service.quitarRecurso(_b.id, tipo)),
-                    extra: tipo == ExperienciaTipo.arGeo ? _buildRadio() : null,
+                    extra: switch (tipo) {
+                      ExperienciaTipo.arGeo => _buildRadio(),
+                      ExperienciaTipo.recorrido360 => _buildRecorridos(),
+                      _ => null,
+                    },
                   ),
                   const SizedBox(height: AppSpacing.md),
                 ],
@@ -259,6 +291,36 @@ class _BusinessExperienciasContentState extends State<BusinessExperienciasConten
     );
   }
 
+  Widget _buildRecorridos() {
+    final lista = _recorridos;
+    if (lista == null) return const SizedBox.shrink();
+    if (lista.isEmpty) {
+      return Text('Tu negocio todavía no tiene recorridos 360° publicados.', style: AppTypography.caption);
+    }
+    final info = ExperienciaInfo.of(ExperienciaTipo.recorrido360);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (final r in lista)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: Row(
+              children: [
+                Icon(Icons.check_circle, size: 14, color: info.color),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Text(
+                    '${r.textoParaMostrar.split('\n').first} · ${r.escenas} fotos 360°',
+                    style: AppTypography.body.copyWith(fontSize: 12, color: AppColors.textPrimary),
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+
   Widget _buildVistaPrevia() {
     return DsCard(
       child: Column(
@@ -307,10 +369,12 @@ class _RecursoCard extends StatelessWidget {
     this.extra,
   });
 
-  /// Los marcadores de RA (imagen + texto que reconoce la cámara) solo los
-  /// da de alta un admin, en la sección "Realidad aumentada" del panel. Aquí
-  /// el negocio solo ve la información, sin botones para subir o quitar.
-  static bool gestionadoPorAdmin(ExperienciaTipo tipo) => tipo == ExperienciaTipo.arMarcador;
+  /// Los marcadores de RA (imagen + texto que reconoce la cámara) y los
+  /// recorridos 360° solo los da de alta un admin, en las secciones
+  /// "Realidad aumentada" y "Recorridos 360°" del panel. Aquí el negocio solo
+  /// ve la información, sin botones para subir o quitar.
+  static bool gestionadoPorAdmin(ExperienciaTipo tipo) =>
+      tipo == ExperienciaTipo.arMarcador || tipo == ExperienciaTipo.recorrido360;
 
   static List<String> requisitos(ExperienciaTipo tipo) => switch (tipo) {
         ExperienciaTipo.arMarcador => [
@@ -323,8 +387,9 @@ class _RecursoCard extends StatelessWidget {
             'Tu negocio debe tener su punto guardado en el mapa.',
           ],
         ExperienciaTipo.recorrido360 => [
-            'Foto 360° equirectangular (JPG 2:1, mínimo 4096 × 2048) o video 360° (MP4).',
-            'También puede ser un modelo 3D del recorrido.',
+            'Los recorridos 360° (3 fotos 360° del lugar) los da de alta '
+                'la administración de TouristMAR.',
+            'Si quieres uno para tu negocio, solicítalo a un administrador.',
           ],
       };
 

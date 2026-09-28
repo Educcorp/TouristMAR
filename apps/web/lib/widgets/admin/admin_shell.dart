@@ -24,7 +24,7 @@ AdminSection? adminSectionForNotification(String tipo) {
 }
 
 /// Destinos disponibles en el panel admin.
-enum AdminSection { inicio, solicitudes, usuarios, negocios, mapa, realidadAumentada, admins, reportes, configuracion, ayuda }
+enum AdminSection { inicio, solicitudes, usuarios, negocios, mapa, realidadAumentada, recorridos360, admins, reportes, configuracion, ayuda }
 
 void adminLogout(BuildContext context) {
   SessionStorage.clearToken();
@@ -48,6 +48,7 @@ const _adminNavItems = [
   _AdminNavLeaf(AdminSection.negocios, Icons.apartment_outlined, 'Negocios'),
   _AdminNavLeaf(AdminSection.mapa, Icons.view_in_ar_outlined, 'Mapa y RA'),
   _AdminNavLeaf(AdminSection.realidadAumentada, Icons.view_in_ar_outlined, 'Realidad aumentada'),
+  _AdminNavLeaf(AdminSection.recorridos360, Icons.threesixty, 'Recorridos 360°'),
   _AdminNavLeaf(AdminSection.admins, Icons.shield_outlined, 'Admins'),
   _AdminNavLeaf(AdminSection.reportes, Icons.bar_chart_outlined, 'Reportes'),
   _AdminNavLeaf(AdminSection.configuracion, Icons.settings_outlined, 'Configuración'),

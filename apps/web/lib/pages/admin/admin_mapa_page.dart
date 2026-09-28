@@ -4,6 +4,7 @@ import 'package:flutter_map/flutter_map.dart';
 import '../../models/lugar.dart';
 import '../../services/auth_service.dart';
 import '../../services/lugares_service.dart';
+import '../../services/recorridos_service.dart';
 import '../../services/session_storage.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/breakpoints.dart';
@@ -24,13 +25,16 @@ class AdminMapaPage extends StatefulWidget {
   final AuthUser admin;
   final AuthService authService;
   final LugaresService lugaresService;
+  final RecorridosService recorridosService;
 
   AdminMapaPage({
     super.key,
     required this.admin,
     AuthService? authService,
+    RecorridosService? recorridosService,
     this.lugaresService = const LugaresService(),
-  }) : authService = authService ?? AuthService();
+  })  : authService = authService ?? AuthService(),
+        recorridosService = recorridosService ?? RecorridosService();
 
   @override
   State<AdminMapaPage> createState() => _AdminMapaPageState();
@@ -40,6 +44,9 @@ class _AdminMapaPageState extends State<AdminMapaPage> {
   final _mapController = MapController();
   List<NegocioSummary> _negocios = [];
   List<Lugar> _lugares = [];
+  /// Recorridos 360° visibles en la app por negocio (los da de alta un admin
+  /// en "Recorridos 360°"; ya no se usa la columna vieja `archivo360`).
+  Map<String, int> _recorridosPorNegocio = {};
   bool _loading = true;
   String? _error;
   bool _soloIncompletos = false;
@@ -68,11 +75,17 @@ class _AdminMapaPageState extends State<AdminMapaPage> {
       final results = await Future.wait([
         widget.authService.adminListNegocios(token),
         widget.lugaresService.listarPublicos(),
+        widget.recorridosService.listRecorridos(token),
       ]);
       if (!mounted) return;
+      final porNegocio = <String, int>{};
+      for (final r in results[2] as List<Recorrido360>) {
+        if (r.publicado && r.negocioId != null) porNegocio.update(r.negocioId!, (n) => n + 1, ifAbsent: () => 1);
+      }
       setState(() {
         _negocios = (results[0] as List<NegocioSummary>).where((n) => n.aprobado).toList();
         _lugares = results[1] as List<Lugar>;
+        _recorridosPorNegocio = porNegocio;
       });
     } catch (err) {
       if (!mounted) return;
@@ -82,7 +95,7 @@ class _AdminMapaPageState extends State<AdminMapaPage> {
     }
   }
 
-  static bool _completo(NegocioSummary n) => n.archivo360 != null && n.arMarcador != null && n.arGeo != null;
+  bool _completo(NegocioSummary n) => ExperienciaTipo.values.every((t) => _tiene(n, t));
 
   @override
   Widget build(BuildContext context) {
@@ -126,7 +139,7 @@ class _AdminMapaPageState extends State<AdminMapaPage> {
     final stats = [
       (Icons.qr_code_scanner, cuenta((n) => n.arMarcador != null), 'Con RA de marcador', ExperienciaInfo.of(ExperienciaTipo.arMarcador).color),
       (Icons.explore_outlined, cuenta((n) => n.arGeo != null), 'Con RA por ubicación', ExperienciaInfo.of(ExperienciaTipo.arGeo).color),
-      (Icons.threesixty, cuenta((n) => n.archivo360 != null), 'Con recorrido 360°', ExperienciaInfo.of(ExperienciaTipo.recorrido360).color),
+      (Icons.threesixty, cuenta((n) => _tiene(n, ExperienciaTipo.recorrido360)), 'Con recorrido 360°', ExperienciaInfo.of(ExperienciaTipo.recorrido360).color),
       (Icons.storefront_outlined, cuenta((n) => !_completo(n)), 'Con experiencias pendientes', AppColors.amber),
     ];
     return LayoutBuilder(
@@ -304,16 +317,20 @@ class _AdminMapaPageState extends State<AdminMapaPage> {
     );
   }
 
-  static bool _tiene(NegocioSummary n, ExperienciaTipo tipo) => switch (tipo) {
+  bool _tiene(NegocioSummary n, ExperienciaTipo tipo) => switch (tipo) {
         ExperienciaTipo.arMarcador => n.arMarcador != null,
         ExperienciaTipo.arGeo => n.arGeo != null,
-        ExperienciaTipo.recorrido360 => n.archivo360 != null,
+        ExperienciaTipo.recorrido360 => (_recorridosPorNegocio[n.id] ?? 0) > 0,
       };
 
   void _revisar(NegocioSummary negocio) {
     showDialog<void>(
       context: context,
-      builder: (_) => _RevisionDialog(negocio: negocio, tiene: (t) => _tiene(negocio, t)),
+      builder: (_) => _RevisionDialog(
+        negocio: negocio,
+        tiene: (t) => _tiene(negocio, t),
+        recorridos360: _recorridosPorNegocio[negocio.id] ?? 0,
+      ),
     );
   }
 }
@@ -374,8 +391,9 @@ class _Leyenda extends StatelessWidget {
 class _RevisionDialog extends StatelessWidget {
   final NegocioSummary negocio;
   final bool Function(ExperienciaTipo) tiene;
+  final int recorridos360;
 
-  const _RevisionDialog({required this.negocio, required this.tiene});
+  const _RevisionDialog({required this.negocio, required this.tiene, required this.recorridos360});
 
   void _pendiente(BuildContext context, String accion) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -422,6 +440,33 @@ class _RevisionDialog extends StatelessWidget {
                   // Los marcadores no los sube el negocio: los da de alta un
                   // admin en la sección "Realidad aumentada" (no hay nada que
                   // aprobar o rechazar aquí).
+                  if (tipo == ExperienciaTipo.recorrido360) {
+                    return DsCard(
+                      child: Row(
+                        children: [
+                          Icon(info.icon, color: activo ? info.color : AppColors.slate500),
+                          const SizedBox(width: AppSpacing.md),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(info.tituloCorto, style: AppTypography.h3.copyWith(fontSize: 14)),
+                                Text('Se gestionan en la sección "Recorridos 360°" del panel.',
+                                    style: AppTypography.bodySmall),
+                              ],
+                            ),
+                          ),
+                          activo
+                              ? DsBadge(
+                                  text: '$recorridos360 ${recorridos360 == 1 ? 'recorrido' : 'recorridos'}',
+                                  tone: BadgeTone.success,
+                                  icon: Icons.check,
+                                )
+                              : const DsBadge(text: 'Sin recorrido', tone: BadgeTone.neutral),
+                        ],
+                      ),
+                    );
+                  }
                   if (tipo == ExperienciaTipo.arMarcador) {
                     return DsCard(
                       child: Row(
