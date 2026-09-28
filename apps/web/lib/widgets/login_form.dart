@@ -1,10 +1,9 @@
-import 'dart:html' as html;
-
 import 'package:flutter/material.dart';
 
 import '../pages/admin/admin_dashboard_page.dart';
 import '../pages/business_home_page.dart';
 import '../pages/home_page.dart';
+import '../platform/platform_services.dart';
 import '../services/auth_service.dart';
 import '../services/session_storage.dart';
 import '../theme/app_theme.dart';
@@ -67,20 +66,13 @@ class _LoginFormState extends State<LoginForm> {
   }
 
   Future<void> _restoreSession() async {
-    final uri = Uri.base;
-    final tokenFromRedirect = uri.queryParameters['token'];
-    final googleError = uri.queryParameters['error'];
-    final googleMessage = uri.queryParameters['message'];
+    final redirect = PlatformServices.googleLogin.consumeRedirectResult();
 
-    if (tokenFromRedirect != null || googleError != null) {
-      html.window.history.replaceState(null, '', uri.path);
+    if (redirect.error != null) {
+      setState(() => _error = redirect.message ?? 'No se pudo iniciar sesión con Google');
     }
 
-    if (googleError != null) {
-      setState(() => _error = googleMessage ?? 'No se pudo iniciar sesión con Google');
-    }
-
-    final token = tokenFromRedirect ?? SessionStorage.token;
+    final token = redirect.token ?? SessionStorage.token;
 
     if (token == null) {
       setState(() => _isRestoringSession = false);
@@ -133,8 +125,25 @@ class _LoginFormState extends State<LoginForm> {
     );
   }
 
-  void _handleGoogleOrBusinessClick() {
-    html.window.location.href = widget.authService.googleLoginUrl;
+  bool _isGoogleSigningIn = false;
+
+  Future<void> _handleGoogleOrBusinessClick() async {
+    if (_isGoogleSigningIn) return;
+    _isGoogleSigningIn = true;
+
+    try {
+      final response = await PlatformServices.googleLogin.start(widget.authService);
+      if (response == null || !mounted) return;
+      SessionStorage.saveToken(response.token);
+      _routeUser(response.user);
+    } catch (err) {
+      if (!mounted) return;
+      setState(() {
+        _error = err is AuthError ? err.message : 'No se pudo iniciar sesión con Google';
+      });
+    } finally {
+      _isGoogleSigningIn = false;
+    }
   }
 
   Future<void> _handleSubmit() async {

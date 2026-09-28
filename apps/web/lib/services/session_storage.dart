@@ -1,15 +1,15 @@
-import 'dart:html' as html;
+import '../platform/platform_services.dart';
 
 const _tokenKey = 'touristmar_token';
 
 class SessionStorage {
-  static String? get token => html.window.localStorage[_tokenKey];
+  static String? get token => PlatformServices.store.read(_tokenKey);
 
   static void saveToken(String token) {
-    html.window.localStorage[_tokenKey] = token;
+    PlatformServices.store.write(_tokenKey, token);
   }
 
   static void clearToken() {
-    html.window.localStorage.remove(_tokenKey);
+    PlatformServices.store.remove(_tokenKey);
   }
 }

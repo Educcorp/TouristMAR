@@ -1,6 +1,6 @@
-import 'dart:html' as html;
-
 import 'package:flutter/material.dart';
+
+import '../platform/platform_services.dart';
 
 const _themeStorageKey = 'touristmar_theme_mode';
 
@@ -20,11 +20,11 @@ class ThemeController {
 
   static void set(ThemeMode value) {
     mode.value = value;
-    html.window.localStorage[_themeStorageKey] = value == ThemeMode.dark ? 'dark' : 'light';
+    PlatformServices.store.write(_themeStorageKey, value == ThemeMode.dark ? 'dark' : 'light');
   }
 
   static ThemeMode _readSaved() {
-    final saved = html.window.localStorage[_themeStorageKey];
+    final saved = PlatformServices.store.read(_themeStorageKey);
     return saved == 'light' ? ThemeMode.light : ThemeMode.dark;
   }
 }
