@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
+import 'app_logo.dart';
 
 class _Category {
   final String label;
@@ -60,12 +61,7 @@ class HeroPanel extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(color: AppColors.brandTeal, shape: BoxShape.circle),
-                    child: Icon(Icons.waves, size: 20, color: AppColors.panelNavy),
-                  ),
+                  AppLogo(size: 36, sobreFoto: true),
                   const SizedBox(width: 8),
                   const Text(
                     'TOURISTMAR',

@@ -10,6 +10,7 @@ import '../theme/breakpoints.dart';
 import 'notification_bell.dart';
 import 'theme_toggle_tile.dart';
 import 'user_avatar.dart';
+import 'app_logo.dart';
 
 class NavItem {
   final IconData icon;
@@ -301,12 +302,7 @@ class _TopBar extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(color: accentColor, shape: BoxShape.circle),
-            child: Icon(Icons.waves, size: 18, color: AppColors.panelNavy),
-          ),
+          AppLogo(size: 32),
           const SizedBox(width: 8),
           Text(
             'TOURISTMAR',
@@ -413,12 +409,7 @@ class _SidebarContent extends StatelessWidget {
           ),
           child: Row(
             children: [
-              Container(
-                width: 24,
-                height: 24,
-                decoration: BoxDecoration(color: accentColor, shape: BoxShape.circle),
-                child: Icon(Icons.waves, size: 12, color: AppColors.panelNavy),
-              ),
+              AppLogo(size: 24),
               const SizedBox(width: 8),
               Text(
                 'TOURISTMAR',

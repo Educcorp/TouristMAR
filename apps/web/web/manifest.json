@@ -1,11 +1,11 @@
 {
-    "name": "touristmar_web",
-    "short_name": "touristmar_web",
+    "name": "TouristMAR",
+    "short_name": "TouristMAR",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#FFFFFF",
+    "theme_color": "#0B2E6B",
+    "description": "Descubre Manzanillo: mapa de lugares, recorridos 360° y realidad aumentada.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

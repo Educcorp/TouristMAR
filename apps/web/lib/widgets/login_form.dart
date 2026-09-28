@@ -14,6 +14,7 @@ import 'app_text_field.dart';
 import 'google_logo.dart';
 import 'register_place_banner.dart';
 import 'session_guard.dart';
+import 'app_logo.dart';
 
 enum _Mode { login, register }
 
@@ -286,12 +287,7 @@ class _LoginFormState extends State<LoginForm> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Container(
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(color: AppColors.brandTeal, shape: BoxShape.circle),
-          child: Icon(Icons.waves, size: 20, color: AppColors.panelNavy),
-        ),
+        AppLogo(size: 36),
         const SizedBox(width: 8),
         Flexible(
           child: Text(

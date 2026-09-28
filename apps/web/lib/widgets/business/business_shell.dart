@@ -8,6 +8,7 @@ import '../../theme/app_theme.dart';
 import '../../theme/breakpoints.dart';
 import '../notification_bell.dart';
 import '../theme_toggle_tile.dart';
+import '../app_logo.dart';
 
 /// Secciones persistentes del panel de empresa.
 enum BusinessSection { dashboard, perfil, experiencias, resenas }
@@ -177,12 +178,7 @@ class _BusinessTopBar extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(color: AppColors.businessOrange, shape: BoxShape.circle),
-            child: Icon(Icons.waves, size: 18, color: AppColors.panelNavy),
-          ),
+          AppLogo(size: 32),
           const SizedBox(width: 8),
           Text(
             'TOURISTMAR',
@@ -386,12 +382,7 @@ class _BusinessSidebarContent extends StatelessWidget {
           decoration: BoxDecoration(border: Border(bottom: BorderSide(color: AppColors.overlay(0.08)))),
           child: Row(
             children: [
-              Container(
-                width: 24,
-                height: 24,
-                decoration: BoxDecoration(color: AppColors.businessOrange, shape: BoxShape.circle),
-                child: Icon(Icons.waves, size: 12, color: AppColors.panelNavy),
-              ),
+              AppLogo(size: 24),
               const SizedBox(width: 8),
               Text(
                 'TOURISTMAR',
