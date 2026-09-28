@@ -52,7 +52,7 @@ void main() {
   });
 
   group('register', () {
-    test('hace POST a /auth/register con email, password y name', () async {
+    test('hace POST a /auth/register con email, password, name y rol turista por defecto', () async {
       final authResponse = {
         'token': 'jwt-token',
         'user': {'id': '1', 'email': 'ana@correo.com', 'name': 'Ana', 'role': 'usuario', 'avatarUrl': null},
@@ -66,7 +66,32 @@ void main() {
 
       await AuthService(client: client).register('ana@correo.com', 'password123', 'Ana');
 
-      expect(calledBody, jsonEncode({'email': 'ana@correo.com', 'password': 'password123', 'name': 'Ana'}));
+      expect(
+        calledBody,
+        jsonEncode({'email': 'ana@correo.com', 'password': 'password123', 'name': 'Ana', 'rol': 'turista'}),
+      );
+    });
+
+    test('un negocio manda rol y categoría (y omite la categoría vacía)', () async {
+      final bodies = <Map<String, dynamic>>[];
+      final client = MockClient((request) async {
+        bodies.add(jsonDecode(request.body) as Map<String, dynamic>);
+        return http.Response(
+          jsonEncode({
+            'token': 'jwt-token',
+            'user': {'id': '1', 'email': 'cafe@correo.com', 'name': 'Café', 'role': 'negocio', 'avatarUrl': null},
+          }),
+          200,
+        );
+      });
+      final service = AuthService(client: client);
+
+      await service.register('cafe@correo.com', 'password123', 'Café', rol: 'negocio', categoria: 'Restaurantes');
+      await service.register('cafe@correo.com', 'password123', 'Café', rol: 'negocio', categoria: '  ');
+
+      expect(bodies[0], containsPair('rol', 'negocio'));
+      expect(bodies[0], containsPair('categoria', 'Restaurantes'));
+      expect(bodies[1].containsKey('categoria'), isFalse);
     });
   });
 

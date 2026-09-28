@@ -12,6 +12,7 @@ class AppTextField extends StatelessWidget {
   final String? Function(String?)? validator;
   final Key? fieldKey;
   final Color? accentColor;
+  final int maxLines;
 
   AppTextField({
     super.key,
@@ -25,6 +26,7 @@ class AppTextField extends StatelessWidget {
     this.validator,
     this.fieldKey,
     this.accentColor,
+    this.maxLines = 1,
   });
 
   @override
@@ -38,6 +40,7 @@ class AppTextField extends StatelessWidget {
           key: fieldKey,
           controller: controller,
           obscureText: obscureText,
+          maxLines: obscureText ? 1 : maxLines,
           keyboardType: keyboardType,
           validator: validator,
           style: TextStyle(color: AppColors.textPrimary, fontSize: 14),

@@ -45,6 +45,26 @@ export async function requireAuth(req: AuthedRequest, res: Response, next: NextF
   next()
 }
 
+/// Para endpoints públicos que igual quieren saber quién llama si viene un
+/// token (p. ej. el registro de escaneos AR): nunca rechaza la petición, solo
+/// llena `req.userId` cuando el token es válido y la cuenta sigue activa.
+export async function optionalAuth(req: AuthedRequest, _res: Response, next: NextFunction) {
+  const header = req.headers.authorization
+  const token = header?.startsWith('Bearer ') ? header.slice('Bearer '.length) : null
+  if (!token) return next()
+
+  try {
+    const payload = jwt.verify(token, env.JWT_SECRET) as { sub: string }
+    const user = await findUserById(payload.sub)
+    if (user && user.activo !== false) {
+      req.userId = user.id
+    }
+  } catch {
+    // Token inválido/expirado o error de base: se trata como anónimo.
+  }
+  next()
+}
+
 export function requireRole(...roles: rol_enum[]) {
   return async (req: AuthedRequest, res: Response, next: NextFunction) => {
     try {

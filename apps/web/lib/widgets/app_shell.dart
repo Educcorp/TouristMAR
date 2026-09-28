@@ -474,12 +474,18 @@ class _SidebarContent extends StatelessWidget {
                         children: [
                           Icon(item.icon, size: 18, color: color),
                           const SizedBox(width: 12),
-                          Text(
-                            item.label,
-                            style: TextStyle(
-                              color: item.highlight ? color : AppColors.overlay(0.85),
-                              fontSize: 14,
-                              fontWeight: item.highlight ? FontWeight.w600 : FontWeight.w500,
+                          // Flexible + ellipsis: una etiqueta larga (o la letra
+                          // agrandada por accesibilidad) no debe desbordar el menú.
+                          Flexible(
+                            child: Text(
+                              item.label,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: item.highlight ? color : AppColors.overlay(0.85),
+                                fontSize: 14,
+                                fontWeight: item.highlight ? FontWeight.w600 : FontWeight.w500,
+                              ),
                             ),
                           ),
                         ],
