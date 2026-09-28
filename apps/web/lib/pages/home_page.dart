@@ -164,8 +164,21 @@ class _HomePageState extends State<HomePage> {
                     style: TextStyle(color: Color(0xFF22D3EE), fontWeight: FontWeight.w600, fontSize: 11, letterSpacing: 2),
                   ),
                   const SizedBox(height: 6),
-                  Text(
-                    '$_greeting, $firstName ☀️',
+                  // Ícono en vez de emoji: el emoji ☀️ lleva un selector de
+                  // variante (U+FE0F) que ninguna fuente Noto cubre, y Flutter
+                  // web avisaba en consola que no podía dibujarlo.
+                  Text.rich(
+                    TextSpan(children: [
+                      TextSpan(text: '$_greeting, $firstName '),
+                      WidgetSpan(
+                        alignment: PlaceholderAlignment.middle,
+                        child: Icon(
+                          DateTime.now().hour < 19 ? Icons.wb_sunny_rounded : Icons.nightlight_round,
+                          size: 22,
+                          color: const Color(0xFFFBBF24),
+                        ),
+                      ),
+                    ]),
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 24, color: Colors.white),
                   ),
                   const SizedBox(height: 2),

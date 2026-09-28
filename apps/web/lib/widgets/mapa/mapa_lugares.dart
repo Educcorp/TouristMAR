@@ -6,6 +6,16 @@ import '../../models/lugar.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/theme_controller.dart';
 
+/// Plantilla de mosaicos del mapa. Por defecto, los servidores de
+/// OpenStreetMap: sin API key, pero pensados para poco tráfico y exigen que
+/// el navegador mande Referer (ver `referrerPolicy` en el backend). Para
+/// producción con más visitas se cambia sin tocar código, p. ej. MapTiler:
+///   --dart-define=MAP_TILE_URL=https://api.maptiler.com/maps/streets-v2/{z}/{x}/{y}.png?key=TU_KEY
+const mapTileUrl = String.fromEnvironment(
+  'MAP_TILE_URL',
+  defaultValue: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+);
+
 LatLng toLatLng(Coordenadas c) => LatLng(c.lat, c.lng);
 
 Coordenadas toCoordenadas(LatLng p) => Coordenadas(p.latitude, p.longitude);
@@ -47,11 +57,8 @@ class MapaBase extends StatelessWidget {
         ),
       ),
       children: [
-        // Mosaicos estándar de OpenStreetMap: sin API key, pero su política
-        // de uso no está pensada para tráfico alto — en producción conviene
-        // cambiar esta URL por un proveedor con key (MapTiler, Stadia…).
         TileLayer(
-          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+          urlTemplate: mapTileUrl,
           userAgentPackageName: 'mx.touristmar.web',
           tileBuilder: ThemeController.isDark ? darkModeTileBuilder : null,
         ),

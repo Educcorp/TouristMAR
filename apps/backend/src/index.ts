@@ -21,6 +21,11 @@ app.use(
   helmet({
     contentSecurityPolicy: false,
     frameguard: false,
+    // El default de helmet ('no-referrer') hace que el navegador no mande
+    // Referer al pedir los mosaicos del mapa, y OpenStreetMap bloquea esas
+    // peticiones (devuelve el mosaico "Access blocked"). Este es el default
+    // de los navegadores: a otros sitios solo se manda el dominio, sin ruta.
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
   }),
 )
 app.use(cors({ origin: env.CORS_ORIGIN, credentials: true }))
