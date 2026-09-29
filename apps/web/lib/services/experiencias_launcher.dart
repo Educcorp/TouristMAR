@@ -1,5 +1,7 @@
 import 'dart:math' as math;
 
+import 'package:flutter/widgets.dart' show BuildContext;
+
 import '../models/lugar.dart';
 
 /// Lanzado cuando todavía no hay un visor configurado para esa experiencia.
@@ -8,8 +10,18 @@ class ExperienciaNoConfigurada implements Exception {
   const ExperienciaNoConfigurada(this.tipo);
 }
 
+/// El visor existe pero no pudo abrirse (p. ej. se negó el permiso de la
+/// cámara). [mensaje] se le muestra tal cual al visitante.
+class ExperienciaError implements Exception {
+  final String mensaje;
+  const ExperienciaError(this.mensaje);
+
+  @override
+  String toString() => mensaje;
+}
+
 /// Punto de conexión con quien ejecuta realmente cada experiencia: el
-/// módulo Unity (RA de marcador y de ubicación) y el visor 3D/360°.
+/// módulo Unity (RA de marcador, RA de ubicación y recorrido 360°).
 ///
 /// La interfaz nunca abre la cámara ni carga modelos por su cuenta: llama a
 /// [ExperienciasLauncher.current]. Por defecto no hay nada configurado y la
@@ -25,7 +37,14 @@ abstract class ExperienciasLauncher {
   /// Si este dispositivo puede ejecutar el tipo (p. ej. la web no tiene RA).
   bool soporta(ExperienciaTipo tipo);
 
-  Future<void> abrir(Lugar lugar, ExperienciaTipo tipo);
+  /// Si el visor mide por su cuenta qué tan cerca está el visitante (la RA por
+  /// ubicación de Unity muestra un resumen de lejos y el detalle al llegar).
+  /// Entonces la interfaz no bloquea el botón esperando la ubicación.
+  bool mideDistancia(ExperienciaTipo tipo) => false;
+
+  /// [context] sirve para preguntarle algo al visitante antes de abrir (p. ej.
+  /// qué recorrido ver si el lugar no tiene uno asignado).
+  Future<void> abrir(BuildContext context, Lugar lugar, ExperienciaTipo tipo);
 }
 
 class _SinConfigurar implements ExperienciasLauncher {
@@ -35,7 +54,10 @@ class _SinConfigurar implements ExperienciasLauncher {
   bool soporta(ExperienciaTipo tipo) => false;
 
   @override
-  Future<void> abrir(Lugar lugar, ExperienciaTipo tipo) async => throw ExperienciaNoConfigurada(tipo);
+  bool mideDistancia(ExperienciaTipo tipo) => false;
+
+  @override
+  Future<void> abrir(BuildContext context, Lugar lugar, ExperienciaTipo tipo) async => throw ExperienciaNoConfigurada(tipo);
 }
 
 /// Posición del visitante para desbloquear la RA por ubicación. Igual que

@@ -22,6 +22,8 @@ class ExperienciaSituacion {
   static ExperienciaSituacion calcular(Lugar lugar, ExperienciaTipo tipo, Coordenadas? yo) {
     if (!lugar.tiene(tipo)) return ExperienciaSituacion(tipo, ExperienciaEstado.noDisponible);
     if (tipo != ExperienciaTipo.arGeo) return ExperienciaSituacion(tipo, ExperienciaEstado.disponible);
+    // El visor de RA por ubicación ya calcula la distancia: se deja abrir siempre.
+    if (ExperienciasLauncher.current.mideDistancia(tipo)) return ExperienciaSituacion(tipo, ExperienciaEstado.disponible);
 
     final destino = lugar.ubicacion;
     if (yo == null || destino == null) return ExperienciaSituacion(tipo, ExperienciaEstado.bloqueada);
@@ -343,9 +345,11 @@ class _DetalleExperienciaState extends State<_DetalleExperiencia> {
     }
     setState(() => _abriendo = true);
     try {
-      await launcher.abrir(widget.lugar, _situacion.tipo);
+      await launcher.abrir(context, widget.lugar, _situacion.tipo);
     } on ExperienciaNoConfigurada {
       _aviso('Esta experiencia estará disponible muy pronto.');
+    } on ExperienciaError catch (e) {
+      _aviso(e.mensaje);
     } finally {
       if (mounted) setState(() => _abriendo = false);
     }
@@ -423,11 +427,17 @@ class _DetalleExperienciaState extends State<_DetalleExperiencia> {
             onActivar: _activarUbicacion,
           ),
           const SizedBox(height: AppSpacing.lg),
-          const _Pasos(pasos: [
-            ('Visita el lugar', 'Esta experiencia solo existe en el sitio físico.'),
-            ('Activa tu ubicación', 'Se desbloquea al entrar en el radio marcado en el mapa.'),
-            ('Mira a tu alrededor', 'El contenido 3D aparece anclado al lugar real.'),
-          ]),
+          ExperienciasLauncher.current.mideDistancia(ExperienciaTipo.arGeo)
+              ? const _Pasos(pasos: [
+                  ('Abre la cámara', 'Toca "Iniciar RA en el lugar" y permite la cámara y tu ubicación.'),
+                  ('Mira el resumen', 'Desde donde estés verás información del lugar y a qué distancia estás.'),
+                  ('Llega al lugar', 'A menos de 100 m se desbloquea la información completa.'),
+                ])
+              : const _Pasos(pasos: [
+                  ('Visita el lugar', 'Esta experiencia solo existe en el sitio físico.'),
+                  ('Activa tu ubicación', 'Se desbloquea al entrar en el radio marcado en el mapa.'),
+                  ('Mira a tu alrededor', 'El contenido 3D aparece anclado al lugar real.'),
+                ]),
         ];
       case ExperienciaTipo.recorrido360:
         return [
@@ -566,7 +576,9 @@ class _EstadoGeo extends StatelessWidget {
     final d = situacion.distancia;
     final progreso = d == null ? 0.0 : (lugar.radioDesbloqueo / d).clamp(0.0, 1.0);
 
-    final (titulo, subtitulo) = desbloqueada
+    final (titulo, subtitulo) = desbloqueada && d == null
+        ? ('Lista para abrir', 'De lejos verás un resumen del lugar y tu distancia; al llegar se desbloquea la información completa.')
+        : desbloqueada
         ? ('¡Estás aquí!', 'La experiencia está desbloqueada.')
         : d == null
             ? ('Ubicación desactivada', 'Actívala para saber qué tan cerca estás.')

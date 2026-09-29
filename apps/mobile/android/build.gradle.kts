@@ -2,7 +2,19 @@ allprojects {
     repositories {
         google()
         mavenCentral()
+        // Las .aar que trae el export de Unity (ARCore, etc.).
+        findProject(":unityLibrary")?.let { flatDir { dirs(it.projectDir.resolve("libs")) } }
     }
+}
+
+// El build.gradle de Unity lee sus rutas (NDK, il2cpp…) de propiedades
+// "unity.*" que el export deja en su propio gradle.properties.
+findProject(":unityLibrary")?.let { unity ->
+    val props = java.util.Properties()
+    unity.projectDir.resolve("../gradle.properties").inputStream().use { props.load(it) }
+    props.stringPropertyNames()
+        .filter { it.startsWith("unity") }
+        .forEach { unity.extensions.extraProperties[it] = props.getProperty(it) }
 }
 
 val newBuildDir: Directory =

@@ -24,3 +24,15 @@ plugins {
 }
 
 include(":app")
+
+// Módulo de realidad aumentada (Unity as a Library). El export de Unity no se
+// versiona (pesa cientos de MB y depende del SO donde se generó): se genera
+// con apps/ar-module → ExportarLibreria y queda en builds/android/ar-marcadores.
+// Sin él la app compila igual y la RA aparece como "no disponible".
+val unityExport = file("../../ar-module/builds/android/ar-marcadores/unityLibrary")
+if (unityExport.resolve("build.gradle").exists()) {
+    include(":unityLibrary")
+    project(":unityLibrary").projectDir = unityExport
+    include(":unityLibrary:xrmanifest.androidlib")
+    project(":unityLibrary:xrmanifest.androidlib").projectDir = unityExport.resolve("xrmanifest.androidlib")
+}

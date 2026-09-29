@@ -1,10 +1,15 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
     <uses-permission android:name="android.permission.INTERNET"/>
     <!-- RA con marcadores: la cámara reconoce las imágenes que da de alta el
          admin (GET /api/marcadores). required="false" para que la app se pueda
          instalar también en equipos sin cámara compatible (el resto funciona). -->
     <uses-permission android:name="android.permission.CAMERA"/>
     <uses-feature android:name="android.hardware.camera" android:required="false"/>
+    <!-- RA por coordenadas (escena GeoAR de Unity): distancia a la playa por GPS. -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+    <uses-feature android:name="android.hardware.location.gps" android:required="false"/>
     <application
         android:label="TouristMAR"
         android:name="${applicationName}"
@@ -30,6 +35,18 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+        </activity>
+        <!-- Módulo de RA (Unity, viene de :unityLibrary). Corre en su propio
+             proceso para que al cerrarlo (Application.Quit) no se cierre la app;
+             se le quita el LAUNCHER para que no aparezca un segundo ícono. -->
+        <activity
+            android:name="com.unity3d.player.UnityPlayerGameActivity"
+            android:process=":unity"
+            android:screenOrientation="portrait"
+            android:launchMode="standard"
+            tools:replace="android:screenOrientation,android:launchMode"
+            tools:node="merge">
+            <intent-filter tools:node="removeAll"/>
         </activity>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
