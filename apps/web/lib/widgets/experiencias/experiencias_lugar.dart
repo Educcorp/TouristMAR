@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../models/lugar.dart';
 import '../../services/experiencias_launcher.dart';
+import '../../services/ra_ubicacion.dart';
+import '../../services/recorridos_service.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/breakpoints.dart';
 import '../../theme/theme_controller.dart';
@@ -19,8 +21,16 @@ class ExperienciaSituacion {
 
   const ExperienciaSituacion(this.tipo, this.estado, {this.distancia});
 
-  static ExperienciaSituacion calcular(Lugar lugar, ExperienciaTipo tipo, Coordenadas? yo) {
-    if (!lugar.tiene(tipo)) return ExperienciaSituacion(tipo, ExperienciaEstado.noDisponible);
+  /// [tieneRecorrido360] = si el lugar tiene su propio recorrido publicado
+  /// (lo dice la API, no `lugar.archivo360`); `null` = usar el del lugar.
+  static ExperienciaSituacion calcular(Lugar lugar, ExperienciaTipo tipo, Coordenadas? yo, {bool? tieneRecorrido360}) {
+    final tiene = switch (tipo) {
+      ExperienciaTipo.recorrido360 => tieneRecorrido360 ?? lugar.tiene(tipo),
+      // La RA por ubicación solo existe para las playas que conoce Unity.
+      ExperienciaTipo.arGeo => playaParaLugar(lugar.nombre) != null,
+      ExperienciaTipo.arMarcador => lugar.tiene(tipo),
+    };
+    if (!tiene) return ExperienciaSituacion(tipo, ExperienciaEstado.noDisponible);
     if (tipo != ExperienciaTipo.arGeo) return ExperienciaSituacion(tipo, ExperienciaEstado.disponible);
     // El visor de RA por ubicación ya calcula la distancia: se deja abrir siempre.
     if (ExperienciasLauncher.current.mideDistancia(tipo)) return ExperienciaSituacion(tipo, ExperienciaEstado.disponible);
@@ -43,8 +53,9 @@ class ExperienciaSituacion {
 class ExperienciasLugarSection extends StatefulWidget {
   final Lugar lugar;
   final bool vistaPrevia;
+  final RecorridosService? recorridosService;
 
-  const ExperienciasLugarSection({super.key, required this.lugar, this.vistaPrevia = false});
+  const ExperienciasLugarSection({super.key, required this.lugar, this.vistaPrevia = false, this.recorridosService});
 
   @override
   State<ExperienciasLugarSection> createState() => _ExperienciasLugarSectionState();
@@ -52,6 +63,39 @@ class ExperienciasLugarSection extends StatefulWidget {
 
 class _ExperienciasLugarSectionState extends State<ExperienciasLugarSection> {
   Coordenadas? _yo;
+
+  /// Si el lugar tiene su propio recorrido 360° publicado. Hasta que responda
+  /// la API (o si falla) la tarjeta se muestra sin recorrido: nunca se toma
+  /// el de otro lugar.
+  bool _tieneRecorrido360 = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _cargarRecorrido360();
+  }
+
+  @override
+  void didUpdateWidget(ExperienciasLugarSection oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.lugar.id != widget.lugar.id || oldWidget.lugar.nombre != widget.lugar.nombre) {
+      _tieneRecorrido360 = false;
+      _cargarRecorrido360();
+    }
+  }
+
+  Future<void> _cargarRecorrido360() async {
+    try {
+      final recorridos = await (widget.recorridosService ?? RecorridosService()).listPublicos();
+      final propio = recorridoDeLugar(recorridos, lugarId: widget.lugar.id, lugarNombre: widget.lugar.nombre);
+      if (mounted) setState(() => _tieneRecorrido360 = propio != null);
+    } catch (_) {
+      // Sin conexión: se queda sin recorrido.
+    }
+  }
+
+  ExperienciaSituacion _situacion(ExperienciaTipo tipo, Coordenadas? yo) =>
+      ExperienciaSituacion.calcular(widget.lugar, tipo, yo, tieneRecorrido360: _tieneRecorrido360);
 
   Future<void> _activarUbicacion() async {
     final yo = await UbicacionProvider.current.actual();
@@ -71,14 +115,16 @@ class _ExperienciasLugarSectionState extends State<ExperienciasLugarSection> {
       situacion: situacion,
       vistaPrevia: widget.vistaPrevia,
       onActivarUbicacion: _activarUbicacion,
+      recalcular: _situacion,
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final situaciones = [
-      for (final tipo in ExperienciaTipo.values) ExperienciaSituacion.calcular(widget.lugar, tipo, _yo),
+      for (final tipo in ExperienciaTipo.values) _situacion(tipo, _yo),
     ];
+    final disponibles = situaciones.where((s) => s.estado != ExperienciaEstado.noDisponible).length;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -90,7 +136,7 @@ class _ExperienciasLugarSectionState extends State<ExperienciasLugarSection> {
             Text('Experiencias inmersivas', style: AppTypography.h3),
             const Spacer(),
             Text(
-              '${widget.lugar.totalExperiencias} de 3 disponibles',
+              '$disponibles de 3 disponibles',
               style: AppTypography.bodySmall,
             ),
           ],
@@ -171,7 +217,13 @@ class ExperienciaCard extends StatelessWidget {
         ),
         const SizedBox(height: 4),
         Text(
-          apagada ? 'Este lugar aún no ofrece esta experiencia.' : info.descripcion,
+          apagada
+              ? switch (situacion.tipo) {
+                  ExperienciaTipo.recorrido360 => 'Este lugar todavía no cuenta con un recorrido 360°.',
+                  ExperienciaTipo.arGeo => 'Por el momento este lugar no cuenta con RA por ubicación.',
+                  ExperienciaTipo.arMarcador => 'Este lugar aún no ofrece esta experiencia.',
+                }
+              : info.descripcion,
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
           style: AppTypography.bodySmall.copyWith(height: 1.35),
@@ -260,12 +312,14 @@ Future<void> mostrarDetalleExperiencia(
   required ExperienciaSituacion situacion,
   bool vistaPrevia = false,
   Future<void> Function()? onActivarUbicacion,
+  ExperienciaSituacion Function(ExperienciaTipo tipo, Coordenadas? yo)? recalcular,
 }) {
   final contenido = _DetalleExperiencia(
     lugar: lugar,
     situacion: situacion,
     vistaPrevia: vistaPrevia,
     onActivarUbicacion: onActivarUbicacion,
+    recalcular: recalcular,
   );
 
   if (Breakpoints.isCompact(MediaQuery.of(context).size.width)) {
@@ -301,12 +355,14 @@ class _DetalleExperiencia extends StatefulWidget {
   final ExperienciaSituacion situacion;
   final bool vistaPrevia;
   final Future<void> Function()? onActivarUbicacion;
+  final ExperienciaSituacion Function(ExperienciaTipo tipo, Coordenadas? yo)? recalcular;
 
   const _DetalleExperiencia({
     required this.lugar,
     required this.situacion,
     required this.vistaPrevia,
     this.onActivarUbicacion,
+    this.recalcular,
   });
 
   @override
@@ -327,7 +383,8 @@ class _DetalleExperienciaState extends State<_DetalleExperiencia> {
     if (!mounted) return;
     setState(() {
       _buscando = false;
-      _situacion = ExperienciaSituacion.calcular(widget.lugar, _situacion.tipo, yo);
+      _situacion = widget.recalcular?.call(_situacion.tipo, yo) ??
+          ExperienciaSituacion.calcular(widget.lugar, _situacion.tipo, yo);
     });
   }
 

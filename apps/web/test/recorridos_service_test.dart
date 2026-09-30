@@ -146,6 +146,41 @@ void main() {
     expect(list.single.escenas, 3);
   });
 
+  group('recorridoDeLugar', () {
+    RecorridoPublico r(String nombre, {String negocioId = '', String titulo = 'Otro lugar'}) => RecorridoPublico(
+          nombre: nombre,
+          textoParaMostrar: '$titulo\nInfo',
+          negocioId: negocioId,
+          urlPortada: '',
+          escenas: 3,
+        );
+
+    final publicados = [
+      r('cerro_vigia_360', titulo: 'Cerro del Vigía'),
+      r('hotel_360', negocioId: 'n-1', titulo: 'Hotel'),
+      r('playa_la_audiencia_360', titulo: 'Bahía de Santiago'),
+    ];
+
+    test('un lugar sin recorrido propio no recibe el de otro lugar', () {
+      expect(recorridoDeLugar(publicados, lugarId: 'demo-miramar', lugarNombre: 'Playa Miramar'), isNull);
+      expect(recorridoDeLugar(publicados, lugarId: 'n-2', lugarNombre: 'Restaurante'), isNull);
+      expect(recorridoDeLugar(const [], lugarId: 'n-1', lugarNombre: 'Hotel'), isNull);
+    });
+
+    test('encuentra el suyo por negocio, por nombre o por título', () {
+      expect(recorridoDeLugar(publicados, lugarId: 'n-1', lugarNombre: 'Cualquiera')!.nombre, 'hotel_360');
+      expect(recorridoDeLugar(publicados, lugarId: 'demo-audiencia', lugarNombre: 'Playa La Audiencia')!.nombre,
+          'playa_la_audiencia_360');
+      expect(recorridoDeLugar(publicados, lugarId: 'demo-vigia', lugarNombre: 'Cerro del Vigia')!.nombre,
+          'cerro_vigia_360');
+    });
+
+    test('no confunde lugares con nombres parecidos', () {
+      expect(recorridoDeLugar(publicados, lugarId: 'x', lugarNombre: 'Audiencia Norte'), isNull);
+      expect(recorridoDeLugar(publicados, lugarId: 'x', lugarNombre: 'Cerro'), isNull);
+    });
+  });
+
   test('lanza AuthError con el mensaje del servidor', () async {
     final client = MockClient((_) async => http.Response(jsonEncode({'error': 'La foto mide 2048×2048'}), 400));
 

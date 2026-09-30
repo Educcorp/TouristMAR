@@ -1,13 +1,9 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:http/http.dart' as http;
 import 'package:touristmar_web/models/lugar.dart';
-import 'package:touristmar_web/services/auth_service.dart' show apiUrl;
 import 'package:touristmar_web/services/experiencias_launcher.dart';
-
-import 'selector_experiencia.dart';
+import 'package:touristmar_web/services/ra_ubicacion.dart';
+import 'package:touristmar_web/services/recorridos_service.dart';
 
 /// Abre las experiencias del módulo de Unity (una pantalla nativa aparte, ver
 /// android/app/src/main/kotlin/.../MainActivity.kt). El módulo trae las tres
@@ -15,9 +11,11 @@ import 'selector_experiencia.dart';
 ///
 /// - RA con marcador: Unity baja todos los marcadores de GET /api/marcadores y
 ///   reconoce cualquiera, así que no necesita saber de qué lugar se abrió.
-/// - Recorrido 360°: se le pasa el nombre del recorrido (GET /api/recorridos).
-/// - RA por ubicación: se le pasa el nombre de la playa (lista fija en Unity,
-///   ControladorPlayas.cs; el propio visor mide la distancia).
+/// - Recorrido 360°: se le pasa el nombre del recorrido del lugar
+///   (GET /api/recorridos); si el lugar no tiene uno, solo se avisa.
+/// - RA por ubicación: se le pasa el nombre de la playa del lugar (lista fija
+///   en Unity, ControladorPlayas.cs; el propio visor mide la distancia); si el
+///   lugar no es una de esas playas, solo se avisa.
 class UnityExperienciasLauncher implements ExperienciasLauncher {
   static const _canal = MethodChannel('touristmar/ar');
 
@@ -49,11 +47,9 @@ class UnityExperienciasLauncher implements ExperienciasLauncher {
       case ExperienciaTipo.arMarcador:
         await _abrirUnity('marcadores');
       case ExperienciaTipo.recorrido360:
-        final recorrido = await _elegirRecorrido(context, lugar);
-        if (recorrido != null) await _abrirUnity('recorrido', recorrido);
+        await _abrirUnity('recorrido', await _recorridoDe(lugar));
       case ExperienciaTipo.arGeo:
-        final playa = await _elegirPlaya(context, lugar);
-        if (playa != null) await _abrirUnity('geo', playa);
+        await _abrirUnity('geo', _playaDe(lugar));
     }
   }
 
@@ -65,95 +61,25 @@ class UnityExperienciasLauncher implements ExperienciasLauncher {
     }
   }
 
-  /// El recorrido asignado al lugar (por negocioId o por nombre); si no hay
-  /// uno, el visitante elige de la lista de recorridos publicados.
-  Future<String?> _elegirRecorrido(BuildContext context, Lugar lugar) async {
-    final List<Map<String, dynamic>> recorridos;
+  /// Solo el recorrido propio del lugar (ver [recorridoDeLugar]). Si el lugar
+  /// todavía no tiene uno se avisa: nunca se ofrecen recorridos de otros lugares.
+  Future<String> _recorridoDe(Lugar lugar) async {
+    final List<RecorridoPublico> recorridos;
     try {
-      final res = await http.get(Uri.parse('$apiUrl/recorridos'));
-      if (res.statusCode != 200) throw const FormatException();
-      recorridos = ((jsonDecode(res.body) as Map<String, dynamic>)['recorridos'] as List).cast<Map<String, dynamic>>();
+      recorridos = await RecorridosService().listPublicos();
     } catch (_) {
       throw const ExperienciaError('No se pudieron cargar los recorridos 360°. Revisa tu conexión.');
     }
-    if (recorridos.isEmpty) throw const ExperienciaError('Todavía no hay recorridos 360° publicados.');
-
-    final propio = recorridos.where((r) =>
-        (r['negocioId'] as String? ?? '') == lugar.id || normalizarNombre(r['nombre'] as String? ?? '') == normalizarNombre(lugar.nombre));
-    if (propio.isNotEmpty) return propio.first['nombre'] as String;
-
-    if (!context.mounted) return null;
-    return mostrarSelectorExperiencia(
-      context,
-      titulo: 'Elige un recorrido 360°',
-      subtitulo: '${lugar.nombre} todavía no tiene un recorrido propio. Puedes ver cualquiera de estos:',
-      icono: Icons.threesixty,
-      opciones: [
-        for (final r in recorridos)
-          OpcionExperiencia(
-            valor: r['nombre'] as String,
-            titulo: _primeraLinea(r['textoParaMostrar'] as String?) ?? r['nombre'] as String,
-            detalle: '${(r['escenas'] as List?)?.length ?? 0} fotos 360°',
-            imagenUrl: r['urlPortada'] as String?,
-          ),
-      ],
-    );
+    final propio = recorridoDeLugar(recorridos, lugarId: lugar.id, lugarNombre: lugar.nombre);
+    if (propio == null) throw ExperienciaError(sinRecorrido360(lugar.nombre));
+    return propio.nombre;
   }
 
-  /// La playa del lugar si está en la lista del módulo; si no, se elige.
-  Future<String?> _elegirPlaya(BuildContext context, Lugar lugar) async {
-    final propia = playaParaLugar(lugar.nombre);
-    if (propia != null) return propia;
-    if (!context.mounted) return null;
-    return mostrarSelectorExperiencia(
-      context,
-      titulo: '¿Qué playa quieres explorar?',
-      subtitulo: 'La realidad aumentada por ubicación está disponible en estas playas de Manzanillo:',
-      icono: Icons.beach_access_outlined,
-      opciones: [for (final p in playasConRA) OpcionExperiencia(valor: p, titulo: p)],
-    );
+  /// Solo la playa del lugar (ver [playaParaLugar]). Si el lugar no tiene RA
+  /// por ubicación se avisa: nunca se ofrecen otras playas.
+  String _playaDe(Lugar lugar) {
+    final playa = playaParaLugar(lugar.nombre);
+    if (playa == null) throw ExperienciaError(sinRaUbicacion(lugar.nombre));
+    return playa;
   }
-
-  static String? _primeraLinea(String? texto) {
-    final linea = texto?.split('\n').first.trim();
-    return (linea == null || linea.isEmpty) ? null : linea;
-  }
-}
-
-/// Las playas que conoce la RA por ubicación. Espejo de `listaPlayas` en
-/// ar-module ControladorPlayas.cs: los nombres tienen que coincidir EXACTO.
-const playasConRA = [
-  'Playa El Paraíso',
-  'Cuyutlán',
-  'Playa Miramar',
-  'Playa los Arcos',
-  'Playa Las Palmitas',
-  'Playa La Boquita',
-  'Playa Olas Altas',
-  'Playa La Audiencia',
-  'Playa Salagua',
-  'Playa Las Brisas',
-  'Playa Perla',
-  'Playa Club de Yates',
-  'Playa Azul',
-  'Playa de las Quinceañeras',
-  'Playa San Pedrito',
-  'Playa Vida del Mar',
-  'Estrecho Peña Blanca',
-];
-
-/// "Laguna de Cuyutlán" → "Cuyutlán", "Playa La Audiencia" → igual.
-String? playaParaLugar(String nombreLugar) {
-  final lugar = normalizarNombre(nombreLugar);
-  for (final p in playasConRA) {
-    final playa = normalizarNombre(p);
-    if (playa == lugar || lugar.contains(playa) || playa.contains(lugar)) return p;
-  }
-  return null;
-}
-
-String normalizarNombre(String texto) {
-  const acentos = {'á': 'a', 'é': 'e', 'í': 'i', 'ó': 'o', 'ú': 'u', 'ü': 'u', 'ñ': 'n'};
-  final minusculas = texto.toLowerCase().split('').map((c) => acentos[c] ?? c).join();
-  return minusculas.replaceAll(RegExp(r'^playa\s+'), '').replaceAll(RegExp(r'\s+'), ' ').trim();
 }
