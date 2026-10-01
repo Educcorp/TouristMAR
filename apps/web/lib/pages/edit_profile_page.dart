@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
@@ -23,8 +25,16 @@ class _EditProfilePageState extends State<EditProfilePage> {
   late final _bioController = TextEditingController(text: widget.profile.bio);
   final _authService = AuthService();
   bool _isSaving = false;
-  bool _isUploadingPhoto = false;
   String? _error;
+
+  /// Foto elegida pero todavía NO guardada. Antes la foto se subía al
+  /// servidor en cuanto se elegía y se escribía directo en
+  /// `widget.profile.avatarUrl`, así que "Cancelar" no la deshacía: volvía a
+  /// aparecer al reabrir "Editar perfil", al cambiar de tema o al reiniciar la
+  /// app (Errores 4, 5 y 5.2). Ahora solo se sube al tocar "Guardar cambios";
+  /// si se cancela, esta variable se descarta junto con la pantalla.
+  Uint8List? _pendingPhotoBytes;
+  String? _pendingPhotoName;
 
   @override
   void dispose() {
@@ -33,33 +43,20 @@ class _EditProfilePageState extends State<EditProfilePage> {
     super.dispose();
   }
 
+  /// Solo elige la foto y la muestra como vista previa; no la sube.
   Future<void> _changePhoto() async {
-    final token = SessionStorage.token;
-    if (token == null) {
-      setState(() => _error = 'Tu sesión expiró, vuelve a iniciar sesión');
-      return;
-    }
-
     final result = await FilePicker.platform.pickFiles(
       type: FileType.image,
       withData: true,
     );
     final file = result?.files.single;
-    if (file == null || file.bytes == null) return;
+    if (file == null || file.bytes == null || !mounted) return;
 
     setState(() {
-      _isUploadingPhoto = true;
+      _pendingPhotoBytes = file.bytes;
+      _pendingPhotoName = file.name;
       _error = null;
     });
-
-    try {
-      final updated = await _authService.uploadAvatar(token, file.bytes!, file.name);
-      setState(() => widget.profile.avatarUrl = updated.avatarUrl);
-    } catch (err) {
-      setState(() => _error = err is AuthError ? err.message : 'No se pudo subir la foto');
-    } finally {
-      if (mounted) setState(() => _isUploadingPhoto = false);
-    }
   }
 
   Future<void> _save() async {
@@ -75,12 +72,23 @@ class _EditProfilePageState extends State<EditProfilePage> {
     });
 
     try {
+      // 1) La foto (si se eligió una) se sube hasta ahora, al guardar.
+      String? newAvatarUrl;
+      if (_pendingPhotoBytes != null) {
+        final withPhoto = await _authService.uploadAvatar(token, _pendingPhotoBytes!, _pendingPhotoName ?? 'avatar.jpg');
+        newAvatarUrl = withPhoto.avatarUrl;
+      }
+
+      // 2) Nombre y descripción.
       final updated = await _authService.updateProfile(token, {
         'nombres': _nameController.text.trim(),
         'bio': _bioController.text.trim(),
       });
+
+      // 3) Solo con todo guardado se toca el perfil compartido.
       widget.profile.name = updated.name;
       widget.profile.bio = updated.bio ?? '';
+      widget.profile.avatarUrl = updated.avatarUrl ?? newAvatarUrl ?? widget.profile.avatarUrl;
       if (mounted) Navigator.of(context).pop(true);
     } catch (err) {
       setState(() => _error = err is AuthError ? err.message : 'No se pudo guardar el perfil');
@@ -124,23 +132,29 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     child: Column(
                       children: [
                         GestureDetector(
-                          onTap: _isUploadingPhoto ? null : _changePhoto,
-                          child: Stack(
-                            alignment: Alignment.center,
-                            children: [
-                              UserAvatar(
-                                imageUrl: widget.profile.avatarUrl,
-                                fallbackLetter: _nameController.text,
-                                radius: 48,
-                              ),
-                              if (_isUploadingPhoto)
-                                CircularProgressIndicator(color: AppColors.brandTeal),
-                            ],
-                          ),
+                          onTap: _isSaving ? null : _changePhoto,
+                          child: _pendingPhotoBytes != null
+                              ? CircleAvatar(
+                                  radius: 48,
+                                  backgroundColor: AppColors.brandTeal.withOpacity(0.2),
+                                  backgroundImage: MemoryImage(_pendingPhotoBytes!),
+                                )
+                              : UserAvatar(
+                                  imageUrl: widget.profile.avatarUrl,
+                                  fallbackLetter: _nameController.text,
+                                  radius: 48,
+                                ),
                         ),
+                        if (_pendingPhotoBytes != null) ...[
+                          const SizedBox(height: 6),
+                          Text(
+                            'Vista previa — se aplicará al guardar',
+                            style: TextStyle(color: AppColors.slate400, fontSize: 11),
+                          ),
+                        ],
                         const SizedBox(height: 10),
                         TextButton.icon(
-                          onPressed: _isUploadingPhoto ? null : _changePhoto,
+                          onPressed: _isSaving ? null : _changePhoto,
                           icon: Icon(Icons.camera_alt_outlined, size: 13, color: AppColors.brandTeal),
                           label: Text('Cambiar foto', style: TextStyle(color: AppColors.brandTeal, fontSize: 12)),
                         ),

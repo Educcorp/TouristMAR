@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/visitor_profile.dart';
 import '../services/auth_service.dart';
 import '../services/lugares_service.dart';
+import '../services/session_storage.dart';
 import '../theme/app_theme.dart';
 import '../theme/breakpoints.dart';
 import '../widgets/app_shell.dart';
@@ -10,7 +11,10 @@ import '../widgets/place_card.dart';
 import '../widgets/quick_action_card.dart';
 import '../widgets/register_place_banner.dart';
 import '../widgets/themed_builder.dart';
+import '../utils/keyboard.dart';
 import '../widgets/user_avatar.dart';
+import '../widgets/notification_bell.dart';
+import 'login_page.dart';
 import 'lugar_detalle_page.dart';
 
 class _QuickAction {
@@ -46,9 +50,51 @@ class _HomePageState extends State<HomePage> {
   late final _quickActions = [
     _QuickAction(Icons.map_outlined, 'Explorar mapa', AppColors.brandTeal, () => openVisitorMap(context, _profile)),
     _QuickAction(Icons.favorite_border, 'Mis favoritos', AppColors.orange),
-    _QuickAction(Icons.add, 'Proponer lugar', AppColors.brandTeal),
-    _QuickAction(Icons.notifications_outlined, 'Notificaciones', AppColors.amber),
+    _QuickAction(Icons.add, 'Proponer lugar', AppColors.brandTeal, _proposePlace),
+    _QuickAction(
+      Icons.notifications_outlined,
+      'Notificaciones',
+      AppColors.amber,
+      () => showNotificationsDialog(context, AppColors.brandTeal),
+    ),
   ];
+
+  /// Error 1: el banner "¿Te gustaría registrar un lugar nuevo?" (y la acción
+  /// rápida "Proponer lugar") no hacían nada. El backend solo deja registrar
+  /// lugares a cuentas de negocio, así que se le explica al visitante y, si
+  /// acepta, se cierra su sesión y se abre directo el registro de negocio.
+  Future<void> _proposePlace() async {
+    final go = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: AppColors.panelNavySoft,
+        title: Text('Registrar un lugar nuevo', style: TextStyle(color: AppColors.textPrimary)),
+        content: Text(
+          'Para proponer tu negocio o sitio turístico necesitas una cuenta de negocio. '
+          'Al continuar se cerrará tu sesión de visitante y te llevaremos al registro de negocio. '
+          'Un administrador revisará la solicitud antes de que aparezca en el mapa.',
+          style: TextStyle(color: AppColors.textSecondary, height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text('Cancelar', style: TextStyle(color: AppColors.slate400)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text('Continuar', style: TextStyle(color: AppColors.brandTeal, fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
+    if (go != true || !mounted) return;
+
+    SessionStorage.clearToken();
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const LoginPage(startInBusinessRegister: true)),
+      (route) => false,
+    );
+  }
 
   late final List<_FeaturedPlace> _places = [
     _FeaturedPlace('demo-audiencia', 'assets/images/place-playa-audiencia.jpg', 'Playas', 'Playa Audiencia', 4.9, false),
@@ -78,11 +124,13 @@ class _HomePageState extends State<HomePage> {
 
     return AppShell(
       accentColor: AppColors.brandTeal,
-      avatarIcon: UserAvatar(imageUrl: widget.user.avatarUrl, fallbackLetter: widget.user.name),
+      // Se lee de `_profile` (el que edita "Editar perfil"), no de
+      // `widget.user`, para que el inicio muestre la foto/nombre guardados.
+      avatarIcon: UserAvatar(imageUrl: _profile.avatarUrl, fallbackLetter: _profile.name),
       drawerIdentity: VisitorIdentityCard(
-        name: widget.user.name,
-        email: widget.user.email,
-        avatarUrl: widget.user.avatarUrl,
+        name: _profile.name,
+        email: _profile.email,
+        avatarUrl: _profile.avatarUrl,
         visitedCount: _profile.visited.length,
         reviewsCount: _profile.reviews.length,
       ),
@@ -123,7 +171,7 @@ class _HomePageState extends State<HomePage> {
                   const SizedBox(height: 12),
                   _buildFeaturedPlaces(),
                   const SizedBox(height: 24),
-                  RegisterPlaceBanner(onTap: () {}),
+                  RegisterPlaceBanner(onTap: _proposePlace),
                   const SizedBox(height: 24),
                 ],
               ),
@@ -206,6 +254,9 @@ class _HomePageState extends State<HomePage> {
           const SizedBox(width: 10),
           Expanded(
             child: TextField(
+              // Tocar fuera de la barra cierra el teclado (en Android, por
+              // defecto, un toque fuera no le quita el foco al campo).
+              onTapOutside: (_) => hideKeyboard(),
               style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
               decoration: InputDecoration(
                 border: InputBorder.none,

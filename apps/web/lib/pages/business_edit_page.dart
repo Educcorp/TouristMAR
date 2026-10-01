@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
@@ -30,8 +32,13 @@ class _BusinessEditPageState extends State<BusinessEditPage> {
   late final _hoursController = TextEditingController(text: widget.business.hours);
   final _authService = AuthService();
   bool _isSaving = false;
-  bool _isUploadingCover = false;
   String? _error;
+
+  /// Portada elegida pero aún no guardada (Error 5.3). Antes se subía al
+  /// elegirla y quedaba aplicada aunque se tocara "Cancelar"; ahora se sube
+  /// junto con el resto de los cambios en [_save].
+  Uint8List? _pendingCoverBytes;
+  String? _pendingCoverName;
 
   static final _websitePattern = RegExp(r'^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(/.*)?$');
 
@@ -52,34 +59,17 @@ class _BusinessEditPageState extends State<BusinessEditPage> {
     return null;
   }
 
+  /// Solo elige la portada y la muestra como vista previa; no la sube.
   Future<void> _changeCover() async {
-    final token = SessionStorage.token;
-    if (token == null) {
-      setState(() => _error = 'Tu sesión expiró, vuelve a iniciar sesión');
-      return;
-    }
-
     final result = await FilePicker.platform.pickFiles(type: FileType.image, withData: true);
     final file = result?.files.single;
-    if (file == null || file.bytes == null) return;
+    if (file == null || file.bytes == null || !mounted) return;
 
     setState(() {
-      _isUploadingCover = true;
+      _pendingCoverBytes = file.bytes;
+      _pendingCoverName = file.name;
       _error = null;
     });
-
-    try {
-      final updated = await _authService.uploadNegocioPortada(token, widget.business.id, file.bytes!, file.name);
-      final matches = updated.negocios.where((n) => n.id == widget.business.id);
-      final portada = matches.isEmpty ? null : matches.first.portada;
-      if (portada != null) {
-        setState(() => widget.business.coverImage = portada);
-      }
-    } catch (err) {
-      setState(() => _error = err is AuthError ? err.message : 'No se pudo subir la portada');
-    } finally {
-      if (mounted) setState(() => _isUploadingCover = false);
-    }
   }
 
   @override
@@ -109,6 +99,19 @@ class _BusinessEditPageState extends State<BusinessEditPage> {
     });
 
     try {
+      // La portada nueva (si hay) se sube hasta ahora, al guardar.
+      String? newCover;
+      if (_pendingCoverBytes != null) {
+        final withCover = await _authService.uploadNegocioPortada(
+          token,
+          widget.business.id,
+          _pendingCoverBytes!,
+          _pendingCoverName ?? 'portada.jpg',
+        );
+        final m = withCover.negocios.where((n) => n.id == widget.business.id);
+        newCover = m.isEmpty ? null : m.first.portada;
+      }
+
       final updated = await _authService.updateNegocio(token, widget.business.id, {
         'nombre': _nameController.text.trim(),
         'categoria': _categoryController.text.trim(),
@@ -129,6 +132,8 @@ class _BusinessEditPageState extends State<BusinessEditPage> {
       business.phone = negocio?.telefono ?? '';
       business.website = negocio?.sitioWeb ?? '';
       business.hours = negocio?.horario ?? '';
+      final portada = negocio?.portada ?? newCover;
+      if (portada != null) business.coverImage = portada;
       if (mounted) Navigator.of(context).pop(true);
     } catch (err) {
       setState(() => _error = err is AuthError ? err.message : 'No se pudo guardar el negocio');
@@ -171,7 +176,7 @@ class _BusinessEditPageState extends State<BusinessEditPage> {
                     ),
                     const SizedBox(height: 24),
                     GestureDetector(
-                      onTap: _isUploadingCover ? null : _changeCover,
+                      onTap: _isSaving ? null : _changeCover,
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(18),
                         child: SizedBox(
@@ -180,20 +185,24 @@ class _BusinessEditPageState extends State<BusinessEditPage> {
                           child: Stack(
                             fit: StackFit.expand,
                             children: [
-                              CoverImage(source: widget.business.coverImage),
+                              _pendingCoverBytes != null
+                                  ? Image.memory(_pendingCoverBytes!, fit: BoxFit.cover)
+                                  : CoverImage(source: widget.business.coverImage),
                               DecoratedBox(decoration: BoxDecoration(color: Colors.black.withOpacity(0.25))),
                               Center(
-                                child: _isUploadingCover
-                                    ? const CircularProgressIndicator(color: Colors.white)
-                                    : const Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(Icons.camera_alt_outlined, color: Colors.white, size: 22),
-                                          SizedBox(height: 6),
-                                          Text('Cambiar foto de portada',
-                                              style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
-                                        ],
-                                      ),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.camera_alt_outlined, color: Colors.white, size: 22),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      _pendingCoverBytes != null
+                                          ? 'Vista previa — se aplicará al guardar'
+                                          : 'Cambiar foto de portada',
+                                      style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ],
                           ),

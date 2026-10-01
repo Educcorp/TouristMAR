@@ -11,6 +11,7 @@ import 'notification_bell.dart';
 import 'theme_toggle_tile.dart';
 import 'user_avatar.dart';
 import 'app_logo.dart';
+import '../utils/keyboard.dart';
 
 class NavItem {
   final IconData icon;
@@ -233,6 +234,9 @@ class AppShell extends StatelessWidget {
 
         return Scaffold(
           backgroundColor: AppColors.panelNavy,
+          // Al abrir o cerrar el menú lateral se quita el foco de cualquier
+          // campo de texto, para que el teclado no se despliegue solo (Error 2).
+          onEndDrawerChanged: (_) => hideKeyboard(),
           endDrawer: Drawer(
             backgroundColor: AppColors.panelNavySoft,
             width: 320,
@@ -275,11 +279,19 @@ class _CompactTopBar extends StatelessWidget {
         color: AppColors.panelNavy,
         border: Border(bottom: BorderSide(color: AppColors.overlay(0.08))),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          NotificationBell(accentColor: accentColor),
-        ],
+      child: SafeArea(
+        // Respeta la barra de estado del teléfono: sin esto la barra de
+        // notificaciones del sistema se encima con la campana y el botón del
+        // menú (Error 3).
+        left: false,
+        right: false,
+        bottom: false,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            NotificationBell(accentColor: accentColor),
+          ],
+        ),
       ),
     );
   }
@@ -300,39 +312,52 @@ class _TopBar extends StatelessWidget {
         color: AppColors.panelNavy,
         border: Border(bottom: BorderSide(color: AppColors.overlay(0.08))),
       ),
-      child: Row(
-        children: [
-          AppLogo(size: 32),
-          const SizedBox(width: 8),
-          Text(
-            'TOURISTMAR',
-            style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, letterSpacing: 2, fontSize: 13),
-          ),
-          if (badgeText != null) ...[
+      child: SafeArea(
+        // Respeta la barra de estado del teléfono: sin esto la barra de
+        // notificaciones del sistema se encima con la campana y el botón del
+        // menú (Error 3).
+        left: false,
+        right: false,
+        bottom: false,
+        child: Row(
+          children: [
+            AppLogo(size: 32),
             const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: accentColor.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(4),
-                border: Border.all(color: accentColor.withOpacity(0.3)),
+            Text(
+              'TOURISTMAR',
+              style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, letterSpacing: 2, fontSize: 13),
+            ),
+            if (badgeText != null) ...[
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: accentColor.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border.all(color: accentColor.withOpacity(0.3)),
+                ),
+                child: Text(
+                  badgeText!,
+                  style: TextStyle(color: accentColor, fontWeight: FontWeight.w700, fontSize: 9, letterSpacing: 1),
+                ),
               ),
-              child: Text(
-                badgeText!,
-                style: TextStyle(color: accentColor, fontWeight: FontWeight.w700, fontSize: 9, letterSpacing: 1),
+            ],
+            const Spacer(),
+            NotificationBell(accentColor: accentColor),
+            const SizedBox(width: 14),
+            Builder(
+              builder: (context) => GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () {
+                  hideKeyboard();
+                  Scaffold.of(context).openEndDrawer();
+                },
+                // Padding extra = área táctil más grande (antes solo 32 px).
+                child: Padding(padding: const EdgeInsets.all(6), child: avatarIcon),
               ),
             ),
           ],
-          const Spacer(),
-          NotificationBell(accentColor: accentColor),
-          const SizedBox(width: 20),
-          Builder(
-            builder: (context) => GestureDetector(
-              onTap: () => Scaffold.of(context).openEndDrawer(),
-              child: avatarIcon,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

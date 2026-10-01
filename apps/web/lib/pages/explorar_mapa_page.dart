@@ -5,7 +5,7 @@ import '../models/lugar.dart';
 import '../models/visitor_profile.dart';
 import '../services/lugares_service.dart';
 import '../theme/app_theme.dart';
-import '../theme/breakpoints.dart';
+import '../utils/keyboard.dart';
 import '../widgets/app_shell.dart';
 import '../widgets/lugar_preview_card.dart';
 import '../widgets/mapa/mapa_lugares.dart';
@@ -324,6 +324,9 @@ class _CampoBusqueda extends StatelessWidget {
           Expanded(
             child: TextField(
               controller: controller,
+              // Tocar fuera de la barra cierra el teclado (en Android, por
+              // defecto, un toque fuera no le quita el foco al campo).
+              onTapOutside: (_) => hideKeyboard(),
               style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
               decoration: InputDecoration(
                 border: InputBorder.none,

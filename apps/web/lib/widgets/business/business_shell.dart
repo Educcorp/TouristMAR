@@ -9,6 +9,7 @@ import '../../theme/breakpoints.dart';
 import '../notification_bell.dart';
 import '../theme_toggle_tile.dart';
 import '../app_logo.dart';
+import '../../utils/keyboard.dart';
 
 /// Secciones persistentes del panel de empresa.
 enum BusinessSection { dashboard, perfil, experiencias, resenas }
@@ -112,6 +113,9 @@ class BusinessShell extends StatelessWidget {
 
         return Scaffold(
           backgroundColor: AppColors.panelNavy,
+          // Al abrir o cerrar el menú lateral se quita el foco de cualquier
+          // campo de texto, para que el teclado no se despliegue solo (Error 2).
+          onEndDrawerChanged: (_) => hideKeyboard(),
           endDrawer: Drawer(
             backgroundColor: AppColors.panelNavySoft,
             width: 320,
@@ -153,11 +157,19 @@ class _BusinessCompactTopBar extends StatelessWidget {
         color: AppColors.panelNavy,
         border: Border(bottom: BorderSide(color: AppColors.overlay(0.08))),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          NotificationBell(accentColor: AppColors.businessOrange, onNotificationTap: onNotificationTap),
-        ],
+      child: SafeArea(
+        // Respeta la barra de estado del teléfono: sin esto la barra de
+        // notificaciones del sistema se encima con la campana y el botón del
+        // menú (Error 3).
+        left: false,
+        right: false,
+        bottom: false,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            NotificationBell(accentColor: AppColors.businessOrange, onNotificationTap: onNotificationTap),
+          ],
+        ),
       ),
     );
   }
@@ -176,46 +188,58 @@ class _BusinessTopBar extends StatelessWidget {
         color: AppColors.panelNavy,
         border: Border(bottom: BorderSide(color: AppColors.overlay(0.08))),
       ),
-      child: Row(
-        children: [
-          AppLogo(size: 32),
-          const SizedBox(width: 8),
-          Text(
-            'TOURISTMAR',
-            style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, letterSpacing: 2, fontSize: 13),
-          ),
-          const SizedBox(width: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-            decoration: BoxDecoration(
-              color: AppColors.businessOrange.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(4),
-              border: Border.all(color: AppColors.businessOrange.withOpacity(0.3)),
+      child: SafeArea(
+        // Respeta la barra de estado del teléfono: sin esto la barra de
+        // notificaciones del sistema se encima con la campana y el botón del
+        // menú (Error 3).
+        left: false,
+        right: false,
+        bottom: false,
+        child: Row(
+          children: [
+            AppLogo(size: 32),
+            const SizedBox(width: 8),
+            Text(
+              'TOURISTMAR',
+              style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, letterSpacing: 2, fontSize: 13),
             ),
-            child: Text(
-              'EMPRESA',
-              style: TextStyle(color: AppColors.businessOrange, fontWeight: FontWeight.w700, fontSize: 9, letterSpacing: 1),
-            ),
-          ),
-          const Spacer(),
-          NotificationBell(accentColor: AppColors.businessOrange, onNotificationTap: onNotificationTap),
-          const SizedBox(width: 20),
-          Builder(
-            builder: (context) => GestureDetector(
-              onTap: () => Scaffold.of(context).openEndDrawer(),
-              child: Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: AppColors.businessOrange.withOpacity(0.12),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: AppColors.businessOrange.withOpacity(0.4)),
-                ),
-                child: Icon(Icons.apartment, size: 16, color: AppColors.businessOrange),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: AppColors.businessOrange.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(color: AppColors.businessOrange.withOpacity(0.3)),
+              ),
+              child: Text(
+                'EMPRESA',
+                style: TextStyle(color: AppColors.businessOrange, fontWeight: FontWeight.w700, fontSize: 9, letterSpacing: 1),
               ),
             ),
-          ),
-        ],
+            const Spacer(),
+            NotificationBell(accentColor: AppColors.businessOrange, onNotificationTap: onNotificationTap),
+            const SizedBox(width: 20),
+            Builder(
+              builder: (context) => GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () {
+                  hideKeyboard();
+                  Scaffold.of(context).openEndDrawer();
+                },
+                child: Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: AppColors.businessOrange.withOpacity(0.12),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: AppColors.businessOrange.withOpacity(0.4)),
+                  ),
+                  child: Icon(Icons.apartment, size: 16, color: AppColors.businessOrange),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -384,9 +408,15 @@ class _BusinessSidebarContent extends StatelessWidget {
             children: [
               AppLogo(size: 24),
               const SizedBox(width: 8),
-              Text(
-                'TOURISTMAR',
-                style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700, fontSize: 12, letterSpacing: 1.5),
+              // Flexible + ellipsis: con letra grande (o en los tests) el
+              // encabezado ya no se desborda del sidebar.
+              Flexible(
+                child: Text(
+                  'TOURISTMAR',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700, fontSize: 12, letterSpacing: 1.5),
+                ),
               ),
               const SizedBox(width: 6),
               Container(
@@ -484,12 +514,16 @@ class _BusinessSidebarContent extends StatelessWidget {
                         children: [
                           Icon(item.icon, size: 18, color: color),
                           const SizedBox(width: 12),
-                          Text(
-                            item.label,
-                            style: TextStyle(
-                              color: active ? color : AppColors.overlay(0.85),
-                              fontSize: 14,
-                              fontWeight: active ? FontWeight.w600 : FontWeight.w500,
+                          Flexible(
+                            child: Text(
+                              item.label,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: active ? color : AppColors.overlay(0.85),
+                                fontSize: 14,
+                                fontWeight: active ? FontWeight.w600 : FontWeight.w500,
+                              ),
                             ),
                           ),
                         ],

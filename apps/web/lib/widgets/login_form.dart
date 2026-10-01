@@ -25,7 +25,12 @@ class LoginForm extends StatefulWidget {
   final AuthService authService;
   final String? initialError;
 
-  LoginForm({super.key, AuthService? authService, this.initialError}) : authService = authService ?? AuthService();
+  /// Abre el formulario directo en "Registrar negocio" (lo usa el banner
+  /// "¿Te gustaría registrar un lugar nuevo?" del visitante).
+  final bool startInBusinessRegister;
+
+  LoginForm({super.key, AuthService? authService, this.initialError, this.startInBusinessRegister = false})
+      : authService = authService ?? AuthService();
 
   @override
   State<LoginForm> createState() => _LoginFormState();
@@ -53,6 +58,10 @@ class _LoginFormState extends State<LoginForm> {
   void initState() {
     super.initState();
     _error = widget.initialError;
+    if (widget.startInBusinessRegister) {
+      _mode = _Mode.register;
+      _loginType = _LoginType.business;
+    }
     _restoreSession();
   }
 

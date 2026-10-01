@@ -9,8 +9,9 @@ import '../widgets/themed_builder.dart';
 
 class LoginPage extends StatelessWidget {
   final String? initialError;
+  final bool startInBusinessRegister;
 
-  const LoginPage({super.key, this.initialError});
+  const LoginPage({super.key, this.initialError, this.startInBusinessRegister = false});
 
   @override
   Widget build(BuildContext context) {
@@ -27,13 +28,13 @@ class LoginPage extends StatelessWidget {
               final isWide = Breakpoints.isExpanded(constraints.maxWidth);
 
               if (!isWide) {
-                return LoginForm(initialError: initialError);
+                return LoginForm(initialError: initialError, startInBusinessRegister: startInBusinessRegister);
               }
 
               return Row(
                 children: [
                   const Expanded(flex: 58, child: HeroPanel()),
-                  Expanded(flex: 42, child: LoginForm(initialError: initialError)),
+                  Expanded(flex: 42, child: LoginForm(initialError: initialError, startInBusinessRegister: startInBusinessRegister)),
                 ],
               );
             },

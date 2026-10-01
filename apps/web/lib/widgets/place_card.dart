@@ -66,7 +66,10 @@ class PlaceCard extends StatelessWidget {
                         child: Icon(
                           isFavorite ? Icons.favorite : Icons.favorite_border,
                           size: 16,
-                          color: isFavorite ? AppColors.brandTeal : Colors.white,
+                          // Va sobre la foto (fondo negro translúcido), así que usa siempre el
+                          // cian claro: en modo claro brandTeal es un azul oscuro que casi
+                          // no se veía.
+                          color: isFavorite ? const Color(0xFF22D3EE) : Colors.white,
                         ),
                       ),
                     ),

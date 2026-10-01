@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
@@ -5,6 +7,7 @@ import '../models/business_profile.dart';
 import '../services/auth_service.dart';
 import '../services/session_storage.dart';
 import '../theme/app_theme.dart';
+import '../widgets/app_button.dart';
 import '../widgets/cover_image.dart';
 import '../widgets/themed_builder.dart';
 
@@ -17,91 +20,112 @@ class BusinessGalleryPage extends StatefulWidget {
   State<BusinessGalleryPage> createState() => _BusinessGalleryPageState();
 }
 
+class _PendingImage {
+  final Uint8List bytes;
+  final String name;
+  const _PendingImage(this.bytes, this.name);
+}
+
+/// La galería ahora funciona como borrador (Error 5.4): agregar o quitar fotos
+/// solo cambia la vista previa; nada se sube ni se borra en el servidor hasta
+/// tocar "Guardar cambios". "Cancelar" (o salir con atrás) descarta todo.
+/// Antes cada foto se subía al elegirla y quedaba aplicada aunque el usuario
+/// no guardara.
 class _BusinessGalleryPageState extends State<BusinessGalleryPage> {
   final _authService = AuthService();
-  bool _isUploading = false;
-  final Set<String> _deletingUrls = {};
+  final List<_PendingImage> _pendingAdds = [];
+  final Set<String> _pendingRemovals = {};
+  bool _isSaving = false;
   String? _error;
+
+  /// true si algo ya se guardó en el servidor (aunque luego algo fallara),
+  /// para que la pantalla anterior refresque.
   bool _changed = false;
 
+  bool get _isDirty => _pendingAdds.isNotEmpty || _pendingRemovals.isNotEmpty;
+
   Future<void> _addImage() async {
+    final result = await FilePicker.platform.pickFiles(type: FileType.image, withData: true);
+    final file = result?.files.single;
+    if (file == null || file.bytes == null || !mounted) return;
+
+    setState(() {
+      _pendingAdds.add(_PendingImage(file.bytes!, file.name));
+      _error = null;
+    });
+  }
+
+  void _removeSaved(String url) => setState(() => _pendingRemovals.add(url));
+
+  void _removePending(_PendingImage img) => setState(() => _pendingAdds.remove(img));
+
+  Future<void> _save() async {
     final token = SessionStorage.token;
     if (token == null) {
       setState(() => _error = 'Tu sesión expiró, vuelve a iniciar sesión');
       return;
     }
 
-    final result = await FilePicker.platform.pickFiles(type: FileType.image, withData: true);
-    final file = result?.files.single;
-    if (file == null || file.bytes == null) return;
-
     setState(() {
-      _isUploading = true;
+      _isSaving = true;
       _error = null;
     });
 
     try {
-      final updated = await _authService.uploadGaleriaImage(token, widget.business.id, file.bytes!, file.name);
-      setState(() {
+      for (final url in _pendingRemovals.toList()) {
+        final updated = await _authService.deleteGaleriaImage(token, widget.business.id, url);
         widget.business.gallery = _galeriaOf(updated) ?? widget.business.gallery;
+        _pendingRemovals.remove(url);
         _changed = true;
-      });
+      }
+      for (final img in _pendingAdds.toList()) {
+        final updated = await _authService.uploadGaleriaImage(token, widget.business.id, img.bytes, img.name);
+        widget.business.gallery = _galeriaOf(updated) ?? widget.business.gallery;
+        _pendingAdds.remove(img);
+        _changed = true;
+      }
+      if (mounted) Navigator.of(context).pop(true);
     } catch (err) {
-      setState(() => _error = err is AuthError ? err.message : 'No se pudo subir la imagen');
+      // Lo que alcanzó a guardarse ya salió de las listas de pendientes; lo
+      // que falló sigue ahí para reintentar.
+      if (mounted) {
+        setState(() => _error = err is AuthError ? err.message : 'No se pudieron guardar todos los cambios');
+      }
     } finally {
-      if (mounted) setState(() => _isUploading = false);
+      if (mounted) setState(() => _isSaving = false);
     }
   }
 
-  Future<void> _confirmDelete(String url) async {
-    final confirmed = await showDialog<bool>(
+  /// Pregunta antes de descartar cambios sin guardar.
+  Future<bool> _confirmDiscard() async {
+    if (!_isDirty) return true;
+    final discard = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.panelNavySoft,
-        title: Text('Eliminar foto', style: TextStyle(color: AppColors.textPrimary)),
+        title: Text('Descartar cambios', style: TextStyle(color: AppColors.textPrimary)),
         content: Text(
-          'Esta foto se quitará de tu galería. Esta acción no se puede deshacer.',
+          'Tienes cambios en la galería sin guardar. Si sales, se perderán.',
           style: TextStyle(color: AppColors.textSecondary),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: Text('Cancelar', style: TextStyle(color: AppColors.slate400)),
+            child: Text('Seguir editando', style: TextStyle(color: AppColors.slate400)),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: Text('Eliminar', style: TextStyle(color: AppColors.errorRed)),
+            child: Text('Descartar', style: TextStyle(color: AppColors.errorRed)),
           ),
         ],
       ),
     );
-
-    if (confirmed == true) _deleteImage(url);
+    return discard == true;
   }
 
-  Future<void> _deleteImage(String url) async {
-    final token = SessionStorage.token;
-    if (token == null) {
-      setState(() => _error = 'Tu sesión expiró, vuelve a iniciar sesión');
-      return;
-    }
-
-    setState(() {
-      _deletingUrls.add(url);
-      _error = null;
-    });
-
-    try {
-      final updated = await _authService.deleteGaleriaImage(token, widget.business.id, url);
-      setState(() {
-        widget.business.gallery = _galeriaOf(updated) ?? widget.business.gallery;
-        _changed = true;
-      });
-    } catch (err) {
-      setState(() => _error = err is AuthError ? err.message : 'No se pudo eliminar la imagen');
-    } finally {
-      if (mounted) setState(() => _deletingUrls.remove(url));
-    }
+  Future<void> _cancel() async {
+    if (_isSaving) return;
+    if (await _confirmDiscard() && mounted) Navigator.of(context).pop(_changed);
   }
 
   List<String>? _galeriaOf(AuthUser user) {
@@ -113,39 +137,74 @@ class _BusinessGalleryPageState extends State<BusinessGalleryPage> {
   Widget build(BuildContext context) => ThemedBuilder(builder: _buildScaffold);
 
   Widget _buildScaffold(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.panelNavy,
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 680),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: TextButton.icon(
-                      onPressed: () => Navigator.of(context).pop(_changed),
-                      icon: Icon(Icons.arrow_back, size: 15, color: AppColors.slate400),
-                      label: Text('Volver a mi negocio', style: TextStyle(color: AppColors.slate400, fontSize: 13)),
+    // El botón "atrás" del sistema pasa por la misma confirmación.
+    return PopScope<Object?>(
+      canPop: !_isDirty && !_isSaving,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _cancel();
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.panelNavy,
+        body: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 680),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton.icon(
+                        onPressed: _cancel,
+                        icon: Icon(Icons.arrow_back, size: 15, color: AppColors.slate400),
+                        label: Text('Volver a mi negocio', style: TextStyle(color: AppColors.slate400, fontSize: 13)),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text('Galería de fotos', style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 24)),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Sube y organiza las fotos que verán los visitantes en el mapa.',
-                    style: TextStyle(color: AppColors.slate400, fontSize: 14),
-                  ),
-                  const SizedBox(height: 24),
-                  if (_error != null) ...[
-                    Text(_error!, style: TextStyle(color: AppColors.errorRed, fontSize: 13)),
                     const SizedBox(height: 12),
+                    Text('Galería de fotos', style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 24)),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Sube y organiza las fotos que verán los visitantes en el mapa.',
+                      style: TextStyle(color: AppColors.slate400, fontSize: 14),
+                    ),
+                    const SizedBox(height: 24),
+                    if (_error != null) ...[
+                      Text(_error!, style: TextStyle(color: AppColors.errorRed, fontSize: 13)),
+                      const SizedBox(height: 12),
+                    ],
+                    _buildGrid(),
+                    if (_isDirty) ...[
+                      const SizedBox(height: 12),
+                      Text(
+                        'Los cambios se aplicarán al tocar "Guardar cambios".',
+                        style: TextStyle(color: AppColors.slate400, fontSize: 12),
+                      ),
+                    ],
+                    const SizedBox(height: 20),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: AppButton(
+                            variant: AppButtonVariant.ghost,
+                            onPressed: _isSaving ? null : _cancel,
+                            child: const Text('Cancelar'),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: AppButton(
+                            backgroundColor: AppColors.businessOrange,
+                            foregroundColor: Colors.white,
+                            onPressed: (_isSaving || !_isDirty) ? null : _save,
+                            child: Text(_isSaving ? 'Guardando...' : 'Guardar cambios'),
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
-                  _buildGrid(),
-                ],
+                ),
               ),
             ),
           ),
@@ -159,18 +218,26 @@ class _BusinessGalleryPageState extends State<BusinessGalleryPage> {
       builder: (context, constraints) {
         final columns = constraints.maxWidth < 480 ? 2 : 3;
         final tileSize = (constraints.maxWidth - (columns - 1) * 10) / columns;
+        final visibles = widget.business.gallery.where((url) => !_pendingRemovals.contains(url));
 
         return Wrap(
           spacing: 10,
           runSpacing: 10,
           children: [
-            ...widget.business.gallery.map((url) => _GalleryTile(
-                  url: url,
+            ...visibles.map((url) => _GalleryTile(
+                  image: CoverImage(source: url),
                   size: tileSize,
-                  isDeleting: _deletingUrls.contains(url),
-                  onDelete: () => _confirmDelete(url),
+                  isBusy: _isSaving,
+                  onDelete: () => _removeSaved(url),
                 )),
-            _AddTile(size: tileSize, isUploading: _isUploading, onTap: _isUploading ? null : _addImage),
+            ..._pendingAdds.map((img) => _GalleryTile(
+                  image: Image.memory(img.bytes, fit: BoxFit.cover),
+                  size: tileSize,
+                  isBusy: _isSaving,
+                  isPending: true,
+                  onDelete: () => _removePending(img),
+                )),
+            _AddTile(size: tileSize, isUploading: false, onTap: _isSaving ? null : _addImage),
           ],
         );
       },
@@ -179,12 +246,19 @@ class _BusinessGalleryPageState extends State<BusinessGalleryPage> {
 }
 
 class _GalleryTile extends StatelessWidget {
-  final String url;
+  final Widget image;
   final double size;
-  final bool isDeleting;
+  final bool isBusy;
+  final bool isPending;
   final VoidCallback onDelete;
 
-  const _GalleryTile({required this.url, required this.size, required this.isDeleting, required this.onDelete});
+  const _GalleryTile({
+    required this.image,
+    required this.size,
+    required this.isBusy,
+    required this.onDelete,
+    this.isPending = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -196,13 +270,18 @@ class _GalleryTile extends StatelessWidget {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            CoverImage(source: url),
-            if (isDeleting)
-              DecoratedBox(
-                decoration: BoxDecoration(color: Colors.black.withOpacity(0.55)),
-                child: const Center(child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)),
-              )
-            else
+            image,
+            if (isPending)
+              Positioned(
+                left: 6,
+                bottom: 6,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(color: Colors.black.withOpacity(0.6), borderRadius: BorderRadius.circular(6)),
+                  child: const Text('Sin guardar', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w600)),
+                ),
+              ),
+            if (!isBusy)
               Positioned(
                 right: 6,
                 top: 6,

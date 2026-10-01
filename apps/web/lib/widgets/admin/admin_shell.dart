@@ -8,6 +8,7 @@ import '../../theme/breakpoints.dart';
 import '../notification_bell.dart';
 import '../theme_toggle_tile.dart';
 import '../app_logo.dart';
+import '../../utils/keyboard.dart';
 
 /// Adónde debe mandar al admin una notificación según su tipo — usado por
 /// [AdminDashboardPage] para pasarle a la campana un handler concreto.
@@ -128,6 +129,9 @@ class AdminShell extends StatelessWidget {
 
         return Scaffold(
           backgroundColor: AppColors.panelNavy,
+          // Al abrir o cerrar el menú lateral se quita el foco de cualquier
+          // campo de texto, para que el teclado no se despliegue solo (Error 2).
+          onEndDrawerChanged: (_) => hideKeyboard(),
           endDrawer: Drawer(
             backgroundColor: AppColors.panelNavySoft,
             width: 320,
@@ -166,11 +170,19 @@ class _AdminCompactTopBar extends StatelessWidget {
         color: AppColors.panelNavy,
         border: Border(bottom: BorderSide(color: AppColors.overlay(0.08))),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          NotificationBell(accentColor: AppColors.adminViolet, onNotificationTap: onNotificationTap),
-        ],
+      child: SafeArea(
+        // Respeta la barra de estado del teléfono: sin esto la barra de
+        // notificaciones del sistema se encima con la campana y el botón del
+        // menú (Error 3).
+        left: false,
+        right: false,
+        bottom: false,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            NotificationBell(accentColor: AppColors.adminViolet, onNotificationTap: onNotificationTap),
+          ],
+        ),
       ),
     );
   }
@@ -189,46 +201,58 @@ class _AdminTopBar extends StatelessWidget {
         color: AppColors.panelNavy,
         border: Border(bottom: BorderSide(color: AppColors.overlay(0.08))),
       ),
-      child: Row(
-        children: [
-          AppLogo(size: 32),
-          const SizedBox(width: 8),
-          Text(
-            'TOURISTMAR',
-            style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, letterSpacing: 2, fontSize: 13),
-          ),
-          const SizedBox(width: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-            decoration: BoxDecoration(
-              color: AppColors.adminViolet.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(4),
-              border: Border.all(color: AppColors.adminViolet.withOpacity(0.3)),
+      child: SafeArea(
+        // Respeta la barra de estado del teléfono: sin esto la barra de
+        // notificaciones del sistema se encima con la campana y el botón del
+        // menú (Error 3).
+        left: false,
+        right: false,
+        bottom: false,
+        child: Row(
+          children: [
+            AppLogo(size: 32),
+            const SizedBox(width: 8),
+            Text(
+              'TOURISTMAR',
+              style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, letterSpacing: 2, fontSize: 13),
             ),
-            child: Text(
-              'ADMIN',
-              style: TextStyle(color: AppColors.adminViolet, fontWeight: FontWeight.w700, fontSize: 9, letterSpacing: 1),
-            ),
-          ),
-          const Spacer(),
-          NotificationBell(accentColor: AppColors.adminViolet, onNotificationTap: onNotificationTap),
-          const SizedBox(width: 20),
-          Builder(
-            builder: (context) => GestureDetector(
-              onTap: () => Scaffold.of(context).openEndDrawer(),
-              child: Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: AppColors.adminViolet.withOpacity(0.12),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: AppColors.adminViolet.withOpacity(0.4)),
-                ),
-                child: Icon(Icons.shield_outlined, size: 16, color: AppColors.adminViolet),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: AppColors.adminViolet.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(color: AppColors.adminViolet.withOpacity(0.3)),
+              ),
+              child: Text(
+                'ADMIN',
+                style: TextStyle(color: AppColors.adminViolet, fontWeight: FontWeight.w700, fontSize: 9, letterSpacing: 1),
               ),
             ),
-          ),
-        ],
+            const Spacer(),
+            NotificationBell(accentColor: AppColors.adminViolet, onNotificationTap: onNotificationTap),
+            const SizedBox(width: 20),
+            Builder(
+              builder: (context) => GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () {
+                  hideKeyboard();
+                  Scaffold.of(context).openEndDrawer();
+                },
+                child: Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: AppColors.adminViolet.withOpacity(0.12),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: AppColors.adminViolet.withOpacity(0.4)),
+                  ),
+                  child: Icon(Icons.shield_outlined, size: 16, color: AppColors.adminViolet),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

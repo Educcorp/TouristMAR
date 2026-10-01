@@ -6,6 +6,7 @@ import '../services/auth_service.dart';
 import '../services/session_storage.dart';
 import '../theme/app_theme.dart';
 import '../utils/date_format_es.dart';
+import '../utils/keyboard.dart';
 import 'admin/ds_states.dart';
 
 /// Campana de notificaciones compartida por los 3 paneles (visitante,
@@ -102,6 +103,9 @@ class _NotificationBellState extends State<NotificationBell> {
 /// (no los botones "Cerrar"/"Marcar todas"), el diálogo se cierra solo y
 /// devuelve esa notificación para que el llamador decida a dónde navegar.
 Future<AppNotification?> showNotificationsDialog(BuildContext context, Color accentColor) {
+  // Sin esto, si la barra de búsqueda tenía el foco, al cerrar el diálogo
+  // Flutter se lo regresa y el teclado se abre solo (Error 2).
+  hideKeyboard();
   return showDialog<AppNotification?>(
     context: context,
     builder: (_) => _NotificationsDialog(accentColor: accentColor),
