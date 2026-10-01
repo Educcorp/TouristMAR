@@ -1,4 +1,7 @@
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import '../models/lugar.dart';
+import 'auth_service.dart' show apiUrl, NegocioInfo;
 
 /// Lo que todavía no existe en el backend. La interfaz lo atrapa y muestra
 /// un aviso en lugar de fallar en silencio.
@@ -12,20 +15,40 @@ class PendienteBackend implements Exception {
 
 /// Fuente de los puntos del mapa y de la configuración de experiencias.
 ///
-/// Hoy responde con datos de ejemplo ([usaDatosDemo] = true) porque el
-/// backend aún no expone:
-///   - `GET  /api/lugares`                     → negocios aprobados con lat/lng
+/// [listarPublicos] ya trae los negocios aprobados con `latitud`/`longitud`
+/// desde `GET /api/lugares` (hoy son pocos: la mayoría de los negocios
+/// existentes todavía no tiene coordenadas cargadas) y completa el resto del
+/// catálogo con el listado de ejemplo, para no perder la vitrina completa
+/// mientras el resto de los negocios no tenga su pin. Falta todavía:
 ///   - `PUT  /api/auth/profile/negocios/:id/ubicacion`   { lat, lng }
 ///   - `PUT/DELETE /api/auth/profile/negocios/:id/experiencias/:tipo` (multipart)
 ///   - `PUT  /api/admin/experiencias/config`   { radioDesbloqueo, ... }
-/// Cuando existan, solo cambia el cuerpo de estos métodos: las pantallas
-/// ya consumen esta clase.
 class LugaresService {
   const LugaresService();
 
   bool get usaDatosDemo => true;
 
-  Future<List<Lugar>> listarPublicos() async => _lugaresDemo;
+  /// Trae los negocios reales con pin ya cargado y completa el resto del
+  /// catálogo con los lugares de ejemplo (sin duplicar por nombre). Si el
+  /// backend no responde, se sigue mostrando el catálogo de ejemplo — el
+  /// mapa nunca debe quedar vacío por un error de red pasajero.
+  Future<List<Lugar>> listarPublicos() async {
+    var reales = const <Lugar>[];
+    try {
+      final res = await http.get(Uri.parse('$apiUrl/lugares'));
+      if (res.statusCode >= 200 && res.statusCode < 300) {
+        final data = jsonDecode(res.body) as Map<String, dynamic>;
+        reales = (data['lugares'] as List)
+            .map((j) => Lugar.fromNegocioInfo(NegocioInfo.fromJson(j as Map<String, dynamic>)))
+            .toList();
+      }
+    } catch (_) {
+      // Sin conexión con el backend: se sigue mostrando el catálogo de ejemplo.
+    }
+
+    final nombresReales = reales.map((l) => l.nombre).toSet();
+    return [...reales, ..._lugaresDemo.where((l) => !nombresReales.contains(l.nombre))];
+  }
 
   Future<void> guardarUbicacion(String negocioId, Coordenadas ubicacion) async {
     throw const PendienteBackend('Guardar la ubicación del negocio');

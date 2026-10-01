@@ -89,6 +89,8 @@ model NegocioProfile {
   archivo360  String?             @map("archivo_360")
   arMarcador  String?             @map("ar_marcador_url")
   arGeo       String?             @map("ar_geo_url")
+  latitud     Float?
+  longitud    Float?
   estado      estado_negocio_enum @default(pendiente)
   revisadoPor String?             @map("revisado_por") @db.Uuid
   revisadoEn  DateTime?           @map("revisado_en")

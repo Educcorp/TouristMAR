@@ -203,7 +203,10 @@ class Lugar {
         telefono: negocio.telefono,
         portada: negocio.portada ?? 'assets/images/place-playa-audiencia.jpg',
         galeria: negocio.galeria,
-        ubicacion: ubicacion,
+        ubicacion: ubicacion ??
+            (negocio.latitud != null && negocio.longitud != null
+                ? Coordenadas(negocio.latitud!, negocio.longitud!)
+                : null),
         archivo360: negocio.archivo360,
         arMarcador: negocio.arMarcador,
         arGeo: negocio.arGeo,
