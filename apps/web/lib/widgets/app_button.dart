@@ -60,7 +60,7 @@ class AppButton extends StatelessWidget {
     switch (variant) {
       case AppButtonVariant.primary:
         return _ButtonColors(
-          background: disabled ? AppColors.brandTeal.withOpacity(0.5) : AppColors.brandTeal,
+          background: disabled ? AppColors.brandTeal.withValues(alpha: 0.5) : AppColors.brandTeal,
           foreground: AppColors.panelNavy,
         );
       case AppButtonVariant.google:

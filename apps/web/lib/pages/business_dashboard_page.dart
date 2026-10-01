@@ -118,7 +118,7 @@ class _BusinessDashboardContentState extends State<BusinessDashboardContent> {
                 gradient: LinearGradient(
                   begin: Alignment.bottomLeft,
                   end: Alignment.topRight,
-                  colors: [AppColors.scrimDark.withOpacity(0.92), AppColors.scrimDark.withOpacity(0.4)],
+                  colors: [AppColors.scrimDark.withValues(alpha: 0.92), AppColors.scrimDark.withValues(alpha: 0.4)],
                 ),
               ),
             ),
@@ -162,9 +162,9 @@ class _BusinessDashboardContentState extends State<BusinessDashboardContent> {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.08),
+        color: color.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: color.withOpacity(0.25)),
+        border: Border.all(color: color.withValues(alpha: 0.25)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -217,9 +217,9 @@ class _BusinessDashboardContentState extends State<BusinessDashboardContent> {
             return Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.08),
+                color: color.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: color.withOpacity(0.2)),
+                border: Border.all(color: color.withValues(alpha: 0.2)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -276,7 +276,7 @@ class _BusinessDashboardContentState extends State<BusinessDashboardContent> {
                       Container(
                         width: 40,
                         height: 40,
-                        decoration: BoxDecoration(color: color.withOpacity(0.15), shape: BoxShape.circle),
+                        decoration: BoxDecoration(color: color.withValues(alpha: 0.15), shape: BoxShape.circle),
                         child: Icon(icon, color: color, size: 18),
                       ),
                       const SizedBox(height: 10),
@@ -301,9 +301,9 @@ class _BusinessDashboardContentState extends State<BusinessDashboardContent> {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.businessOrange.withOpacity(0.06),
+        color: AppColors.businessOrange.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.businessOrange.withOpacity(0.25)),
+        border: Border.all(color: AppColors.businessOrange.withValues(alpha: 0.25)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -361,7 +361,7 @@ class _RecentReviewTile extends StatelessWidget {
         children: [
           CircleAvatar(
             radius: 16,
-            backgroundColor: AppColors.brandTeal.withOpacity(0.15),
+            backgroundColor: AppColors.brandTeal.withValues(alpha: 0.15),
             child: Text(review.initials, style: TextStyle(color: AppColors.brandTeal, fontSize: 11, fontWeight: FontWeight.w700)),
           ),
           const SizedBox(width: 12),

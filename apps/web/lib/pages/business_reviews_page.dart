@@ -131,7 +131,7 @@ class BusinessReviewsContent extends StatelessWidget {
                 children: [
                   CircleAvatar(
                     radius: 16,
-                    backgroundColor: AppColors.brandTeal.withOpacity(0.15),
+                    backgroundColor: AppColors.brandTeal.withValues(alpha: 0.15),
                     child: Text(r.initials, style: TextStyle(color: AppColors.brandTeal, fontSize: 11, fontWeight: FontWeight.w700)),
                   ),
                   const SizedBox(width: 10),

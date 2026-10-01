@@ -207,9 +207,9 @@ class _BusinessTopBar extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
-                color: AppColors.businessOrange.withOpacity(0.15),
+                color: AppColors.businessOrange.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(4),
-                border: Border.all(color: AppColors.businessOrange.withOpacity(0.3)),
+                border: Border.all(color: AppColors.businessOrange.withValues(alpha: 0.3)),
               ),
               child: Text(
                 'EMPRESA',
@@ -230,9 +230,9 @@ class _BusinessTopBar extends StatelessWidget {
                   width: 32,
                   height: 32,
                   decoration: BoxDecoration(
-                    color: AppColors.businessOrange.withOpacity(0.12),
+                    color: AppColors.businessOrange.withValues(alpha: 0.12),
                     shape: BoxShape.circle,
-                    border: Border.all(color: AppColors.businessOrange.withOpacity(0.4)),
+                    border: Border.all(color: AppColors.businessOrange.withValues(alpha: 0.4)),
                   ),
                   child: Icon(Icons.apartment, size: 16, color: AppColors.businessOrange),
                 ),
@@ -319,7 +319,7 @@ class _BusinessSidebarContent extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               ...negocios.map((n) => Material(
-                    color: n.id == selected.id ? AppColors.businessOrange.withOpacity(0.1) : Colors.transparent,
+                    color: n.id == selected.id ? AppColors.businessOrange.withValues(alpha: 0.1) : Colors.transparent,
                     borderRadius: BorderRadius.circular(10),
                     child: InkWell(
                       borderRadius: BorderRadius.circular(10),
@@ -344,7 +344,7 @@ class _BusinessSidebarContent extends StatelessWidget {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                               decoration: BoxDecoration(
-                                color: _estadoColor(n.estado).withOpacity(0.15),
+                                color: _estadoColor(n.estado).withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(999),
                               ),
                               child: Text(
@@ -422,7 +422,7 @@ class _BusinessSidebarContent extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                 decoration: BoxDecoration(
-                  color: AppColors.businessOrange.withOpacity(0.15),
+                  color: AppColors.businessOrange.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
@@ -453,9 +453,9 @@ class _BusinessSidebarContent extends StatelessWidget {
                     width: 44,
                     height: 44,
                     decoration: BoxDecoration(
-                      color: AppColors.businessOrange.withOpacity(0.12),
+                      color: AppColors.businessOrange.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.businessOrange.withOpacity(0.3)),
+                      border: Border.all(color: AppColors.businessOrange.withValues(alpha: 0.3)),
                     ),
                     child: Icon(Icons.apartment, color: AppColors.businessOrange, size: 20),
                   ),
@@ -503,7 +503,7 @@ class _BusinessSidebarContent extends StatelessWidget {
               return Padding(
                 padding: const EdgeInsets.only(bottom: 4),
                 child: Material(
-                  color: active ? AppColors.businessOrange.withOpacity(0.1) : Colors.transparent,
+                  color: active ? AppColors.businessOrange.withValues(alpha: 0.1) : Colors.transparent,
                   borderRadius: BorderRadius.circular(12),
                   child: InkWell(
                     borderRadius: BorderRadius.circular(12),
@@ -548,11 +548,11 @@ class _BusinessSidebarContent extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
               onTap: () => _handleLogout(context),
               child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                 child: Row(
                   children: [
                     Icon(Icons.logout, size: 18, color: AppColors.errorRed),
-                    SizedBox(width: 12),
+                    const SizedBox(width: 12),
                     Text(
                       'Cerrar sesión',
                       style: TextStyle(color: AppColors.errorRed, fontSize: 14, fontWeight: FontWeight.w500),

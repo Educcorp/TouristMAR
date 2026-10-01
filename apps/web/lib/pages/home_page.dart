@@ -38,7 +38,7 @@ class _FeaturedPlace {
 class HomePage extends StatefulWidget {
   final AuthUser user;
 
-  HomePage({super.key, required this.user});
+  const HomePage({super.key, required this.user});
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -158,10 +158,17 @@ class _HomePageState extends State<HomePage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        'Lugares destacados',
-                        style: TextStyle(color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.w600),
+                      // Flexible + ellipsis: en pantallas angostas o con letra
+                      // grande el título ya no empuja "Ver todos" fuera del borde.
+                      Flexible(
+                        child: Text(
+                          'Lugares destacados',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.w600),
+                        ),
                       ),
+                      const SizedBox(width: 12),
                       Text(
                         'Ver todos',
                         style: TextStyle(color: AppColors.brandTeal, fontSize: 13, fontWeight: FontWeight.w500),
@@ -197,7 +204,7 @@ class _HomePageState extends State<HomePage> {
                 gradient: LinearGradient(
                   begin: Alignment.bottomLeft,
                   end: Alignment.topRight,
-                  colors: [AppColors.scrimDark.withOpacity(0.9), AppColors.scrimDark.withOpacity(0.35)],
+                  colors: [AppColors.scrimDark.withValues(alpha: 0.9), AppColors.scrimDark.withValues(alpha: 0.35)],
                 ),
               ),
             ),

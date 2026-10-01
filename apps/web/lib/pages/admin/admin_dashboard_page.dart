@@ -141,7 +141,7 @@ class _InicioContentState extends State<_InicioContent> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _Hero(),
-                  SizedBox(height: AppSpacing.lg),
+                  const SizedBox(height: AppSpacing.lg),
                   if (_loading)
                     DsLoadingState()
                   else if (_error != null)
@@ -182,8 +182,8 @@ class _Hero extends StatelessWidget {
                     begin: Alignment.centerLeft,
                     end: Alignment.centerRight,
                     colors: [
-                      AppColors.scrimDark.withOpacity(0.92),
-                      AppColors.scrimDark.withOpacity(0.55),
+                      AppColors.scrimDark.withValues(alpha: 0.92),
+                      AppColors.scrimDark.withValues(alpha: 0.55),
                     ],
                   ),
                 ),
@@ -195,7 +195,7 @@ class _Hero extends StatelessWidget {
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
-                    colors: [AppColors.scrimDark.withOpacity(0.3), Colors.transparent],
+                    colors: [AppColors.scrimDark.withValues(alpha: 0.3), Colors.transparent],
                   ),
                 ),
               ),
@@ -228,7 +228,7 @@ class _Hero extends StatelessWidget {
                       spacing: AppSpacing.lg,
                       runSpacing: 4,
                       children: [
-                        _MetaChip(icon: Icons.location_on_outlined, text: 'Manzanillo, Colima'),
+                        const _MetaChip(icon: Icons.location_on_outlined, text: 'Manzanillo, Colima'),
                         _MetaChip(icon: Icons.calendar_today_outlined, text: formatDateEs(now)),
                       ],
                     ),
@@ -253,9 +253,9 @@ class _MetaChip extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 13, color: Colors.white.withOpacity(0.8)),
+        Icon(icon, size: 13, color: Colors.white.withValues(alpha: 0.8)),
         const SizedBox(width: 6),
-        Text(text, style: TextStyle(color: Colors.white.withOpacity(0.85), fontSize: 12, fontWeight: FontWeight.w500)),
+        Text(text, style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: 12, fontWeight: FontWeight.w500)),
       ],
     );
   }

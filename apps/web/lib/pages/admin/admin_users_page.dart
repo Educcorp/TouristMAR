@@ -109,7 +109,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
             Text('Administra los usuarios del sistema.', style: AppTypography.body),
             const SizedBox(height: AppSpacing.lg),
             _SearchField(controller: _searchController),
-            SizedBox(height: AppSpacing.xl),
+            const SizedBox(height: AppSpacing.xl),
             _buildContent(),
           ],
         ),

@@ -1,10 +1,10 @@
 import 'dart:typed_data';
 
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
 import '../models/visitor_profile.dart';
 import '../services/auth_service.dart';
+import '../services/image_picker_service.dart';
 import '../services/session_storage.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_button.dart';
@@ -14,7 +14,10 @@ import '../widgets/user_avatar.dart';
 class EditProfilePage extends StatefulWidget {
   final VisitorProfile profile;
 
-  const EditProfilePage({super.key, required this.profile});
+  /// Solo para pruebas: permite usar un servicio con un cliente HTTP falso.
+  final AuthService? authService;
+
+  const EditProfilePage({super.key, required this.profile, this.authService});
 
   @override
   State<EditProfilePage> createState() => _EditProfilePageState();
@@ -23,7 +26,7 @@ class EditProfilePage extends StatefulWidget {
 class _EditProfilePageState extends State<EditProfilePage> {
   late final _nameController = TextEditingController(text: widget.profile.name);
   late final _bioController = TextEditingController(text: widget.profile.bio);
-  final _authService = AuthService();
+  late final AuthService _authService = widget.authService ?? AuthService();
   bool _isSaving = false;
   String? _error;
 
@@ -45,16 +48,12 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
   /// Solo elige la foto y la muestra como vista previa; no la sube.
   Future<void> _changePhoto() async {
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.image,
-      withData: true,
-    );
-    final file = result?.files.single;
-    if (file == null || file.bytes == null || !mounted) return;
+    final picked = await ImagePickerService.pick();
+    if (picked == null || !mounted) return;
 
     setState(() {
-      _pendingPhotoBytes = file.bytes;
-      _pendingPhotoName = file.name;
+      _pendingPhotoBytes = picked.bytes;
+      _pendingPhotoName = picked.name;
       _error = null;
     });
   }
@@ -136,7 +135,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                           child: _pendingPhotoBytes != null
                               ? CircleAvatar(
                                   radius: 48,
-                                  backgroundColor: AppColors.brandTeal.withOpacity(0.2),
+                                  backgroundColor: AppColors.brandTeal.withValues(alpha: 0.2),
                                   backgroundImage: MemoryImage(_pendingPhotoBytes!),
                                 )
                               : UserAvatar(

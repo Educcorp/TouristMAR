@@ -56,9 +56,9 @@ class AppColors {
   static Color get textPrimary => _dark ? Colors.white : const Color(0xFF0F172A);
   static Color get textSecondary => _dark ? Colors.white70 : const Color(0xFF334155);
 
-  /// Equivalente theme-aware de `Colors.white.withOpacity(x)` para bordes,
+  /// Equivalente theme-aware de `Colors.white.withValues(alpha: x)` para bordes,
   /// fondos sutiles y estados hover sobre el fondo del panel.
-  static Color overlay(double opacity) => _dark ? Colors.white.withOpacity(opacity) : Colors.black.withOpacity(opacity);
+  static Color overlay(double opacity) => _dark ? Colors.white.withValues(alpha: opacity) : Colors.black.withValues(alpha: opacity);
 }
 
 /// Escala de espaciado 4/8/12/16/24/32/48/64 compartida por el panel admin.

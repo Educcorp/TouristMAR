@@ -171,7 +171,7 @@ class _AdminAdminsPageState extends State<AdminAdminsPage> {
 
   Widget _buildForm() {
     return DsCard(
-      background: AppColors.adminViolet.withOpacity(0.05),
+      background: AppColors.adminViolet.withValues(alpha: 0.05),
       child: Form(
         key: _formKey,
         child: Column(
@@ -220,7 +220,7 @@ class _AdminAdminsPageState extends State<AdminAdminsPage> {
                   variant: DsButtonVariant.ghost,
                   onPressed: _creating ? null : () => setState(() => _showForm = false),
                 ),
-                SizedBox(width: AppSpacing.sm),
+                const SizedBox(width: AppSpacing.sm),
                 DsButton(
                   label: _creating ? 'Creando...' : 'Crear administrador',
                   variant: DsButtonVariant.primary,

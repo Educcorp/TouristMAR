@@ -41,9 +41,9 @@ class DsButton extends StatelessWidget {
         border = color;
         break;
       case DsButtonVariant.secondary:
-        bg = color.withOpacity(0.12);
+        bg = color.withValues(alpha: 0.12);
         fg = color;
-        border = color.withOpacity(0.3);
+        border = color.withValues(alpha: 0.3);
         break;
       case DsButtonVariant.ghost:
         bg = Colors.transparent;
@@ -51,16 +51,16 @@ class DsButton extends StatelessWidget {
         border = AppColors.borderSubtle;
         break;
       case DsButtonVariant.danger:
-        bg = AppColors.errorRed.withOpacity(0.12);
+        bg = AppColors.errorRed.withValues(alpha: 0.12);
         fg = AppColors.errorRed;
-        border = AppColors.errorRed.withOpacity(0.3);
+        border = AppColors.errorRed.withValues(alpha: 0.3);
         break;
     }
 
     if (disabled) {
-      bg = bg.withOpacity(bg.opacity * 0.4);
-      fg = fg.withOpacity(0.4);
-      border = border.withOpacity(0.15);
+      bg = bg.withValues(alpha: bg.a * 0.4);
+      fg = fg.withValues(alpha: 0.4);
+      border = border.withValues(alpha: 0.15);
     }
 
     final vPad = size == DsButtonSize.sm ? 8.0 : 11.0;

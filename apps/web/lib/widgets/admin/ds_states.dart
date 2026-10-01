@@ -9,6 +9,7 @@ class DsLoadingState extends StatelessWidget {
   // Sin `const`: el color por default lee AppColors.adminViolet, que depende
   // de ThemeController — igual que AdminHelpPage/ThemeToggleTile, marcar
   // esto `const` congelaría el color si el tema cambia mientras se muestra.
+  // ignore: prefer_const_constructors_in_immutables
   DsLoadingState({super.key, this.accent});
 
   @override
@@ -68,9 +69,9 @@ class DsErrorState extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
-        color: AppColors.errorRed.withOpacity(0.08),
+        color: AppColors.errorRed.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(AppRadius.card),
-        border: Border.all(color: AppColors.errorRed.withOpacity(0.25)),
+        border: Border.all(color: AppColors.errorRed.withValues(alpha: 0.25)),
       ),
       child: Row(
         children: [

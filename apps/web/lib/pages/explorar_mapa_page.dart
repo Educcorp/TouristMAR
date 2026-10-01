@@ -215,7 +215,7 @@ class _ExplorarMapaPageState extends State<ExplorarMapaPage> {
                 final l = filtrados[i];
                 final activo = l.id == _seleccionadoId;
                 return Material(
-                  color: activo ? AppColors.brandTeal.withOpacity(0.1) : Colors.transparent,
+                  color: activo ? AppColors.brandTeal.withValues(alpha: 0.1) : Colors.transparent,
                   borderRadius: BorderRadius.circular(AppRadius.buttonLg),
                   child: InkWell(
                     borderRadius: BorderRadius.circular(AppRadius.buttonLg),
@@ -314,7 +314,7 @@ class _CampoBusqueda extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadius.buttonLg),
         border: Border.all(color: AppColors.overlay(0.1)),
         boxShadow: flotante
-            ? [BoxShadow(color: Colors.black.withOpacity(0.18), blurRadius: 14, offset: const Offset(0, 4))]
+            ? [BoxShadow(color: Colors.black.withValues(alpha: 0.18), blurRadius: 14, offset: const Offset(0, 4))]
             : null,
       ),
       child: Row(
@@ -405,7 +405,7 @@ class _AvisoDemo extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppColors.amber,
           borderRadius: BorderRadius.circular(999),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.15), blurRadius: 8)],
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 8)],
         ),
         child: const Row(
           mainAxisSize: MainAxisSize.min,

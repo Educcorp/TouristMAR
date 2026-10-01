@@ -24,7 +24,7 @@ class BusinessHomePage extends StatefulWidget {
 }
 
 class _BusinessHomePageState extends State<BusinessHomePage> {
-  late List<BusinessProfile> _negocios = widget.user.negocios
+  late final List<BusinessProfile> _negocios = widget.user.negocios
       .map((n) => BusinessProfile.fromNegocioInfo(widget.user, n))
       .toList();
   late String _selectedId = (_negocios.firstWhere(

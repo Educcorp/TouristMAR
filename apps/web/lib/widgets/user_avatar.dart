@@ -7,6 +7,10 @@ class UserAvatar extends StatelessWidget {
   final double radius;
   final Color? color;
 
+  // Sin `const` a propósito: build() lee AppColors (depende de
+  // ThemeController); una instancia const no se reconstruiría al cambiar el
+  // tema y se quedaría con los colores viejos.
+  // ignore: prefer_const_constructors_in_immutables
   UserAvatar({
     super.key,
     required this.imageUrl,
@@ -21,13 +25,13 @@ class UserAvatar extends StatelessWidget {
     if (imageUrl != null && imageUrl!.isNotEmpty) {
       return CircleAvatar(
         radius: radius,
-        backgroundColor: resolvedColor.withOpacity(0.2),
+        backgroundColor: resolvedColor.withValues(alpha: 0.2),
         backgroundImage: NetworkImage(imageUrl!),
       );
     }
     return CircleAvatar(
       radius: radius,
-      backgroundColor: resolvedColor.withOpacity(0.2),
+      backgroundColor: resolvedColor.withValues(alpha: 0.2),
       child: Text(
         fallbackLetter.isNotEmpty ? fallbackLetter[0].toUpperCase() : '?',
         style: TextStyle(color: resolvedColor, fontWeight: FontWeight.w700, fontSize: radius * 0.6),

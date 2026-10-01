@@ -85,7 +85,7 @@ class _Hero extends StatelessWidget {
               gradient: LinearGradient(
                 begin: Alignment.bottomCenter,
                 end: Alignment.topCenter,
-                colors: [AppColors.scrimDark.withOpacity(0.95), AppColors.scrimDark.withOpacity(0.1)],
+                colors: [AppColors.scrimDark.withValues(alpha: 0.95), AppColors.scrimDark.withValues(alpha: 0.1)],
               ),
             ),
           ),
@@ -96,7 +96,7 @@ class _Hero extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Material(
-                    color: Colors.black.withOpacity(0.4),
+                    color: Colors.black.withValues(alpha: 0.4),
                     shape: const CircleBorder(),
                     child: IconButton(
                       tooltip: 'Volver',
@@ -117,7 +117,7 @@ class _Hero extends StatelessWidget {
                     )
                   else
                     Material(
-                      color: Colors.black.withOpacity(0.4),
+                      color: Colors.black.withValues(alpha: 0.4),
                       shape: const CircleBorder(),
                       child: IconButton(
                         tooltip: 'Agregar a favoritos',

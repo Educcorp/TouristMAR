@@ -61,9 +61,9 @@ class ExperienciaViewport extends StatelessWidget {
                         width: 56,
                         height: 56,
                         decoration: BoxDecoration(
-                          color: color.withOpacity(0.15),
+                          color: color.withValues(alpha: 0.15),
                           shape: BoxShape.circle,
-                          border: Border.all(color: color.withOpacity(0.5)),
+                          border: Border.all(color: color.withValues(alpha: 0.5)),
                         ),
                         child: Icon(bloqueado ? Icons.lock_outline : info.icon, color: color, size: 26),
                       ),
@@ -82,7 +82,7 @@ class ExperienciaViewport extends StatelessWidget {
             // Esquinas tipo visor de cámara.
             Padding(
               padding: const EdgeInsets.all(10),
-              child: CustomPaint(painter: _EsquinasPainter(Colors.white.withOpacity(0.35))),
+              child: CustomPaint(painter: _EsquinasPainter(Colors.white.withValues(alpha: 0.35))),
             ),
             Positioned(
               left: 12,
@@ -90,7 +90,7 @@ class ExperienciaViewport extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.45),
+                  color: Colors.black.withValues(alpha: 0.45),
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Row(
@@ -134,7 +134,7 @@ class ViewportControl extends StatelessWidget {
       child: Tooltip(
         message: tooltip,
         child: Material(
-          color: Colors.black.withOpacity(0.45),
+          color: Colors.black.withValues(alpha: 0.45),
           shape: const CircleBorder(),
           child: InkWell(
             customBorder: const CircleBorder(),
@@ -157,7 +157,7 @@ class _RejillaPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = color.withOpacity(0.18)
+      ..color = color.withValues(alpha: 0.18)
       ..strokeWidth = 1;
     final horizonte = size.height * 0.45;
     final centro = size.width / 2;
@@ -186,7 +186,7 @@ class _EsferaPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = color.withOpacity(0.18)
+      ..color = color.withValues(alpha: 0.18)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1;
     final centro = Offset(size.width / 2, size.height / 2);

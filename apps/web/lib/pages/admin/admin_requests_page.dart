@@ -100,7 +100,7 @@ class _AdminRequestsPageState extends State<AdminRequestsPage> {
             ),
             const SizedBox(height: 4),
             Text('Gestiona y da seguimiento a las solicitudes del sistema.', style: AppTypography.body),
-            SizedBox(height: AppSpacing.xl),
+            const SizedBox(height: AppSpacing.xl),
             _buildContent(),
           ],
         ),

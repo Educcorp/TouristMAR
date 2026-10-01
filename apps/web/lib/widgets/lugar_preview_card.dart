@@ -69,7 +69,7 @@ class LugarPreviewCard extends StatelessWidget {
         color: AppColors.panelNavySoft,
         borderRadius: BorderRadius.circular(AppRadius.card),
         border: Border.all(color: AppColors.borderSubtle),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.18), blurRadius: 18, offset: const Offset(0, 6))],
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.18), blurRadius: 18, offset: const Offset(0, 6))],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -102,7 +102,7 @@ class LugarPreviewCard extends StatelessWidget {
                     right: 8,
                     top: 8,
                     child: Material(
-                      color: Colors.black.withOpacity(0.45),
+                      color: Colors.black.withValues(alpha: 0.45),
                       shape: const CircleBorder(),
                       child: InkWell(
                         customBorder: const CircleBorder(),
@@ -159,9 +159,9 @@ class ExperienciasMiniBadges extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                 decoration: BoxDecoration(
-                  color: activa ? color.withOpacity(0.12) : AppColors.overlay(0.04),
+                  color: activa ? color.withValues(alpha: 0.12) : AppColors.overlay(0.04),
                   borderRadius: BorderRadius.circular(999),
-                  border: Border.all(color: activa ? color.withOpacity(0.35) : AppColors.borderSubtle),
+                  border: Border.all(color: activa ? color.withValues(alpha: 0.35) : AppColors.borderSubtle),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,

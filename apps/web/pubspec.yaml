@@ -17,6 +17,8 @@ dependencies:
   fl_chart: ^0.69.0
   flutter_map: ^8.3.2
   latlong2: ^0.10.1
+  # APIs del navegador para la build web (reemplaza a dart:html, obsoleto).
+  web: ^1.1.0
 
 dev_dependencies:
   flutter_test:

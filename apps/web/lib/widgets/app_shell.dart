@@ -332,9 +332,9 @@ class _TopBar extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                  color: accentColor.withOpacity(0.15),
+                  color: accentColor.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(4),
-                  border: Border.all(color: accentColor.withOpacity(0.3)),
+                  border: Border.all(color: accentColor.withValues(alpha: 0.3)),
                 ),
                 child: Text(
                   badgeText!,
@@ -445,7 +445,7 @@ class _SidebarContent extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                   decoration: BoxDecoration(
-                    color: accentColor.withOpacity(0.15),
+                    color: accentColor.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
@@ -479,7 +479,7 @@ class _SidebarContent extends StatelessWidget {
               return Padding(
                 padding: const EdgeInsets.only(bottom: 4),
                 child: Material(
-                  color: item.highlight ? accentColor.withOpacity(0.1) : Colors.transparent,
+                  color: item.highlight ? accentColor.withValues(alpha: 0.1) : Colors.transparent,
                   borderRadius: BorderRadius.circular(12),
                   child: InkWell(
                     borderRadius: BorderRadius.circular(12),
@@ -526,11 +526,11 @@ class _SidebarContent extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
               onTap: () => _handleTap(context, () => _logout(context)),
               child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                 child: Row(
                   children: [
                     Icon(Icons.logout, size: 18, color: AppColors.errorRed),
-                    SizedBox(width: 12),
+                    const SizedBox(width: 12),
                     Text(
                       'Cerrar sesión',
                       style: TextStyle(color: AppColors.errorRed, fontSize: 14, fontWeight: FontWeight.w500),

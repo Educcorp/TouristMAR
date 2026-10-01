@@ -150,9 +150,9 @@ class ExperienciaCard extends StatelessWidget {
       width: 44,
       height: 44,
       decoration: BoxDecoration(
-        color: color.withOpacity(0.14),
+        color: color.withValues(alpha: 0.14),
         borderRadius: BorderRadius.circular(AppRadius.buttonLg),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Icon(info.icon, color: color, size: 22),
     );
@@ -193,7 +193,7 @@ class ExperienciaCard extends StatelessWidget {
             padding: const EdgeInsets.all(AppSpacing.lg),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(AppRadius.card),
-              border: Border.all(color: apagada ? AppColors.borderSubtle : color.withOpacity(0.25)),
+              border: Border.all(color: apagada ? AppColors.borderSubtle : color.withValues(alpha: 0.25)),
             ),
             child: compacta
                 ? Row(
@@ -405,7 +405,7 @@ class _DetalleExperienciaState extends State<_DetalleExperiencia> {
     switch (_situacion.tipo) {
       case ExperienciaTipo.arMarcador:
         return [
-          ExperienciaViewport(
+          const ExperienciaViewport(
             tipo: ExperienciaTipo.arMarcador,
             mensaje: 'Aquí se abrirá la cámara con el contenido\nen realidad aumentada.',
           ),
@@ -441,7 +441,7 @@ class _DetalleExperienciaState extends State<_DetalleExperiencia> {
         ];
       case ExperienciaTipo.recorrido360:
         return [
-          ExperienciaViewport(
+          const ExperienciaViewport(
             tipo: ExperienciaTipo.recorrido360,
             mensaje: 'Aquí se cargará el recorrido 360° del lugar.\nArrastra para mirar alrededor.',
             controles: [
@@ -495,9 +495,9 @@ class _BannerVistaPrevia extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.sm),
       decoration: BoxDecoration(
-        color: AppColors.amber.withOpacity(0.1),
+        color: AppColors.amber.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(AppRadius.button),
-        border: Border.all(color: AppColors.amber.withOpacity(0.3)),
+        border: Border.all(color: AppColors.amber.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
@@ -589,9 +589,9 @@ class _EstadoGeo extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(AppSpacing.lg),
           decoration: BoxDecoration(
-            color: (desbloqueada ? color : AppColors.amber).withOpacity(0.08),
+            color: (desbloqueada ? color : AppColors.amber).withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(AppRadius.card),
-            border: Border.all(color: (desbloqueada ? color : AppColors.amber).withOpacity(0.3)),
+            border: Border.all(color: (desbloqueada ? color : AppColors.amber).withValues(alpha: 0.3)),
           ),
           child: Row(
             children: [

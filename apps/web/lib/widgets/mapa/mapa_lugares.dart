@@ -106,7 +106,7 @@ class PinLugar extends StatelessWidget {
                 shape: BoxShape.circle,
                 border: Border.all(color: Colors.white, width: seleccionado ? 3 : 2),
                 boxShadow: [
-                  BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 3)),
+                  BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 8, offset: const Offset(0, 3)),
                 ],
               ),
               child: Icon(lugar.categoria.icon, size: size * 0.5, color: Colors.white),
@@ -188,8 +188,8 @@ CircleLayer capaRadio(Coordenadas centro, double metros, Color color) {
         point: toLatLng(centro),
         radius: metros,
         useRadiusInMeter: true,
-        color: color.withOpacity(0.15),
-        borderColor: color.withOpacity(0.7),
+        color: color.withValues(alpha: 0.15),
+        borderColor: color.withValues(alpha: 0.7),
         borderStrokeWidth: 2,
       ),
     ],
@@ -225,7 +225,7 @@ class ControlesMapa extends StatelessWidget {
         color: AppColors.panelNavySoft,
         borderRadius: BorderRadius.circular(AppRadius.buttonLg),
         border: Border.all(color: AppColors.borderSubtle),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.15), blurRadius: 12, offset: const Offset(0, 4))],
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 12, offset: const Offset(0, 4))],
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(

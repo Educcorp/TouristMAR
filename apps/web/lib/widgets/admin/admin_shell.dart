@@ -220,9 +220,9 @@ class _AdminTopBar extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
-                color: AppColors.adminViolet.withOpacity(0.15),
+                color: AppColors.adminViolet.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(4),
-                border: Border.all(color: AppColors.adminViolet.withOpacity(0.3)),
+                border: Border.all(color: AppColors.adminViolet.withValues(alpha: 0.3)),
               ),
               child: Text(
                 'ADMIN',
@@ -243,9 +243,9 @@ class _AdminTopBar extends StatelessWidget {
                   width: 32,
                   height: 32,
                   decoration: BoxDecoration(
-                    color: AppColors.adminViolet.withOpacity(0.12),
+                    color: AppColors.adminViolet.withValues(alpha: 0.12),
                     shape: BoxShape.circle,
-                    border: Border.all(color: AppColors.adminViolet.withOpacity(0.4)),
+                    border: Border.all(color: AppColors.adminViolet.withValues(alpha: 0.4)),
                   ),
                   child: Icon(Icons.shield_outlined, size: 16, color: AppColors.adminViolet),
                 ),
@@ -305,7 +305,7 @@ class _AdminSidebarContent extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                 decoration: BoxDecoration(
-                  color: AppColors.adminViolet.withOpacity(0.15),
+                  color: AppColors.adminViolet.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
@@ -332,9 +332,9 @@ class _AdminSidebarContent extends StatelessWidget {
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: AppColors.adminViolet.withOpacity(0.12),
+                  color: AppColors.adminViolet.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.adminViolet.withOpacity(0.3)),
+                  border: Border.all(color: AppColors.adminViolet.withValues(alpha: 0.3)),
                 ),
                 child: Icon(Icons.shield_outlined, color: AppColors.adminViolet, size: 20),
               ),
@@ -370,7 +370,7 @@ class _AdminSidebarContent extends StatelessWidget {
               return Padding(
                 padding: const EdgeInsets.only(bottom: 4),
                 child: Material(
-                  color: active ? AppColors.adminViolet.withOpacity(0.1) : Colors.transparent,
+                  color: active ? AppColors.adminViolet.withValues(alpha: 0.1) : Colors.transparent,
                   borderRadius: BorderRadius.circular(12),
                   child: InkWell(
                     borderRadius: BorderRadius.circular(12),
@@ -417,11 +417,11 @@ class _AdminSidebarContent extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
               onTap: () => _handleLogout(context),
               child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                 child: Row(
                   children: [
                     Icon(Icons.logout, size: 18, color: AppColors.errorRed),
-                    SizedBox(width: 12),
+                    const SizedBox(width: 12),
                     Text(
                       'Cerrar sesión',
                       style: TextStyle(color: AppColors.errorRed, fontSize: 14, fontWeight: FontWeight.w500),

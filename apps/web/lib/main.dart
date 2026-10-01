@@ -24,7 +24,7 @@ class TouristMarApp extends StatelessWidget {
           title: 'TouristMAR — Iniciar sesión',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.current,
-          home: LoginPage(),
+          home: const LoginPage(),
         );
       },
     );

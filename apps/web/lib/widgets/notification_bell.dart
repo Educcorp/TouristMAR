@@ -66,8 +66,8 @@ class _NotificationBellState extends State<NotificationBell> {
       child: InkWell(
         onTap: _openPanel,
         customBorder: const CircleBorder(),
-        hoverColor: widget.accentColor.withOpacity(0.12),
-        splashColor: widget.accentColor.withOpacity(0.18),
+        hoverColor: widget.accentColor.withValues(alpha: 0.12),
+        splashColor: widget.accentColor.withValues(alpha: 0.18),
         child: Padding(
           padding: const EdgeInsets.all(6),
           child: Stack(
@@ -280,7 +280,7 @@ class _NotificationTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: notification.leida ? Colors.transparent : accentColor.withOpacity(0.06),
+      color: notification.leida ? Colors.transparent : accentColor.withValues(alpha: 0.06),
       borderRadius: BorderRadius.circular(10),
       child: InkWell(
         borderRadius: BorderRadius.circular(10),
@@ -293,7 +293,7 @@ class _NotificationTile extends StatelessWidget {
               Container(
                 width: 34,
                 height: 34,
-                decoration: BoxDecoration(color: _color.withOpacity(0.12), shape: BoxShape.circle),
+                decoration: BoxDecoration(color: _color.withValues(alpha: 0.12), shape: BoxShape.circle),
                 child: Icon(_icon, size: 16, color: _color),
               ),
               const SizedBox(width: 12),

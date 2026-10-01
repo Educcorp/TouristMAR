@@ -45,7 +45,7 @@ class PlaceCard extends StatelessWidget {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: AppColors.brandTeal.withOpacity(0.9),
+                        color: AppColors.brandTeal.withValues(alpha: 0.9),
                         borderRadius: BorderRadius.circular(999),
                       ),
                       child: Text(
@@ -62,7 +62,7 @@ class PlaceCard extends StatelessWidget {
                       child: Container(
                         width: 30,
                         height: 30,
-                        decoration: BoxDecoration(color: Colors.black.withOpacity(0.4), shape: BoxShape.circle),
+                        decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.4), shape: BoxShape.circle),
                         child: Icon(
                           isFavorite ? Icons.favorite : Icons.favorite_border,
                           size: 16,

@@ -65,7 +65,7 @@ class _BusinessProfileContentState extends State<BusinessProfileContent> {
                     gradient: LinearGradient(
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
-                      colors: [Colors.transparent, AppColors.scrimDark.withOpacity(0.9)],
+                      colors: [Colors.transparent, AppColors.scrimDark.withValues(alpha: 0.9)],
                     ),
                   ),
                 ),
@@ -91,7 +91,7 @@ class _BusinessProfileContentState extends State<BusinessProfileContent> {
                             decoration: BoxDecoration(
                               color: AppColors.panelNavySoft,
                               borderRadius: BorderRadius.circular(18),
-                              border: Border.all(color: AppColors.businessOrange.withOpacity(0.4), width: 2),
+                              border: Border.all(color: AppColors.businessOrange.withValues(alpha: 0.4), width: 2),
                             ),
                             child: Icon(Icons.apartment, size: 30, color: AppColors.businessOrange),
                           ),
@@ -275,7 +275,7 @@ class _BusinessProfileContentState extends State<BusinessProfileContent> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(Icons.add, size: 18, color: AppColors.slate400),
-                  SizedBox(height: 2),
+                  const SizedBox(height: 2),
                   Text('Agregar', style: TextStyle(color: AppColors.slate400, fontSize: 9)),
                 ],
               ),
@@ -306,7 +306,7 @@ class _BusinessProfileContentState extends State<BusinessProfileContent> {
                 children: [
                   CircleAvatar(
                     radius: 14,
-                    backgroundColor: AppColors.brandTeal.withOpacity(0.15),
+                    backgroundColor: AppColors.brandTeal.withValues(alpha: 0.15),
                     child: Text(r.initials, style: TextStyle(color: AppColors.brandTeal, fontSize: 10, fontWeight: FontWeight.w700)),
                   ),
                   const SizedBox(width: 10),
@@ -358,9 +358,9 @@ class _EstadoBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.15),
+        color: color.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

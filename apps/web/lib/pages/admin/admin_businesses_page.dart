@@ -147,7 +147,7 @@ class _AdminBusinessesPageState extends State<AdminBusinessesPage> {
                 onTap: () => setState(() => _estadoFiltro = e),
               ),
             if (_categorias.isNotEmpty) ...[
-              SizedBox(width: AppSpacing.sm, height: 1),
+              const SizedBox(width: AppSpacing.sm, height: 1),
               for (final c in _categorias)
                 _FilterChip(
                   label: c,
@@ -207,9 +207,9 @@ class _FilterChip extends StatelessWidget {
           duration: const Duration(milliseconds: 150),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           decoration: BoxDecoration(
-            color: selected ? AppColors.adminViolet.withOpacity(0.16) : AppColors.surface,
+            color: selected ? AppColors.adminViolet.withValues(alpha: 0.16) : AppColors.surface,
             borderRadius: BorderRadius.circular(999),
-            border: Border.all(color: selected ? AppColors.adminViolet.withOpacity(0.4) : AppColors.borderSubtle),
+            border: Border.all(color: selected ? AppColors.adminViolet.withValues(alpha: 0.4) : AppColors.borderSubtle),
           ),
           child: Text(
             label,
@@ -296,9 +296,9 @@ class _AssetDot extends StatelessWidget {
         height: 20,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: active ? color.withOpacity(0.15) : AppColors.overlay(0.05),
+          color: active ? color.withValues(alpha: 0.15) : AppColors.overlay(0.05),
           borderRadius: BorderRadius.circular(6),
-          border: Border.all(color: active ? color.withOpacity(0.4) : AppColors.overlay(0.1)),
+          border: Border.all(color: active ? color.withValues(alpha: 0.4) : AppColors.overlay(0.1)),
         ),
         child: Text(label, style: TextStyle(color: color, fontSize: 9, fontWeight: FontWeight.w700)),
       ),

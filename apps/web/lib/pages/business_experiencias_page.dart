@@ -213,7 +213,7 @@ class _BusinessExperienciasContentState extends State<BusinessExperienciasConten
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                         decoration: BoxDecoration(
-                          color: AppColors.scrimDark.withOpacity(0.8),
+                          color: AppColors.scrimDark.withValues(alpha: 0.8),
                           borderRadius: BorderRadius.circular(999),
                         ),
                         child: const Row(
@@ -504,9 +504,9 @@ class _Aviso extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(AppRadius.buttonLg),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,

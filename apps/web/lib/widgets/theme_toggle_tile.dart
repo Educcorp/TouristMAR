@@ -13,6 +13,7 @@ class ThemeToggleTile extends StatelessWidget {
   // cambia" — se saltaría el rebuild entero al alternar el tema (el switch y
   // la etiqueta se quedarían congelados en el valor del primer render, que
   // es justo el bug que se reportó).
+  // ignore: prefer_const_constructors_in_immutables
   ThemeToggleTile({super.key});
 
   @override
@@ -40,7 +41,7 @@ class ThemeToggleTile extends StatelessWidget {
               Switch.adaptive(
                 value: isDark,
                 onChanged: (_) => ThemeController.toggle(),
-                activeColor: AppColors.brandTeal,
+                activeThumbColor: AppColors.brandTeal,
               ),
             ],
           ),

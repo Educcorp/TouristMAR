@@ -1,10 +1,10 @@
 import 'dart:typed_data';
 
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
 import '../models/business_profile.dart';
 import '../services/auth_service.dart';
+import '../services/image_picker_service.dart';
 import '../services/session_storage.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_button.dart';
@@ -15,7 +15,10 @@ import '../widgets/themed_builder.dart';
 class BusinessEditPage extends StatefulWidget {
   final BusinessProfile business;
 
-  const BusinessEditPage({super.key, required this.business});
+  /// Solo para pruebas: permite usar un servicio con un cliente HTTP falso.
+  final AuthService? authService;
+
+  const BusinessEditPage({super.key, required this.business, this.authService});
 
   @override
   State<BusinessEditPage> createState() => _BusinessEditPageState();
@@ -30,7 +33,7 @@ class _BusinessEditPageState extends State<BusinessEditPage> {
   late final _phoneController = TextEditingController(text: widget.business.phone);
   late final _websiteController = TextEditingController(text: widget.business.website);
   late final _hoursController = TextEditingController(text: widget.business.hours);
-  final _authService = AuthService();
+  late final AuthService _authService = widget.authService ?? AuthService();
   bool _isSaving = false;
   String? _error;
 
@@ -61,13 +64,12 @@ class _BusinessEditPageState extends State<BusinessEditPage> {
 
   /// Solo elige la portada y la muestra como vista previa; no la sube.
   Future<void> _changeCover() async {
-    final result = await FilePicker.platform.pickFiles(type: FileType.image, withData: true);
-    final file = result?.files.single;
-    if (file == null || file.bytes == null || !mounted) return;
+    final picked = await ImagePickerService.pick();
+    if (picked == null || !mounted) return;
 
     setState(() {
-      _pendingCoverBytes = file.bytes;
-      _pendingCoverName = file.name;
+      _pendingCoverBytes = picked.bytes;
+      _pendingCoverName = picked.name;
       _error = null;
     });
   }
@@ -188,7 +190,7 @@ class _BusinessEditPageState extends State<BusinessEditPage> {
                               _pendingCoverBytes != null
                                   ? Image.memory(_pendingCoverBytes!, fit: BoxFit.cover)
                                   : CoverImage(source: widget.business.coverImage),
-                              DecoratedBox(decoration: BoxDecoration(color: Colors.black.withOpacity(0.25))),
+                              DecoratedBox(decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.25))),
                               Center(
                                 child: Column(
                                   mainAxisSize: MainAxisSize.min,

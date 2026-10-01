@@ -82,7 +82,7 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
                     ),
                     Switch(
                       value: _reduceMotion,
-                      activeColor: AppColors.adminViolet,
+                      activeThumbColor: AppColors.adminViolet,
                       onChanged: (v) => setState(() => _reduceMotion = v),
                     ),
                   ],

@@ -12,6 +12,7 @@ class AppLogo extends StatelessWidget {
 
   // Sin `const` a propósito: una instancia const no se reconstruye, y el
   // logo tiene que cambiar de versión cuando cambia ThemeController.
+  // ignore: prefer_const_constructors_in_immutables
   AppLogo({super.key, this.size = 32, this.sobreFoto = false});
 
   @override

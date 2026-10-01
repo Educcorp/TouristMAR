@@ -1,10 +1,10 @@
 import 'dart:typed_data';
 
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
 import '../models/business_profile.dart';
 import '../services/auth_service.dart';
+import '../services/image_picker_service.dart';
 import '../services/session_storage.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_button.dart';
@@ -14,7 +14,10 @@ import '../widgets/themed_builder.dart';
 class BusinessGalleryPage extends StatefulWidget {
   final BusinessProfile business;
 
-  const BusinessGalleryPage({super.key, required this.business});
+  /// Solo para pruebas: permite usar un servicio con un cliente HTTP falso.
+  final AuthService? authService;
+
+  const BusinessGalleryPage({super.key, required this.business, this.authService});
 
   @override
   State<BusinessGalleryPage> createState() => _BusinessGalleryPageState();
@@ -32,7 +35,7 @@ class _PendingImage {
 /// Antes cada foto se subía al elegirla y quedaba aplicada aunque el usuario
 /// no guardara.
 class _BusinessGalleryPageState extends State<BusinessGalleryPage> {
-  final _authService = AuthService();
+  late final AuthService _authService = widget.authService ?? AuthService();
   final List<_PendingImage> _pendingAdds = [];
   final Set<String> _pendingRemovals = {};
   bool _isSaving = false;
@@ -45,12 +48,11 @@ class _BusinessGalleryPageState extends State<BusinessGalleryPage> {
   bool get _isDirty => _pendingAdds.isNotEmpty || _pendingRemovals.isNotEmpty;
 
   Future<void> _addImage() async {
-    final result = await FilePicker.platform.pickFiles(type: FileType.image, withData: true);
-    final file = result?.files.single;
-    if (file == null || file.bytes == null || !mounted) return;
+    final picked = await ImagePickerService.pick();
+    if (picked == null || !mounted) return;
 
     setState(() {
-      _pendingAdds.add(_PendingImage(file.bytes!, file.name));
+      _pendingAdds.add(_PendingImage(picked.bytes, picked.name));
       _error = null;
     });
   }
@@ -277,7 +279,7 @@ class _GalleryTile extends StatelessWidget {
                 bottom: 6,
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(color: Colors.black.withOpacity(0.6), borderRadius: BorderRadius.circular(6)),
+                  decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.6), borderRadius: BorderRadius.circular(6)),
                   child: const Text('Sin guardar', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w600)),
                 ),
               ),
@@ -290,7 +292,7 @@ class _GalleryTile extends StatelessWidget {
                   child: Container(
                     width: 26,
                     height: 26,
-                    decoration: BoxDecoration(color: Colors.black.withOpacity(0.6), shape: BoxShape.circle),
+                    decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.6), shape: BoxShape.circle),
                     child: const Icon(Icons.close, size: 15, color: Colors.white),
                   ),
                 ),

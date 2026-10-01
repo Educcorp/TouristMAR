@@ -87,7 +87,7 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
             Text('Reportes', style: AppTypography.h1),
             const SizedBox(height: 4),
             Text('Métricas y distribución del sistema, calculadas en tiempo real.', style: AppTypography.body),
-            SizedBox(height: AppSpacing.xl),
+            const SizedBox(height: AppSpacing.xl),
             if (_loading)
               DsLoadingState()
             else if (_error != null)
@@ -176,6 +176,10 @@ class _ChartShell extends StatelessWidget {
   final String title;
   final Widget child;
 
+  // Sin `const` a propósito: build() lee AppColors (depende de
+  // ThemeController); una instancia const no se reconstruiría al cambiar el
+  // tema y se quedaría con los colores viejos.
+  // ignore: prefer_const_constructors_in_immutables
   _ChartShell({required this.title, required this.child});
 
   @override
@@ -185,7 +189,7 @@ class _ChartShell extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(title, style: AppTypography.h3),
-          SizedBox(height: AppSpacing.lg),
+          const SizedBox(height: AppSpacing.lg),
           SizedBox(height: 200, child: child),
         ],
       ),
@@ -440,9 +444,9 @@ class _RangeSelector extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             decoration: BoxDecoration(
-              color: selected ? AppColors.adminViolet.withOpacity(0.16) : Colors.transparent,
+              color: selected ? AppColors.adminViolet.withValues(alpha: 0.16) : Colors.transparent,
               borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: selected ? AppColors.adminViolet.withOpacity(0.4) : AppColors.borderSubtle),
+              border: Border.all(color: selected ? AppColors.adminViolet.withValues(alpha: 0.4) : AppColors.borderSubtle),
             ),
             child: Text(
               e.value,

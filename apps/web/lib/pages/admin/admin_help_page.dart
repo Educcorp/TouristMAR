@@ -31,6 +31,7 @@ class AdminHelpPage extends StatelessWidget {
   // ThemeController, un valor externo mutable) — con `const`, Dart
   // canonicalizaría la instancia y esta página se quedaría con los colores
   // del primer render si el tema cambia mientras está visible.
+  // ignore: prefer_const_constructors_in_immutables
   AdminHelpPage({super.key});
 
   @override
@@ -70,7 +71,7 @@ class AdminHelpPage extends StatelessWidget {
                 )),
             const SizedBox(height: AppSpacing.lg),
             DsCard(
-              background: AppColors.adminViolet.withOpacity(0.06),
+              background: AppColors.adminViolet.withValues(alpha: 0.06),
               child: Row(
                 children: [
                   DsIconBadgeCircle(icon: Icons.support_agent_outlined, color: AppColors.adminViolet, size: 38),

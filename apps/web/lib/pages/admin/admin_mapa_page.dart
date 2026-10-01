@@ -240,7 +240,7 @@ class _AdminMapaPageState extends State<AdminMapaPage> {
               selected: _soloIncompletos,
               onSelected: (v) => setState(() => _soloIncompletos = v),
               showCheckmark: false,
-              selectedColor: AppColors.adminViolet.withOpacity(0.16),
+              selectedColor: AppColors.adminViolet.withValues(alpha: 0.16),
               checkmarkColor: AppColors.adminViolet,
               labelStyle: TextStyle(
                 color: _soloIncompletos ? AppColors.adminViolet : AppColors.slate300,
@@ -348,7 +348,7 @@ class _EstadoRecurso extends StatelessWidget {
     if (compacto) {
       return Tooltip(
         message: '${info.tituloCorto}: ${activo ? 'subido' : 'falta'}',
-        child: Icon(info.icon, size: 18, color: activo ? info.color : AppColors.slate500.withOpacity(0.5)),
+        child: Icon(info.icon, size: 18, color: activo ? info.color : AppColors.slate500.withValues(alpha: 0.5)),
       );
     }
     return activo
@@ -363,7 +363,7 @@ class _Leyenda extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.sm),
       decoration: BoxDecoration(
-        color: AppColors.panelNavySoft.withOpacity(0.95),
+        color: AppColors.panelNavySoft.withValues(alpha: 0.95),
         borderRadius: BorderRadius.circular(AppRadius.button),
         border: Border.all(color: AppColors.borderSubtle),
       ),

@@ -25,7 +25,7 @@ class RegisterPlaceBanner extends StatelessWidget {
               Container(
                 width: 36,
                 height: 36,
-                decoration: BoxDecoration(color: AppColors.brandTeal.withOpacity(0.15), shape: BoxShape.circle),
+                decoration: BoxDecoration(color: AppColors.brandTeal.withValues(alpha: 0.15), shape: BoxShape.circle),
                 child: Icon(Icons.location_on_outlined, size: 18, color: AppColors.brandTeal),
               ),
               const SizedBox(width: 12),

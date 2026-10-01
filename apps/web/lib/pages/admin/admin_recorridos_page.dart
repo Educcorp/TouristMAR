@@ -373,7 +373,7 @@ class _RecorridoFormState extends State<_RecorridoForm> {
   @override
   Widget build(BuildContext context) {
     return DsCard(
-      background: AppColors.adminViolet.withOpacity(0.05),
+      background: AppColors.adminViolet.withValues(alpha: 0.05),
       child: Form(
         key: _formKey,
         child: Column(
@@ -599,7 +599,7 @@ class _RecorridoRow extends StatelessWidget {
                 children: [
                   Tooltip(
                     message: r.activo ? 'Visible en la app' : 'Oculto en la app',
-                    child: Switch(value: r.activo, activeColor: AppColors.adminViolet, onChanged: onToggle),
+                    child: Switch(value: r.activo, activeThumbColor: AppColors.adminViolet, onChanged: onToggle),
                   ),
                   Row(
                     mainAxisSize: MainAxisSize.min,
@@ -894,9 +894,9 @@ class _Aviso extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.08),
+        color: color.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(AppRadius.button),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
@@ -920,9 +920,9 @@ class _TipsFotos extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        color: AppColors.amber.withOpacity(0.08),
+        color: AppColors.amber.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(AppRadius.button),
-        border: Border.all(color: AppColors.amber.withOpacity(0.25)),
+        border: Border.all(color: AppColors.amber.withValues(alpha: 0.25)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

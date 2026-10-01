@@ -48,8 +48,8 @@ class HeroPanel extends StatelessWidget {
               end: Alignment.topCenter,
               colors: [
                 AppColors.scrimDark,
-                AppColors.scrimDark.withOpacity(0.5),
-                Colors.black.withOpacity(0.1),
+                AppColors.scrimDark.withValues(alpha: 0.5),
+                Colors.black.withValues(alpha: 0.1),
               ],
             ),
           ),
@@ -70,9 +70,9 @@ class HeroPanel extends StatelessWidget {
                 ],
               ),
               const Spacer(),
-              Text(
+              const Text(
                 'MANZANILLO · COLIMA',
-                style: const TextStyle(color: Color(0xFF22D3EE), fontWeight: FontWeight.w600, fontSize: 12, letterSpacing: 3),
+                style: TextStyle(color: Color(0xFF22D3EE), fontWeight: FontWeight.w600, fontSize: 12, letterSpacing: 3),
               ),
               const SizedBox(height: 16),
               Text('Descubre el Pacífico\nMexicano',
@@ -132,7 +132,7 @@ class _CategoryPill extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.3),
+        color: Colors.black.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(999),
         border: Border.all(color: AppColors.overlay(0.1)),
       ),

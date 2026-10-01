@@ -383,7 +383,7 @@ class _MarcadorFormState extends State<_MarcadorForm> {
   @override
   Widget build(BuildContext context) {
     return DsCard(
-      background: AppColors.adminViolet.withOpacity(0.05),
+      background: AppColors.adminViolet.withValues(alpha: 0.05),
       child: Form(
         key: _formKey,
         child: Column(
@@ -613,9 +613,9 @@ class _Tips extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        color: AppColors.amber.withOpacity(0.08),
+        color: AppColors.amber.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(AppRadius.button),
-        border: Border.all(color: AppColors.amber.withOpacity(0.25)),
+        border: Border.all(color: AppColors.amber.withValues(alpha: 0.25)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -731,7 +731,7 @@ class _MarcadorRow extends StatelessWidget {
                     message: marcador.activo ? 'Visible en la app' : 'Oculto en la app',
                     child: Switch(
                       value: marcador.activo,
-                      activeColor: AppColors.adminViolet,
+                      activeThumbColor: AppColors.adminViolet,
                       onChanged: onToggle,
                     ),
                   ),

@@ -14,6 +14,10 @@ class AppTextField extends StatelessWidget {
   final Color? accentColor;
   final int maxLines;
 
+  // Sin `const` a propósito: build() lee AppColors (depende de
+  // ThemeController); una instancia const no se reconstruiría al cambiar el
+  // tema y se quedaría con los colores viejos.
+  // ignore: prefer_const_constructors_in_immutables
   AppTextField({
     super.key,
     required this.label,
