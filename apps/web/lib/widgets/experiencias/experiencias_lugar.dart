@@ -326,6 +326,10 @@ Future<void> mostrarDetalleExperiencia(
     return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      // El scrim por defecto de Flutter (`Colors.black54`) es fijo sin
+      // importar el tema: en modo claro se ve como un gris muy fuerte en vez
+      // de un oscurecido sutil. `AppColors.overlay` sí es theme-aware.
+      barrierColor: AppColors.overlay(0.3),
       backgroundColor: AppColors.panelNavySoft,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.cardLg)),
@@ -339,6 +343,7 @@ Future<void> mostrarDetalleExperiencia(
 
   return showDialog<void>(
     context: context,
+    barrierColor: AppColors.overlay(0.3),
     builder: (_) => Dialog(
       backgroundColor: AppColors.panelNavySoft,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.cardLg)),

@@ -23,8 +23,6 @@ class AdminSettingsPage extends StatefulWidget {
 }
 
 class _AdminSettingsPageState extends State<AdminSettingsPage> {
-  bool _reduceMotion = false;
-
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
@@ -59,54 +57,6 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
                       text: widget.admin.isSuperAdmin ? 'Super Admin' : 'Administrador',
                       tone: widget.admin.isSuperAdmin ? BadgeTone.info : BadgeTone.neutral,
                     ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            _SettingsSection(
-              title: 'Apariencia',
-              child: DsCard(
-                child: Row(
-                  children: [
-                    DsIconBadgeCircle(icon: Icons.dark_mode_outlined, color: AppColors.adminViolet, size: 36),
-                    const SizedBox(width: AppSpacing.md),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Reducir movimiento', style: TextStyle(color: AppColors.textPrimary, fontSize: 13, fontWeight: FontWeight.w600)),
-                          Text('Disminuye las animaciones de la interfaz.', style: AppTypography.bodySmall),
-                        ],
-                      ),
-                    ),
-                    Switch(
-                      value: _reduceMotion,
-                      activeColor: AppColors.adminViolet,
-                      onChanged: (v) => setState(() => _reduceMotion = v),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            _SettingsSection(
-              title: 'Notificaciones',
-              child: DsCard(
-                child: Row(
-                  children: [
-                    DsIconBadgeCircle(icon: Icons.notifications_outlined, color: AppColors.slate400, size: 36),
-                    const SizedBox(width: AppSpacing.md),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Alertas por correo', style: TextStyle(color: AppColors.textPrimary, fontSize: 13, fontWeight: FontWeight.w600)),
-                          Text('Aún no disponible en esta versión del panel.', style: AppTypography.bodySmall),
-                        ],
-                      ),
-                    ),
-                    const DsBadge(text: 'Próximamente', tone: BadgeTone.neutral),
                   ],
                 ),
               ),

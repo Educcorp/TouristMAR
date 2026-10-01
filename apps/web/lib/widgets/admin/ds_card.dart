@@ -4,7 +4,8 @@ import '../../theme/app_theme.dart';
 
 /// Superficie base de todas las tarjetas del panel admin: mismo color,
 /// borde y radio en cualquier página. Si [onTap] se define, la tarjeta gana
-/// un hover sutil (elevación + brillo de borde) pensado para web/desktop.
+/// un hover sutil (tinte claro + levantamiento + brillo de borde) pensado
+/// para web/desktop.
 class DsCard extends StatefulWidget {
   final Widget child;
   final EdgeInsetsGeometry padding;
@@ -44,15 +45,10 @@ class _DsCardState extends State<DsCard> {
         color: widget.background ?? AppColors.surface,
         borderRadius: BorderRadius.circular(widget.radius),
         border: Border.all(color: borderColor),
-        boxShadow: _hovered && interactive
-            ? [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.25),
-                  blurRadius: 20,
-                  offset: const Offset(0, 8),
-                ),
-              ]
-            : null,
+        // Sin BoxShadow a propósito: `surface` es casi transparente, así que
+        // una sombra oscura se ve *a través* de la tarjeta y la oscurece
+        // completa al pasar el cursor. El hover se marca solo con el tinte
+        // claro del InkWell (hoverColor), el borde y el leve levantamiento.
       ),
       child: widget.child,
     );
@@ -69,6 +65,14 @@ class _DsCardState extends State<DsCard> {
         child: InkWell(
           onTap: widget.onTap,
           borderRadius: BorderRadius.circular(widget.radius),
+          // Sin esto, InkWell usa el gris fijo de Flutter para el estado
+          // presionado (0x66BCBCBC en modo claro) — no es theme-aware y se ve
+          // como una mancha gris fuerte cubriendo toda la tarjeta. Con
+          // AppColors.overlay sí se adapta al tema y queda sutil.
+          splashColor: AppColors.overlay(0.08),
+          highlightColor: AppColors.overlay(0.06),
+          hoverColor: AppColors.overlay(0.03),
+          focusColor: AppColors.overlay(0.04),
           child: card,
         ),
       ),
