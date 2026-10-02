@@ -119,6 +119,10 @@ class _ExplorarMapaPageState extends State<ExplorarMapaPage> {
     );
   }
 
+  /// Alto reservado abajo del mapa para la franja de créditos de
+  /// OpenStreetMap, más un margen.
+  static const _margenInferior = 44.0;
+
   Widget _mapa({required bool compacto}) {
     final filtrados = _filtrados;
     final seleccionado = _seleccionado;
@@ -146,15 +150,18 @@ class _ExplorarMapaPageState extends State<ExplorarMapaPage> {
               ],
             ),
           ),
+        // Los controles y el aviso de datos de ejemplo van por encima de la
+        // franja de créditos de OpenStreetMap (abajo del mapa); antes estaban
+        // a 24 px del borde y tapaban el texto del copyright.
         Positioned(
           right: 12,
-          bottom: compacto && seleccionado != null ? 190 : 24,
+          bottom: compacto && seleccionado != null ? 190 : _margenInferior,
           child: ControlesMapa(controller: _mapController),
         ),
         if (widget.service.usaDatosDemo)
           Positioned(
             left: 12,
-            bottom: compacto && seleccionado != null ? 190 : 24,
+            bottom: compacto && seleccionado != null ? 190 : _margenInferior,
             child: const _AvisoDemo(),
           ),
         if (_cargando) const Center(child: CircularProgressIndicator()),
