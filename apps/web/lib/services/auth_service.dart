@@ -22,6 +22,8 @@ class NegocioInfo {
   final String? archivo360;
   final String? arMarcador;
   final String? arGeo;
+  final double? latitud;
+  final double? longitud;
   final String estado;
   final DateTime createdAt;
 
@@ -39,6 +41,8 @@ class NegocioInfo {
     this.archivo360,
     this.arMarcador,
     this.arGeo,
+    this.latitud,
+    this.longitud,
     required this.estado,
     required this.createdAt,
   });
@@ -61,6 +65,8 @@ class NegocioInfo {
         archivo360: json['archivo360'] as String?,
         arMarcador: json['arMarcador'] as String?,
         arGeo: json['arGeo'] as String?,
+        latitud: (json['latitud'] as num?)?.toDouble(),
+        longitud: (json['longitud'] as num?)?.toDouble(),
         estado: json['estado'] as String,
         createdAt: DateTime.parse(json['createdAt'] as String),
       );

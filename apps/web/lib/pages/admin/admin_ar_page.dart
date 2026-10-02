@@ -487,8 +487,6 @@ class _MarcadorFormState extends State<_MarcadorForm> {
           size: DsButtonSize.sm,
           onPressed: _saving ? null : _pickImage,
         ),
-        const SizedBox(height: AppSpacing.md),
-        _Tips(),
       ],
     );
   }
@@ -601,39 +599,6 @@ class _MarcadorFormState extends State<_MarcadorForm> {
     if (text.isEmpty) return 'Campo requerido';
     if (text.length > max) return 'Máximo $max caracteres';
     return null;
-  }
-}
-
-/// Recordatorio de qué imágenes funcionan como marcador — el error más común
-/// es subir un logo plano que ARCore/ARKit rechazan sin avisar al turista.
-class _Tips extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final style = AppTypography.bodySmall;
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: AppColors.amber.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(AppRadius.button),
-        border: Border.all(color: AppColors.amber.withValues(alpha: 0.25)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.lightbulb_outline, size: 14, color: AppColors.amber),
-              const SizedBox(width: 6),
-              Text('Para que se reconozca bien', style: style.copyWith(color: AppColors.amber, fontWeight: FontWeight.w600)),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Text('• Mucho detalle y contraste', style: style),
-          Text('• Evita logos planos, colores lisos o patrones repetidos', style: style),
-          Text('• Mínimo ~500 px de lado', style: style),
-        ],
-      ),
-    );
   }
 }
 

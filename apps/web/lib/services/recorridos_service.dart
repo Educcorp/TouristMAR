@@ -126,6 +126,46 @@ class RecorridoPublico {
         urlPortada: json['urlPortada'] as String? ?? '',
         escenas: (json['escenas'] as List?)?.length ?? 0,
       );
+
+  /// El título que puso el admin (primera línea de [textoParaMostrar]).
+  String get titulo => textoParaMostrar.split('\n').first.trim();
+}
+
+/// El recorrido 360° propio de un lugar, o `null` si todavía no tiene uno.
+/// Nunca se cae a "cualquier otro recorrido": un lugar sin recorrido muestra
+/// un aviso, no los de otros lugares. Cuenta como suyo si está ligado a ese
+/// negocio ([lugarId] = negocioId) o si su nombre o título es el del lugar
+/// ("playa_la_audiencia_360" o "Playa La Audiencia" ↔ "Playa La Audiencia").
+RecorridoPublico? recorridoDeLugar(
+  Iterable<RecorridoPublico> recorridos, {
+  required String lugarId,
+  required String lugarNombre,
+}) {
+  final porNegocio = recorridos.where((r) => r.negocioId.isNotEmpty && r.negocioId == lugarId);
+  if (porNegocio.isNotEmpty) return porNegocio.first;
+
+  final nombre = normalizarNombre(lugarNombre);
+  if (nombre.isEmpty) return null;
+  final porNombre = recorridos.where((r) =>
+      normalizarNombre(r.nombre, esIdentificador: true) == nombre || normalizarNombre(r.titulo) == nombre);
+  return porNombre.isEmpty ? null : porNombre.first;
+}
+
+/// Aviso para un lugar que todavía no tiene recorrido 360°.
+String sinRecorrido360(String lugarNombre) => '$lugarNombre todavía no cuenta con un recorrido 360°.';
+
+/// Para comparar nombres de lugares: sin acentos, sin mayúsculas y sin el
+/// "Playa" del inicio ("Playa La Audiencia" → "la audiencia"). Con
+/// [esIdentificador] también convierte un `nombre` de recorrido
+/// ("playa_la_audiencia_360") quitando guiones y el "360".
+String normalizarNombre(String texto, {bool esIdentificador = false}) {
+  const acentos = {'á': 'a', 'é': 'e', 'í': 'i', 'ó': 'o', 'ú': 'u', 'ü': 'u', 'ñ': 'n'};
+  var t = texto.toLowerCase().split('').map((c) => acentos[c] ?? c).join();
+  if (esIdentificador) {
+    t = t.replaceAll(RegExp(r'[_-]+'), ' ').replaceAll(RegExp(r'\b360\b'), ' ');
+  }
+  t = t.replaceAll(RegExp(r'\s+'), ' ').trim();
+  return t.replaceAll(RegExp(r'^playa\s+'), '');
 }
 
 /// Gestión de recorridos 360° para admin / super_admin. La app móvil no usa

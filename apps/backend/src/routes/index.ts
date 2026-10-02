@@ -4,6 +4,7 @@ import { adminRouter } from '../modules/admin/admin.routes'
 import { notificationRouter } from '../modules/notifications/notification.routes'
 import { marcadoresRouter, arAdminRouter } from '../modules/ar/ar.routes'
 import { recorridosRouter, recorridosAdminRouter } from '../modules/recorridos/recorridos.routes'
+import { lugaresRouter } from '../modules/lugares/lugares.routes'
 
 export const apiRouter = Router()
 
@@ -18,4 +19,5 @@ apiRouter.use('/admin', adminRouter)
 // GET /api/recorridos (ver recorridos.controller.ts).
 apiRouter.use('/marcadores', marcadoresRouter)
 apiRouter.use('/recorridos', recorridosRouter)
+apiRouter.use('/lugares', lugaresRouter)
 apiRouter.use('/notifications', notificationRouter)
