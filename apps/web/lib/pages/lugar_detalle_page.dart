@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/lugar.dart';
+import '../services/favoritos_service.dart';
 import '../theme/app_theme.dart';
 import '../theme/breakpoints.dart';
 import '../widgets/cover_image.dart';
@@ -116,16 +117,7 @@ class _Hero extends StatelessWidget {
                           style: TextStyle(color: AppColors.scrimDark, fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 1)),
                     )
                   else
-                    Material(
-                      color: Colors.black.withValues(alpha: 0.4),
-                      shape: const CircleBorder(),
-                      child: IconButton(
-                        tooltip: 'Agregar a favoritos',
-                        onPressed: () => ScaffoldMessenger.of(context)
-                            .showSnackBar(const SnackBar(content: Text('Próximamente'))),
-                        icon: const Icon(Icons.favorite_border, color: Colors.white),
-                      ),
-                    ),
+                    _FavoritoButton(lugar: lugar),
                 ],
               ),
             ),
@@ -182,6 +174,53 @@ class _Hero extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Corazón de la ficha: marca o desmarca el lugar en "Mis favoritos". Los
+/// lugares de ejemplo no existen en la base de datos, así que solo avisan.
+class _FavoritoButton extends StatelessWidget {
+  final Lugar lugar;
+
+  const _FavoritoButton({required this.lugar});
+
+  Future<void> _alternar(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    if (!lugar.esFavoritable) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Este lugar es de ejemplo y aún no se puede guardar en favoritos')),
+      );
+      return;
+    }
+    try {
+      final marcado = await FavoritosService.instance.alternar(lugar.id);
+      messenger.showSnackBar(SnackBar(content: Text(marcado ? 'Agregado a tus favoritos' : 'Quitado de tus favoritos')));
+    } on FavoritosError catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(e.message)));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<Set<String>>(
+      valueListenable: FavoritosService.instance.ids,
+      builder: (context, ids, _) {
+        final esFavorito = ids.contains(lugar.id);
+        return Material(
+          color: Colors.black.withValues(alpha: 0.4),
+          shape: const CircleBorder(),
+          child: IconButton(
+            tooltip: esFavorito ? 'Quitar de favoritos' : 'Agregar a favoritos',
+            onPressed: () => _alternar(context),
+            // Va sobre la foto: cian claro, igual que en las tarjetas.
+            icon: Icon(
+              esFavorito ? Icons.favorite : Icons.favorite_border,
+              color: esFavorito ? const Color(0xFF22D3EE) : Colors.white,
+            ),
+          ),
+        );
+      },
     );
   }
 }
