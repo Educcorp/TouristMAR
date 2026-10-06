@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
+import 'cover_image.dart';
 
 class PlaceCard extends StatelessWidget {
   final String image;
@@ -38,7 +39,7 @@ class PlaceCard extends StatelessWidget {
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  Image.asset(image, fit: BoxFit.cover),
+                  CoverImage(source: image),
                   Positioned(
                     left: 10,
                     top: 10,

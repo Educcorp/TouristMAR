@@ -69,6 +69,7 @@ model User {
   arMarcadores  ArMarcador[]
   arEscaneos    ArEscaneo[]
   recorridos360 Recorrido360[]
+  favoritos     Favorito[]
 
   @@map("users")
 }
@@ -99,6 +100,7 @@ model NegocioProfile {
 
   arMarcadores  ArMarcador[]
   recorridos360 Recorrido360[]
+  favoritos     Favorito[]
 
   @@index([userId])
   @@map("negocio_profiles")
@@ -231,4 +233,20 @@ model Recorrido360Escena {
 
   @@unique([recorridoId, orden])
   @@map("recorrido_360_escenas")
+}
+
+/// Lugar (negocio aprobado) que un visitante guardó en "Mis favoritos". Un
+/// visitante no puede repetir el mismo lugar; si el usuario o el negocio se
+/// borran, el favorito se va con ellos.
+model Favorito {
+  id        String         @id @default(uuid()) @db.Uuid
+  userId    String         @map("user_id") @db.Uuid
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  negocioId String         @map("negocio_id") @db.Uuid
+  negocio   NegocioProfile @relation(fields: [negocioId], references: [id], onDelete: Cascade)
+  createdAt DateTime       @default(now()) @map("created_at")
+
+  @@unique([userId, negocioId])
+  @@index([userId, createdAt])
+  @@map("favoritos")
 }
