@@ -181,6 +181,14 @@ class Lugar {
     this.radioDesbloqueo = 50,
   });
 
+  static final _uuid = RegExp(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$', caseSensitive: false);
+
+  /// Solo los negocios reales (id UUID) existen en la base de datos; los
+  /// lugares de ejemplo (`demo-…`) no se pueden guardar como favoritos.
+  bool get esFavoritable => idEsReal(id);
+
+  static bool idEsReal(String id) => _uuid.hasMatch(id);
+
   CategoriaLugar get categoria => CategoriaLugarDetector.detectar(categoriaTexto);
 
   bool tiene(ExperienciaTipo tipo) => switch (tipo) {

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../models/visitor_profile.dart';
+import '../models/lugar.dart';
 import '../navegacion/rutas.dart';
 import '../services/auth_service.dart';
+import '../services/favoritos_service.dart';
 import '../services/lugares_service.dart';
 import '../theme/app_theme.dart';
 import '../theme/breakpoints.dart';
@@ -29,8 +31,7 @@ class _FeaturedPlace {
   final String category;
   final String name;
   final double rating;
-  bool favorite;
-  _FeaturedPlace(this.lugarId, this.image, this.category, this.name, this.rating, this.favorite);
+  _FeaturedPlace(this.lugarId, this.image, this.category, this.name, this.rating);
 }
 
 class HomePage extends StatefulWidget {
@@ -45,9 +46,16 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   late final VisitorProfile _profile = VisitorProfile.fromAuthUser(widget.user);
 
+  @override
+  void initState() {
+    super.initState();
+    // Para que los corazones de tarjetas y fichas salgan ya marcados.
+    FavoritosService.instance.cargarIds();
+  }
+
   late final _quickActions = [
     _QuickAction(Icons.map_outlined, 'Explorar mapa', AppColors.brandTeal, () => openVisitorMap(context, _profile)),
-    _QuickAction(Icons.favorite_border, 'Mis favoritos', AppColors.orange),
+    _QuickAction(Icons.favorite_border, 'Mis favoritos', AppColors.orange, () => openVisitorFavoritos(context, _profile)),
     _QuickAction(Icons.add, 'Proponer lugar', AppColors.brandTeal, _proposePlace),
     _QuickAction(
       Icons.notifications_outlined,
@@ -91,9 +99,9 @@ class _HomePageState extends State<HomePage> {
   }
 
   late final List<_FeaturedPlace> _places = [
-    _FeaturedPlace('demo-audiencia', 'assets/images/place-playa-audiencia.jpg', 'Playas', 'Playa Audiencia', 4.9, false),
-    _FeaturedPlace('demo-vigia', 'assets/images/place-cerro-vigia.jpg', 'Miradores', 'Cerro del Vigía', 4.8, true),
-    _FeaturedPlace('demo-cuyutlan', 'assets/images/place-laguna-cuyutlan.jpg', 'Recreación', 'Laguna de Cuyutlán', 4.6, false),
+    _FeaturedPlace('demo-audiencia', 'assets/images/place-playa-audiencia.jpg', 'Playas', 'Playa Audiencia', 4.9),
+    _FeaturedPlace('demo-vigia', 'assets/images/place-cerro-vigia.jpg', 'Miradores', 'Cerro del Vigía', 4.8),
+    _FeaturedPlace('demo-cuyutlan', 'assets/images/place-laguna-cuyutlan.jpg', 'Recreación', 'Laguna de Cuyutlán', 4.6),
   ];
 
   Future<void> _openPlace(String lugarId) async {
@@ -101,6 +109,22 @@ class _HomePageState extends State<HomePage> {
     final lugar = lugares.where((l) => l.id == lugarId).firstOrNull;
     if (lugar == null || !mounted) return;
     await abrirLugar(context, lugar);
+  }
+
+  /// Las tarjetas destacadas de hoy son lugares de ejemplo (sin registro en
+  /// la base de datos), así que todavía no se pueden guardar; en cuanto sean
+  /// negocios reales el corazón funciona igual que en la ficha del lugar.
+  Future<void> _toggleFavorite(String lugarId) async {
+    final messenger = ScaffoldMessenger.of(context);
+    if (!Lugar.idEsReal(lugarId)) {
+      messenger.showSnackBar(const SnackBar(content: Text('Este lugar es de ejemplo y aún no se puede guardar en favoritos')));
+      return;
+    }
+    try {
+      await FavoritosService.instance.alternar(lugarId);
+    } on FavoritosError catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(e.message)));
+    }
   }
 
   String get _greeting {
@@ -303,7 +327,9 @@ class _HomePageState extends State<HomePage> {
         final isNarrow = Breakpoints.isCompact(constraints.maxWidth);
         final cardWidth = isNarrow ? constraints.maxWidth : (constraints.maxWidth - 24) / 3;
 
-        return Wrap(
+        return ValueListenableBuilder<Set<String>>(
+          valueListenable: FavoritosService.instance.ids,
+          builder: (context, _, __) => Wrap(
           spacing: 12,
           runSpacing: 12,
           children: _places
@@ -315,13 +341,14 @@ class _HomePageState extends State<HomePage> {
                     category: place.category,
                     name: place.name,
                     rating: place.rating,
-                    isFavorite: place.favorite,
+                    isFavorite: FavoritosService.instance.esFavorito(place.lugarId),
                     onTap: () => _openPlace(place.lugarId),
-                    onToggleFavorite: () => setState(() => place.favorite = !place.favorite),
+                    onToggleFavorite: () => _toggleFavorite(place.lugarId),
                   ),
                 ),
               )
               .toList(),
+          ),
         );
       },
     );

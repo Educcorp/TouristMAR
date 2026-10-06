@@ -36,7 +36,13 @@ void _logout(BuildContext context) => cerrarSesion(context);
 /// Qué página del flujo de visitante está activa — decide qué ítem del nav
 /// se resalta. Antes el resaltado era fijo por ítem ("Mi perfil" siempre
 /// marcado); ahora cada página que arma la lista dice cuál es, vía [current].
-enum VisitorSection { home, mapa, profile }
+enum VisitorSection { home, mapa, favoritos, profile }
+
+/// Abre "Mis favoritos" (`/favoritos`, sin animación, como un cambio de pestaña).
+void openVisitorFavoritos(BuildContext context, VisitorProfile profile, {VisitorSection? from}) {
+  if (from == VisitorSection.favoritos) return;
+  context.go('/favoritos');
+}
 
 /// Abre el mapa del visitante (`/mapa`, sin animación, como un cambio de pestaña).
 void openVisitorMap(BuildContext context, VisitorProfile profile, {VisitorSection? from}) {
@@ -62,7 +68,12 @@ List<NavItem> visitorNavItems(
       highlight: current == VisitorSection.mapa,
       onTap: () => openVisitorMap(context, profile, from: current),
     ),
-    NavItem(icon: Icons.favorite_border, label: 'Mis favoritos', onTap: () => _comingSoon(context)),
+    NavItem(
+      icon: Icons.favorite_border,
+      label: 'Mis favoritos',
+      highlight: current == VisitorSection.favoritos,
+      onTap: () => openVisitorFavoritos(context, profile, from: current),
+    ),
     NavItem(
       icon: Icons.person_outline,
       label: 'Mi perfil',
