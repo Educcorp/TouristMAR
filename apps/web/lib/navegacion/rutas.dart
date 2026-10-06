@@ -10,6 +10,7 @@ import '../pages/business_home_page.dart';
 import '../pages/business_suggest_page.dart';
 import '../pages/edit_profile_page.dart';
 import '../pages/explorar_mapa_page.dart';
+import '../pages/favoritos_page.dart';
 import '../pages/home_page.dart';
 import '../pages/login_page.dart';
 import '../pages/lugar_detalle_page.dart';
@@ -28,7 +29,7 @@ import 'sesion.dart';
 // anterior y recargar deja al usuario donde estaba:
 //
 //   /login                         inicio de sesión y registro (?registro=negocio)
-//   /inicio  /mapa  /perfil        visitante (/perfil/editar)
+//   /inicio  /mapa  /favoritos  /perfil   visitante (/perfil/editar)
 //   /lugar/:id                     ficha de un lugar (?vista=previa para admin/negocio)
 //   /recorrido/:nombre             recorrido 360° a pantalla completa
 //   /empresa/:seccion              panel de empresa (?negocio=<id>)
@@ -126,6 +127,11 @@ GoRouter crearRouter({AuthService? authService, String? inicial}) {
         path: '/mapa',
         pageBuilder: (context, state) =>
             _sinAnimacion(state, SessionGuard(child: ExplorarMapaPage(profile: Sesion.perfilVisitante))),
+      ),
+      GoRoute(
+        path: '/favoritos',
+        pageBuilder: (context, state) =>
+            _sinAnimacion(state, SessionGuard(child: FavoritosPage(profile: Sesion.perfilVisitante))),
       ),
       GoRoute(
         path: '/perfil',

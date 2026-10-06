@@ -56,6 +56,19 @@ void main() {
     await _desmontar(tester);
   });
 
+  testWidgets('"Mis favoritos" tiene su ruta y solo es del visitante', (tester) async {
+    Sesion.iniciar(_turista);
+    final router = await _montar(tester, '/favoritos');
+    expect(_ruta(router), '/favoritos');
+    await _desmontar(tester);
+
+    reiniciarSesionParaPruebas();
+    Sesion.iniciar(_admin);
+    final routerAdmin = await _montar(tester, '/favoritos');
+    expect(_ruta(routerAdmin), '/admin/inicio');
+    await _desmontar(tester);
+  });
+
   testWidgets('un visitante no puede entrar al panel admin', (tester) async {
     Sesion.iniciar(_turista);
     final router = await _montar(tester, '/admin/usuarios');

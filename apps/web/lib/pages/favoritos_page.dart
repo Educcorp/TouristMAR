@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/lugar.dart';
 import '../models/visitor_profile.dart';
+import '../navegacion/rutas.dart';
 import '../services/favoritos_service.dart';
 import '../theme/app_theme.dart';
 import '../theme/breakpoints.dart';
@@ -9,7 +10,6 @@ import '../widgets/app_shell.dart';
 import '../widgets/place_card.dart';
 import '../widgets/themed_builder.dart';
 import '../widgets/user_avatar.dart';
-import 'lugar_detalle_page.dart';
 
 /// "Mis favoritos": los lugares que el visitante guardó con el corazón.
 class FavoritosPage extends StatefulWidget {
@@ -175,9 +175,7 @@ class _FavoritosPageState extends State<FavoritosPage> {
                       name: lugar.nombre,
                       rating: lugar.rating,
                       isFavorite: true,
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => LugarDetallePage(lugar: lugar)),
-                      ),
+                      onTap: () => abrirLugar(context, lugar),
                       onToggleFavorite: () => _quitar(lugar),
                     ),
                   ))
