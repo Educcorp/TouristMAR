@@ -8,6 +8,7 @@ import '../../theme/app_theme.dart';
 import '../../theme/breakpoints.dart';
 import '../../theme/theme_controller.dart';
 import '../mapa/mapa_lugares.dart';
+import '../recorrido360/visor_360.dart';
 import 'experiencia_viewport.dart';
 
 /// Estado calculado de una experiencia para un visitante concreto.
@@ -503,14 +504,7 @@ class _DetalleExperienciaState extends State<_DetalleExperiencia> {
         ];
       case ExperienciaTipo.recorrido360:
         return [
-          const ExperienciaViewport(
-            tipo: ExperienciaTipo.recorrido360,
-            mensaje: 'Aquí se cargará el recorrido 360° del lugar.\nArrastra para mirar alrededor.',
-            controles: [
-              ViewportControl(icon: Icons.threed_rotation, tooltip: 'Reiniciar vista', onPressed: null),
-              ViewportControl(icon: Icons.fullscreen, tooltip: 'Pantalla completa', onPressed: null),
-            ],
-          ),
+          _VistaPrevia360(lugar: widget.lugar),
           const SizedBox(height: AppSpacing.lg),
           const _Pasos(pasos: [
             ('Desde cualquier lugar', 'No necesitas estar en el sitio para hacer el recorrido.'),
@@ -546,6 +540,60 @@ class _DetalleExperienciaState extends State<_DetalleExperiencia> {
             ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
             : Icon(icon, size: 18),
         label: Text(label, style: const TextStyle(fontWeight: FontWeight.w700)),
+      ),
+    );
+  }
+}
+
+/// La primera vista del recorrido ya en 360° (se puede girar) antes de
+/// abrirlo completo. Si todavía carga o no hay conexión, el marco vacío.
+class _VistaPrevia360 extends StatefulWidget {
+  final Lugar lugar;
+
+  const _VistaPrevia360({required this.lugar});
+
+  @override
+  State<_VistaPrevia360> createState() => _VistaPrevia360State();
+}
+
+class _VistaPrevia360State extends State<_VistaPrevia360> {
+  RecorridoPublico? _recorrido;
+  bool _cargando = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _cargar();
+  }
+
+  Future<void> _cargar() async {
+    try {
+      final lista = await RecorridosService().listPublicos();
+      final propio = recorridoDeLugar(lista, lugarId: widget.lugar.id, lugarNombre: widget.lugar.nombre);
+      if (mounted) setState(() => _recorrido = propio);
+    } catch (_) {
+      // Sin conexión: se queda el marco vacío.
+    } finally {
+      if (mounted) setState(() => _cargando = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final r = _recorrido;
+    if (r == null || r.escenas.isEmpty) {
+      return ExperienciaViewport(
+        tipo: ExperienciaTipo.recorrido360,
+        mensaje: _cargando ? 'Cargando el recorrido 360°…' : 'Este lugar todavía no tiene recorrido 360°.',
+      );
+    }
+    return ExperienciaViewport(
+      tipo: ExperienciaTipo.recorrido360,
+      child: Visor360(
+        escenas: [for (final e in r.escenas) EscenaVisor.publica(e)],
+        escenaInicialId: r.escenaInicial,
+        titulo: r.titulo,
+        mostrarTira: false,
       ),
     );
   }

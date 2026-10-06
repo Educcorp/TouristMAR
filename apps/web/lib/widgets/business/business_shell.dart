@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../models/business_profile.dart';
-import '../../pages/login_page.dart';
+import '../../navegacion/rutas.dart';
 import '../../services/auth_service.dart';
-import '../../services/session_storage.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/breakpoints.dart';
 import '../notification_bell.dart';
@@ -14,13 +13,7 @@ import '../../utils/keyboard.dart';
 /// Secciones persistentes del panel de empresa.
 enum BusinessSection { dashboard, perfil, experiencias, resenas }
 
-void businessLogout(BuildContext context) {
-  SessionStorage.clearToken();
-  Navigator.of(context).pushAndRemoveUntil(
-    MaterialPageRoute(builder: (_) => const LoginPage()),
-    (route) => false,
-  );
-}
+void businessLogout(BuildContext context) => cerrarSesion(context);
 
 class _BusinessNavLeaf {
   final BusinessSection? section;

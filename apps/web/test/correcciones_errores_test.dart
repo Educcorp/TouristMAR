@@ -10,6 +10,8 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:touristmar_web/navegacion/rutas.dart';
+import 'package:touristmar_web/navegacion/sesion.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:touristmar_web/models/business_profile.dart';
@@ -148,7 +150,12 @@ void main() {
   group('Error 1 — "¿Te gustaría registrar un lugar nuevo?"', () {
     testWidgets('el banner lleva al registro de negocio', (tester) async {
       _pantallaCelular(tester);
-      await tester.pumpWidget(const MaterialApp(home: HomePage(user: _turista)));
+      // La app con sus rutas: cerrar sesión lleva a /login?registro=negocio.
+      Sesion.iniciar(_turista);
+      addTearDown(reiniciarSesionParaPruebas);
+      final router = crearRouter(inicial: '/inicio');
+      addTearDown(router.dispose);
+      await tester.pumpWidget(MaterialApp.router(routerConfig: router));
       await tester.pump();
       // La sesión se guarda después de montar la pantalla para que la campana
       // no intente consultar notificaciones a un servidor real.
@@ -165,6 +172,7 @@ void main() {
       expect(find.byType(LoginForm), findsOneWidget);
       expect(find.byKey(const ValueKey('category-field')), findsOneWidget);
       expect(find.text('Solicitar registro'), findsOneWidget);
+      expect(router.routerDelegate.currentConfiguration.uri.toString(), '/login?registro=negocio');
       await _desmontar(tester);
     });
 

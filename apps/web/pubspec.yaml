@@ -9,6 +9,9 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  # Rutas con URL limpia en la web (`/admin/mapa` en vez de `/#/admin/mapa`).
+  flutter_web_plugins:
+    sdk: flutter
   http: ^1.2.2
   google_fonts: ^6.2.1
   flutter_svg: ^2.0.10+1
@@ -19,6 +22,9 @@ dependencies:
   latlong2: ^0.10.1
   # APIs del navegador para la build web (reemplaza a dart:html, obsoleto).
   web: ^1.1.0
+  panorama_viewer: ^2.0.7
+  url_launcher: ^6.3.3
+  go_router: ^18.0.2
 
 dev_dependencies:
   flutter_test:

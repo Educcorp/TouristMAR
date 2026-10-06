@@ -64,5 +64,11 @@
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
         </intent>
+        <!-- "Cómo llegar" abre la ruta en Google Maps (url_launcher). Desde
+             Android 11 hay que declarar que la app abre enlaces https. -->
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="https"/>
+        </intent>
     </queries>
 </manifest>

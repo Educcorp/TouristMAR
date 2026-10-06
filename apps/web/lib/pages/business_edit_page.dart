@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 
 import '../models/business_profile.dart';
+import '../models/lugar.dart';
 import '../services/auth_service.dart';
 import '../services/image_picker_service.dart';
 import '../services/session_storage.dart';
@@ -10,6 +11,7 @@ import '../theme/app_theme.dart';
 import '../widgets/app_button.dart';
 import '../widgets/app_text_field.dart';
 import '../widgets/cover_image.dart';
+import '../widgets/mapa/ubicacion_lugar.dart';
 import '../widgets/themed_builder.dart';
 
 class BusinessEditPage extends StatefulWidget {
@@ -30,6 +32,10 @@ class _BusinessEditPageState extends State<BusinessEditPage> {
   late final _categoryController = TextEditingController(text: widget.business.category);
   late final _descriptionController = TextEditingController(text: widget.business.description);
   late final _addressController = TextEditingController(text: widget.business.address);
+  /// Pin del negocio en el mapa (va junto a la dirección).
+  late Coordenadas? _ubicacion = widget.business.latitud != null && widget.business.longitud != null
+      ? Coordenadas(widget.business.latitud!, widget.business.longitud!)
+      : null;
   late final _phoneController = TextEditingController(text: widget.business.phone);
   late final _websiteController = TextEditingController(text: widget.business.website);
   late final _hoursController = TextEditingController(text: widget.business.hours);
@@ -122,6 +128,8 @@ class _BusinessEditPageState extends State<BusinessEditPage> {
         'telefono': _phoneController.text.trim(),
         'sitioWeb': _websiteController.text.trim(),
         'horario': _hoursController.text.trim(),
+        'latitud': _ubicacion?.lat,
+        'longitud': _ubicacion?.lng,
       });
 
       final business = widget.business;
@@ -134,6 +142,8 @@ class _BusinessEditPageState extends State<BusinessEditPage> {
       business.phone = negocio?.telefono ?? '';
       business.website = negocio?.sitioWeb ?? '';
       business.hours = negocio?.horario ?? '';
+      business.latitud = negocio?.latitud;
+      business.longitud = negocio?.longitud;
       final portada = negocio?.portada ?? newCover;
       if (portada != null) business.coverImage = portada;
       if (mounted) Navigator.of(context).pop(true);
@@ -271,6 +281,14 @@ class _BusinessEditPageState extends State<BusinessEditPage> {
                             hintText: 'Calle, número, colonia…',
                             accentColor: AppColors.businessOrange,
                             validator: (v) => _requiredValidator(v, 'Ingresa la dirección'),
+                          ),
+                          const SizedBox(height: 16),
+                          CampoCoordenadas(
+                            lugar: _nameController.text.trim().isEmpty ? 'tu negocio' : _nameController.text.trim(),
+                            inicial: _ubicacion,
+                            acento: AppColors.businessOrange,
+                            habilitado: !_isSaving,
+                            onChanged: (c) => _ubicacion = c,
                           ),
                           const SizedBox(height: 16),
                           AppTextField(

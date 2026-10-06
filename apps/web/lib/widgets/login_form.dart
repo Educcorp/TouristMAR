@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
-import '../pages/admin/admin_dashboard_page.dart';
-import '../pages/business_home_page.dart';
-import '../pages/home_page.dart';
+import '../navegacion/sesion.dart';
 import '../platform/platform_services.dart';
 import '../services/auth_service.dart';
 import '../services/session_storage.dart';
@@ -10,9 +9,9 @@ import '../theme/app_theme.dart';
 import '../theme/breakpoints.dart';
 import 'app_button.dart';
 import 'app_text_field.dart';
+import 'tipo_negocio_field.dart';
 import 'google_logo.dart';
 import 'register_place_banner.dart';
-import 'session_guard.dart';
 import 'app_logo.dart';
 
 enum _Mode { login, register }
@@ -39,7 +38,9 @@ class LoginForm extends StatefulWidget {
 class _LoginFormState extends State<LoginForm> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
+  /// Texto del tipo "Otro" (lo que escribe el negocio).
   final _categoryController = TextEditingController();
+  String? _tipoNegocio;
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
@@ -74,64 +75,32 @@ class _LoginFormState extends State<LoginForm> {
     super.dispose();
   }
 
-  Future<void> _restoreSession() async {
-    final redirect = PlatformServices.googleLogin.consumeRedirectResult();
-
-    if (redirect.error != null) {
-      setState(() => _error = redirect.message ?? 'No se pudo iniciar sesión con Google');
+  /// La sesión ya se restauró al abrir la app ([Sesion.restaurar]); si
+  /// quien la tiene es un negocio en revisión o rechazado (no tiene panel),
+  /// aquí se le muestra su estado.
+  void _restoreSession() {
+    final user = Sesion.usuario.value;
+    if (user != null && rutaInicio(user) == null) {
+      _negocioEstado = user.negocios.isNotEmpty ? user.negocios.first : null;
+      _screen = _Screen.negocioEstado;
     }
-
-    final token = redirect.token ?? SessionStorage.token;
-
-    if (token == null) {
-      setState(() => _isRestoringSession = false);
-      return;
-    }
-
-    try {
-      final restoredUser = await widget.authService.getCurrentUser(token);
-      SessionStorage.saveToken(token);
-      if (!mounted) return;
-      _routeUser(restoredUser);
-      // No hacer más `setState` después de navegar: `pushReplacement` anima
-      // la transición y no desmonta esta pantalla al instante. Si acá se
-      // reactivara `_isRestoringSession` a false, este LoginForm se
-      // reconstruiría visible (mostrando el formulario completo) justo
-      // debajo de la ruta nueva mientras esta última termina de entrar —
-      // el parpadeo de vuelta al login antes de llegar al perfil.
-      return;
-    } catch (_) {
-      SessionStorage.clearToken();
-    }
-    if (mounted) setState(() => _isRestoringSession = false);
+    _isRestoringSession = false;
   }
 
-  /// Decide a dónde mandar al usuario según su rol y, si es negocio, su
-  /// estado de aprobación. Un negocio pendiente/rechazado nunca llega al
-  /// panel — se queda en esta misma pantalla mostrando su estado.
+  /// Abre la sesión y manda al usuario a la pantalla de su rol. Un negocio
+  /// pendiente/rechazado nunca llega al panel: se queda en esta misma
+  /// pantalla viendo su estado.
   void _routeUser(AuthUser user) {
-    if (user.isAdmin) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => SessionGuard(child: AdminDashboardPage(admin: user))),
-      );
+    Sesion.iniciar(user);
+    final ruta = rutaInicio(user);
+    if (ruta != null) {
+      context.go(ruta);
       return;
     }
-    if (user.isNegocio) {
-      if (user.negociosAprobados.isNotEmpty) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => SessionGuard(child: BusinessHomePage(user: user))),
-        );
-        return;
-      }
-      setState(() {
-        _negocioEstado = user.negocios.isNotEmpty ? user.negocios.first : null;
-        _screen = _Screen.negocioEstado;
-      });
-      return;
-    }
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => SessionGuard(child: HomePage(user: user))),
-    );
+    setState(() {
+      _negocioEstado = user.negocios.isNotEmpty ? user.negocios.first : null;
+      _screen = _Screen.negocioEstado;
+    });
   }
 
   bool _isGoogleSigningIn = false;
@@ -171,7 +140,7 @@ class _LoginFormState extends State<LoginForm> {
               _passwordController.text,
               _nameController.text,
               rol: _isBusiness ? 'negocio' : 'turista',
-              categoria: _isBusiness ? _categoryController.text : null,
+              categoria: _isBusiness ? valorTipoNegocio(_tipoNegocio, _categoryController) : null,
             );
       SessionStorage.saveToken(response.token);
       _routeUser(response.user);
@@ -189,7 +158,7 @@ class _LoginFormState extends State<LoginForm> {
   }
 
   void _logout() {
-    SessionStorage.clearToken();
+    Sesion.cerrar();
     setState(() {
       _negocioEstado = null;
       _screen = _Screen.credentials;
@@ -414,12 +383,10 @@ class _LoginFormState extends State<LoginForm> {
                   ),
                   const SizedBox(height: 20),
                   if (_isBusiness) ...[
-                    AppTextField(
-                      fieldKey: const ValueKey('category-field'),
-                      label: 'Categoría',
-                      icon: Icons.local_offer_outlined,
-                      controller: _categoryController,
-                      hintText: 'Ej. Playa · Restaurante · Mirador',
+                    TipoNegocioField(
+                      seleccionado: _tipoNegocio,
+                      onChanged: (v) => setState(() => _tipoNegocio = v),
+                      otroController: _categoryController,
                       accentColor: accentColor,
                     ),
                     const SizedBox(height: 20),

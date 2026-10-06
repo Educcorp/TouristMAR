@@ -5,6 +5,10 @@ import {
   listNegocios,
   approveNegocio,
   rejectNegocio,
+  updateNegocioUbicacion,
+  createLugar,
+  updateLugar,
+  deleteLugar,
   listUsers,
   updateUserActive,
   listAdminAccounts,
@@ -23,6 +27,11 @@ adminRouter.get('/negocios', listNegocios)
 adminRouter.get('/negocios/pendientes', listPendingNegocios)
 adminRouter.post('/negocios/:negocioId/aprobar', approveNegocio)
 adminRouter.post('/negocios/:negocioId/rechazar', rejectNegocio)
+adminRouter.put('/negocios/:negocioId/ubicacion', updateNegocioUbicacion)
+adminRouter.patch('/negocios/:negocioId', updateLugar)
+adminRouter.delete('/negocios/:negocioId', deleteLugar)
+// Lugar sin dueño (lo registra el admin; queda a nombre del super admin).
+adminRouter.post('/lugares', createLugar)
 
 adminRouter.get('/users', listUsers)
 adminRouter.patch('/users/:userId/activo', updateUserActive)

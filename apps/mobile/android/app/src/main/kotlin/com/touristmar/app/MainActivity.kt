@@ -15,12 +15,13 @@ import io.flutter.plugin.common.MethodChannel
  * actividad sin perder la sesión ni la pantalla de Flutter.
  *
  * Canal "touristmar/ar" — contraparte en lib/ar/unity_experiencias_launcher.dart.
- * Unity lee los extras "escena" y "parametro" (ar-module: ParametrosApp.cs).
+ * Unity lee los extras "escena", "parametro" y "apiBaseUrl" (ar-module:
+ * ParametrosApp.cs y Recorrido/VisorRecorrido360.cs).
  */
 class MainActivity : FlutterActivity() {
     private var pendiente: Pendiente? = null
 
-    private class Pendiente(val escena: String, val parametro: String, val result: MethodChannel.Result)
+    private class Pendiente(val escena: String, val parametro: String, val apiBaseUrl: String, val result: MethodChannel.Result)
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -30,6 +31,7 @@ class MainActivity : FlutterActivity() {
                 "abrir" -> abrir(
                     call.argument<String>("escena") ?: "marcadores",
                     call.argument<String>("parametro") ?: "",
+                    call.argument<String>("apiBaseUrl") ?: "",
                     result,
                 )
                 else -> result.notImplemented()
@@ -51,22 +53,22 @@ class MainActivity : FlutterActivity() {
         else -> arrayOf(Manifest.permission.CAMERA)
     }
 
-    private fun abrir(escena: String, parametro: String, result: MethodChannel.Result) {
+    private fun abrir(escena: String, parametro: String, apiBaseUrl: String, result: MethodChannel.Result) {
         if (!unityIncluido()) {
             result.error("no_disponible", "Esta versión de la app no incluye el módulo de realidad aumentada.", null)
             return
         }
         val faltan = permisosPara(escena).filter { checkSelfPermission(it) != PackageManager.PERMISSION_GRANTED }
         if (faltan.isEmpty()) {
-            lanzarUnity(escena, parametro, result)
+            lanzarUnity(escena, parametro, apiBaseUrl, result)
             return
         }
         pendiente?.result?.error("cancelado", "Se pidió abrir otra experiencia.", null)
-        pendiente = Pendiente(escena, parametro, result)
+        pendiente = Pendiente(escena, parametro, apiBaseUrl, result)
         requestPermissions(faltan.toTypedArray(), PERMISOS)
     }
 
-    private fun lanzarUnity(escena: String, parametro: String, result: MethodChannel.Result) {
+    private fun lanzarUnity(escena: String, parametro: String, apiBaseUrl: String, result: MethodChannel.Result) {
         if (escena == "geo") {
             val gps = getSystemService(LOCATION_SERVICE) as LocationManager
             if (!gps.isProviderEnabled(LocationManager.GPS_PROVIDER) && !gps.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
@@ -77,7 +79,8 @@ class MainActivity : FlutterActivity() {
         startActivity(
             Intent().setClassName(this, UNITY_ACTIVITY)
                 .putExtra("escena", escena)
-                .putExtra("parametro", parametro),
+                .putExtra("parametro", parametro)
+                .putExtra("apiBaseUrl", apiBaseUrl),
         )
         result.success(null)
     }
@@ -93,7 +96,7 @@ class MainActivity : FlutterActivity() {
                 p.result.error("sin_permiso", "Para ver la realidad aumentada necesitas permitir el uso de la cámara.", null)
             Manifest.permission.ACCESS_FINE_LOCATION in negados && Manifest.permission.ACCESS_COARSE_LOCATION in negados ->
                 p.result.error("sin_permiso", "Para la realidad aumentada por ubicación necesitas permitir el acceso a tu ubicación.", null)
-            else -> lanzarUnity(p.escena, p.parametro, p.result)
+            else -> lanzarUnity(p.escena, p.parametro, p.apiBaseUrl, p.result)
         }
     }
 

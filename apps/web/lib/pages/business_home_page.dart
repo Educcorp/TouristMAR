@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../models/business_profile.dart';
+import '../navegacion/rutas.dart';
+import '../navegacion/sesion.dart';
 import '../services/auth_service.dart';
 import '../widgets/business/business_shell.dart';
 import '../widgets/themed_builder.dart';
@@ -8,7 +11,6 @@ import 'business_dashboard_page.dart';
 import 'business_experiencias_page.dart';
 import 'business_profile_page.dart';
 import 'business_reviews_page.dart';
-import 'business_suggest_page.dart';
 
 /// Host del panel de empresa: aloja [BusinessShell] y decide qué contenido
 /// mostrar en el área central según la sección elegida y el negocio
@@ -17,45 +19,45 @@ import 'business_suggest_page.dart';
 class BusinessHomePage extends StatefulWidget {
   final AuthUser user;
 
-  const BusinessHomePage({super.key, required this.user});
+  /// Sección visible y negocio elegido (vienen de la URL:
+  /// `/empresa/<seccion>?negocio=<id>`).
+  final BusinessSection seccion;
+  final String? negocioId;
+
+  const BusinessHomePage({super.key, required this.user, this.seccion = BusinessSection.dashboard, this.negocioId});
 
   @override
   State<BusinessHomePage> createState() => _BusinessHomePageState();
 }
 
 class _BusinessHomePageState extends State<BusinessHomePage> {
-  late final List<BusinessProfile> _negocios = widget.user.negocios
-      .map((n) => BusinessProfile.fromNegocioInfo(widget.user, n))
-      .toList();
-  late String _selectedId = (_negocios.firstWhere(
-    (n) => n.verified,
-    orElse: () => _negocios.first,
-  )).id;
-  BusinessSection _section = BusinessSection.dashboard;
+  /// La misma lista para todas las pantallas de la empresa (ver [Sesion.negocios]).
+  List<BusinessProfile> get _negocios => Sesion.negocios;
+
+  String get _selectedId {
+    final pedido = widget.negocioId;
+    if (pedido != null && _negocios.any((n) => n.id == pedido)) return pedido;
+    return _negocios.firstWhere((n) => n.verified, orElse: () => _negocios.first).id;
+  }
+
+  BusinessSection get _section => widget.seccion;
 
   BusinessProfile get _selected => _negocios.firstWhere((n) => n.id == _selectedId);
 
-  void _selectNegocio(String id) {
-    setState(() {
-      _selectedId = id;
-      _section = BusinessSection.dashboard;
-    });
-  }
+  void _ir(BusinessSection section, {String? negocioId}) =>
+      context.go(rutaEmpresa(section, negocioId: negocioId ?? _selectedId));
 
-  void _selectSection(BusinessSection section) => setState(() => _section = section);
+  void _selectNegocio(String id) => _ir(BusinessSection.dashboard, negocioId: id);
+
+  void _selectSection(BusinessSection section) => _ir(section);
 
   void _refreshSelected() => setState(() {});
 
   Future<void> _openSuggestForm() async {
-    final created = await Navigator.of(context).push<BusinessProfile>(
-      MaterialPageRoute(builder: (_) => const BusinessSuggestPage()),
-    );
+    final created = await context.push<BusinessProfile>('/empresa/sugerir');
     if (created != null && mounted) {
-      setState(() {
-        _negocios.add(created);
-        _selectedId = created.id;
-        _section = BusinessSection.dashboard;
-      });
+      if (!_negocios.any((n) => n.id == created.id)) _negocios.add(created);
+      _ir(BusinessSection.dashboard, negocioId: created.id);
     }
   }
 
@@ -82,10 +84,7 @@ class _BusinessHomePageState extends State<BusinessHomePage> {
     final negocioId = notification.negocioId;
     if (negocioId == null) return;
     if (!_negocios.any((n) => n.id == negocioId)) return;
-    setState(() {
-      _selectedId = negocioId;
-      _section = BusinessSection.perfil;
-    });
+    _ir(BusinessSection.perfil, negocioId: negocioId);
   }
 
   Widget _buildBody() {

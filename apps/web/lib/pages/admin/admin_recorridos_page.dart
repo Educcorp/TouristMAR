@@ -1,6 +1,7 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
+import '../../models/lugar.dart';
 import '../../services/auth_service.dart';
 import '../../services/recorridos_service.dart';
 import '../../services/session_storage.dart';
@@ -10,40 +11,66 @@ import '../../widgets/admin/ds_button.dart';
 import '../../widgets/admin/ds_card.dart';
 import '../../widgets/admin/ds_states.dart';
 import '../../widgets/app_text_field.dart';
+import '../../widgets/mapa/ubicacion_lugar.dart';
+import '../../widgets/recorrido360/visor_360.dart';
 
 /// Mismo límite que multer en recorridos.routes.ts.
 const _maxMb = 30;
 
 String _formatMb(int bytes) => '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
 
-/// Contenido de la sección "Recorridos 360°" embebido en [AdminShell]: alta,
-/// edición y baja de los recorridos y sus 3 fotos 360°. Lo que se
-/// guarda aquí lo descarga Unity desde `GET /api/recorridos`, sin publicar
-/// una versión nueva de la app.
-class AdminRecorridosPage extends StatefulWidget {
-  final AuthService authService;
-  final RecorridosService recorridosService;
-
-  AdminRecorridosPage({super.key, AuthService? authService, RecorridosService? recorridosService})
-      : authService = authService ?? AuthService(),
-        recorridosService = recorridosService ?? RecorridosService();
-
-  @override
-  State<AdminRecorridosPage> createState() => _AdminRecorridosPageState();
+/// Normaliza un ángulo a -180…180 (el rango que acepta el backend).
+double _normalizarYaw(double grados) {
+  final y = ((grados + 180) % 360 + 360) % 360 - 180;
+  return double.parse(y.toStringAsFixed(1));
 }
 
-class _AdminRecorridosPageState extends State<AdminRecorridosPage> {
+/// Ordena "escena_2.jpg" antes que "escena_10.jpg" (las apps de captura
+/// numeran así las fotos).
+int _compararNatural(String a, String b) {
+  final partes = RegExp(r'\d+|\D+');
+  final pa = partes.allMatches(a.toLowerCase()).map((m) => m[0]!).toList();
+  final pb = partes.allMatches(b.toLowerCase()).map((m) => m[0]!).toList();
+  for (var i = 0; i < pa.length && i < pb.length; i++) {
+    final na = int.tryParse(pa[i]);
+    final nb = int.tryParse(pb[i]);
+    final c = na != null && nb != null ? na.compareTo(nb) : pa[i].compareTo(pb[i]);
+    if (c != 0) return c;
+  }
+  return pa.length.compareTo(pb.length);
+}
+
+/// Sección "Recorrido 360°" de un lugar (dentro de "Mapa y RA" →
+/// `/admin/mapa/lugar/<id>`): los recorridos de ese lugar, el formulario para
+/// registrar uno nuevo y, al abrir uno, su editor de escenarios (visor 360°,
+/// fotos y flechas). Lo que se guarda aquí lo ve el turista al tocar "Ver en
+/// 360°" en el mapa o en la ficha del lugar: en el teléfono lo abre Unity
+/// (`GET /api/recorridos`) y en la web el visor de Flutter.
+class RecorridosLugarSection extends StatefulWidget {
+  final NegocioSummary lugar;
+  final RecorridosService recorridosService;
+
+  /// Avisa que cambió algo (para refrescar el resumen del lugar).
+  final VoidCallback? onCambio;
+
+  RecorridosLugarSection({super.key, required this.lugar, RecorridosService? recorridosService, this.onCambio})
+      : recorridosService = recorridosService ?? RecorridosService();
+
+  @override
+  State<RecorridosLugarSection> createState() => _RecorridosLugarSectionState();
+}
+
+class _RecorridosLugarSectionState extends State<RecorridosLugarSection> {
   List<Recorrido360> _recorridos = [];
-  List<NegocioSummary> _negocios = [];
   bool _loading = true;
   String? _error;
   final Set<String> _busy = {};
 
-  // Formulario de datos: abierto para alta (`_editing == null`) o edición.
+  // Formulario: abierto para alta (`_editing == null`) o edición.
   bool _showForm = false;
   Recorrido360? _editing;
 
-  /// Recorrido cuyas escenas se están editando (vista de detalle).
+  /// Recorrido cuyos escenarios se están editando.
   String? _abiertoId;
 
   Recorrido360? get _abierto {
@@ -52,6 +79,9 @@ class _AdminRecorridosPageState extends State<AdminRecorridosPage> {
     }
     return null;
   }
+
+  Coordenadas? get _pinLugar =>
+      widget.lugar.tieneUbicacion ? Coordenadas(widget.lugar.latitud!, widget.lugar.longitud!) : null;
 
   @override
   void initState() {
@@ -67,18 +97,9 @@ class _AdminRecorridosPageState extends State<AdminRecorridosPage> {
       _error = null;
     });
     try {
-      final results = await Future.wait([
-        widget.recorridosService.listRecorridos(token),
-        widget.authService.adminListNegocios(token),
-      ]);
+      final todos = await widget.recorridosService.listRecorridos(token);
       if (!mounted) return;
-      setState(() {
-        _recorridos = results[0] as List<Recorrido360>;
-        // Solo negocios aprobados: el endpoint público oculta los recorridos
-        // de negocios pendientes/rechazados.
-        _negocios = (results[1] as List<NegocioSummary>).where((n) => n.aprobado).toList()
-          ..sort((a, b) => a.nombre.toLowerCase().compareTo(b.nombre.toLowerCase()));
-      });
+      setState(() => _recorridos = todos.where((r) => r.negocioId == widget.lugar.id).toList());
     } catch (err) {
       if (!mounted) return;
       setState(() => _error = err is AuthError ? err.message : 'No se pudo conectar con el servidor');
@@ -106,6 +127,7 @@ class _AdminRecorridosPageState extends State<AdminRecorridosPage> {
         _recorridos = [updated, ..._recorridos];
       }
     });
+    widget.onCambio?.call();
   }
 
   void _onSaved(Recorrido360 saved) {
@@ -114,7 +136,7 @@ class _AdminRecorridosPageState extends State<AdminRecorridosPage> {
     setState(() {
       _showForm = false;
       _editing = null;
-      // Recién creado: directo a subir sus fotos.
+      // Recién creado: directo a subir sus escenarios.
       if (esNuevo) _abiertoId = saved.id;
     });
   }
@@ -136,7 +158,7 @@ class _AdminRecorridosPageState extends State<AdminRecorridosPage> {
     final confirmed = await _confirmar(
       context,
       titulo: 'Eliminar recorrido',
-      mensaje: '"${recorrido.titulo}" y sus fotos dejarán de estar en la app. '
+      mensaje: '"${recorrido.titulo}" y sus ${recorrido.escenas.length} escenarios dejarán de estar en la app. '
           'Si solo quieres ocultarlo un tiempo, mejor desactívalo.',
     );
     if (!confirmed) return;
@@ -152,6 +174,7 @@ class _AdminRecorridosPageState extends State<AdminRecorridosPage> {
         if (_editing?.id == recorrido.id) _closeForm();
         if (_abiertoId == recorrido.id) _abiertoId = null;
       });
+      widget.onCambio?.call();
     } catch (err) {
       _snack(err is AuthError ? err.message : 'No se pudo eliminar el recorrido');
     } finally {
@@ -167,113 +190,87 @@ class _AdminRecorridosPageState extends State<AdminRecorridosPage> {
   @override
   Widget build(BuildContext context) {
     final abierto = _abierto;
-    return RefreshIndicator(
-      onRefresh: _load,
-      color: AppColors.adminViolet,
-      child: SingleChildScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(AppSpacing.xl),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 960),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (abierto != null && !_showForm)
-                _EscenasEditor(
-                  key: ValueKey(abierto.id),
-                  recorrido: abierto,
-                  service: widget.recorridosService,
-                  onChanged: _replace,
-                  onBack: () => setState(() => _abiertoId = null),
-                  onEditarDatos: () => _openForm(abierto),
-                )
-              else
-                ..._buildLista(),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  List<Widget> _buildLista() {
-    final publicados = _recorridos.where((r) => r.publicado).length;
-    return [
-      Wrap(
-        alignment: WrapAlignment.spaceBetween,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        spacing: AppSpacing.lg,
-        runSpacing: AppSpacing.md,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Recorridos 360°', style: AppTypography.h1),
-              const SizedBox(height: 4),
-              Text(
-                _loading
-                    ? 'Fotos 360° que el turista recorre desde la app.'
-                    : '${_recorridos.length} recorridos · $publicados visibles en la app',
-                style: AppTypography.body,
-              ),
-            ],
-          ),
-          if (!_showForm)
-            DsButton(
-              label: 'Nuevo recorrido 360°',
-              icon: Icons.add,
-              variant: DsButtonVariant.primary,
-              accent: AppColors.adminViolet,
-              onPressed: _loading ? null : () => _openForm(),
-            ),
-        ],
-      ),
-      if (_showForm) ...[
-        const SizedBox(height: AppSpacing.xl),
-        _RecorridoForm(
-          key: ValueKey(_editing?.id ?? 'nuevo'),
-          recorrido: _editing,
-          negocios: _negocios,
-          service: widget.recorridosService,
-          onCancel: _closeForm,
-          onSaved: _onSaved,
-        ),
-      ],
-      const SizedBox(height: AppSpacing.xl),
-      _buildList(),
-    ];
-  }
-
-  Widget _buildList() {
-    if (_loading) return DsLoadingState(accent: AppColors.adminViolet);
-    if (_error != null) return DsErrorState(message: _error!, onRetry: _load);
-    if (_recorridos.isEmpty) {
-      return const DsEmptyState(
-        icon: Icons.threesixty,
-        title: 'Sin recorridos 360°',
-        subtitle: 'Crea el primero y sube sus 3 fotos 360° para que el turista pueda recorrer el lugar.',
+    if (abierto != null && !_showForm) {
+      return _EscenariosEditor(
+        key: ValueKey(abierto.id),
+        recorrido: abierto,
+        lugarNombre: widget.lugar.nombre,
+        service: widget.recorridosService,
+        onChanged: _replace,
+        onBack: () => setState(() => _abiertoId = null),
+        onEditarDatos: () => _openForm(abierto),
       );
     }
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        for (final r in _recorridos)
-          Padding(
-            padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-            child: _RecorridoRow(
-              recorrido: r,
-              busy: _busy.contains(r.id),
-              onToggle: (v) => _toggleActivo(r, v),
-              onAbrir: () => setState(() => _abiertoId = r.id),
-              onEdit: () => _openForm(r),
-              onDelete: () => _delete(r),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                _loading
+                    ? ''
+                    : _recorridos.isEmpty
+                        ? 'Sin recorridos.'
+                        : '${_recorridos.length} ${_recorridos.length == 1 ? 'recorrido' : 'recorridos'} · '
+                            '${_recorridos.where((r) => r.publicado).length} visibles en la app',
+                style: AppTypography.bodySmall,
+              ),
             ),
+            if (!_showForm)
+              DsButton(
+                label: 'Nuevo recorrido',
+                icon: Icons.add,
+                size: DsButtonSize.sm,
+                variant: DsButtonVariant.primary,
+                accent: AppColors.adminViolet,
+                onPressed: _loading ? null : () => _openForm(),
+              ),
+          ],
+        ),
+        if (_showForm) ...[
+          const SizedBox(height: AppSpacing.md),
+          _RecorridoForm(
+            key: ValueKey(_editing?.id ?? 'nuevo'),
+            recorrido: _editing,
+            lugar: widget.lugar,
+            pinLugar: _pinLugar,
+            service: widget.recorridosService,
+            onCancel: _closeForm,
+            onSaved: _onSaved,
           ),
+        ],
+        const SizedBox(height: AppSpacing.md),
+        if (_loading)
+          DsLoadingState(accent: AppColors.adminViolet)
+        else if (_error != null)
+          DsErrorState(message: _error!, onRetry: _load)
+        else
+          for (final r in _recorridos)
+            Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+              child: _RecorridoRow(
+                recorrido: r,
+                sinUbicacion: !r.tieneUbicacion,
+                busy: _busy.contains(r.id),
+                onToggle: (v) => _toggleActivo(r, v),
+                onAbrir: () => setState(() => _abiertoId = r.id),
+                onEdit: () => _openForm(r),
+                onDelete: () => _delete(r),
+              ),
+            ),
       ],
     );
   }
 }
 
-Future<bool> _confirmar(BuildContext context, {required String titulo, required String mensaje}) async {
+Future<bool> _confirmar(
+  BuildContext context, {
+  required String titulo,
+  required String mensaje,
+  String accion = 'Eliminar',
+  bool peligro = true,
+}) async {
   final confirmed = await showDialog<bool>(
     context: context,
     builder: (context) => AlertDialog(
@@ -287,7 +284,7 @@ Future<bool> _confirmar(BuildContext context, {required String titulo, required 
         ),
         TextButton(
           onPressed: () => Navigator.of(context).pop(true),
-          child: Text('Eliminar', style: TextStyle(color: AppColors.errorRed)),
+          child: Text(accion, style: TextStyle(color: peligro ? AppColors.errorRed : AppColors.adminViolet)),
         ),
       ],
     ),
@@ -297,7 +294,10 @@ Future<bool> _confirmar(BuildContext context, {required String titulo, required 
 
 class _RecorridoForm extends StatefulWidget {
   final Recorrido360? recorrido;
-  final List<NegocioSummary> negocios;
+
+  /// El lugar al que pertenece el recorrido (no se elige: es el de la página).
+  final NegocioSummary lugar;
+  final Coordenadas? pinLugar;
   final RecorridosService service;
   final VoidCallback onCancel;
   final ValueChanged<Recorrido360> onSaved;
@@ -305,7 +305,8 @@ class _RecorridoForm extends StatefulWidget {
   const _RecorridoForm({
     super.key,
     required this.recorrido,
-    required this.negocios,
+    required this.lugar,
+    required this.pinLugar,
     required this.service,
     required this.onCancel,
     required this.onSaved,
@@ -320,7 +321,11 @@ class _RecorridoFormState extends State<_RecorridoForm> {
   late final _nombre = TextEditingController(text: widget.recorrido?.nombre);
   late final _titulo = TextEditingController(text: widget.recorrido?.titulo);
   late final _texto = TextEditingController(text: widget.recorrido?.texto);
-  late String? _negocioId = widget.recorrido?.negocioId;
+  /// Pin propio del recorrido. Si todavía no tiene, toma el del lugar (se
+  /// puede cambiar: p. ej. la entrada del recorrido no es la del negocio).
+  late Coordenadas? _ubicacion = widget.recorrido?.tieneUbicacion ?? false
+      ? Coordenadas(widget.recorrido!.latitud!, widget.recorrido!.longitud!)
+      : widget.pinLugar;
 
   bool _saving = false;
   String? _error;
@@ -351,14 +356,17 @@ class _RecorridoFormState extends State<_RecorridoForm> {
               'nombre': nombre,
               'titulo': _titulo.text.trim(),
               'texto': _texto.text.trim(),
-              'negocioId': _negocioId,
+              'latitud': _ubicacion?.lat,
+              'longitud': _ubicacion?.lng,
             })
           : await widget.service.createRecorrido(
               token,
               nombre: nombre,
               titulo: _titulo.text.trim(),
               texto: _texto.text.trim(),
-              negocioId: _negocioId,
+              negocioId: widget.lugar.id,
+              latitud: _ubicacion?.lat,
+              longitud: _ubicacion?.lng,
             );
       if (!mounted) return;
       widget.onSaved(saved);
@@ -384,61 +392,20 @@ class _RecorridoFormState extends State<_RecorridoForm> {
               style: AppTypography.caption.copyWith(color: AppColors.adminViolet, letterSpacing: 1.5),
             ),
             const SizedBox(height: AppSpacing.md),
-            Text('Sitio', style: TextStyle(color: AppColors.slate300, fontSize: 14)),
-            const SizedBox(height: 8),
-            DropdownButtonFormField<String?>(
-              initialValue: widget.negocios.any((n) => n.id == _negocioId) ? _negocioId : null,
-              isExpanded: true,
-              dropdownColor: AppColors.panelNavySoft,
-              style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
-              decoration: InputDecoration(
-                prefixIcon: Icon(Icons.place_outlined, size: 18, color: AppColors.slate500),
-                filled: true,
-                fillColor: AppColors.panelNavySoft,
-                contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide(color: AppColors.overlay(0.1)),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide(color: AppColors.adminViolet),
-                ),
-              ),
-              items: [
-                const DropdownMenuItem<String?>(value: null, child: Text('General del destino (sin negocio)')),
-                ...widget.negocios.map(
-                  (n) => DropdownMenuItem<String?>(value: n.id, child: Text(n.nombre, overflow: TextOverflow.ellipsis)),
-                ),
-              ],
-              onChanged: _saving ? null : (v) => setState(() => _negocioId = v),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Un negocio aprobado (su hotel, su restaurante) o un lugar general como un mirador o la bahía.',
-              style: AppTypography.caption,
-            ),
-            const SizedBox(height: AppSpacing.md),
             AppTextField(
               label: 'Identificador del recorrido',
               icon: Icons.label_outline,
               controller: _nombre,
-              hintText: 'Ej. cerro_vigia_360',
+              hintText: 'Ej. playa_audiencia_360',
               accentColor: AppColors.adminViolet,
               validator: _validarNombre,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Único. Es el "nombre" con el que la app de RA identifica este recorrido: '
-              'solo minúsculas, números, _ o -.',
-              style: AppTypography.caption,
             ),
             const SizedBox(height: AppSpacing.md),
             AppTextField(
               label: 'Título que verá el turista',
               icon: Icons.title,
               controller: _titulo,
-              hintText: 'Ej. Cerro del Vigía',
+              hintText: 'Ej. Playa La Audiencia',
               accentColor: AppColors.adminViolet,
               validator: (v) => _required(v, 80),
             ),
@@ -448,17 +415,17 @@ class _RecorridoFormState extends State<_RecorridoForm> {
               icon: Icons.notes,
               controller: _texto,
               maxLines: 4,
-              hintText: 'Descripción del recorrido (máx. 500 caracteres)',
+              hintText: 'Ej. Recorre la playa desde el malecón hasta las palapas.',
               accentColor: AppColors.adminViolet,
               validator: (v) => _required(v, 500),
             ),
-            if (!_isEdit) ...[
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                'Después de crearlo subirás sus 3 fotos 360° (Foto 1, Foto 2 y Foto 3).',
-                style: AppTypography.caption,
-              ),
-            ],
+            const SizedBox(height: AppSpacing.md),
+            CampoCoordenadas(
+              lugar: _titulo.text.trim().isEmpty ? 'el recorrido' : _titulo.text.trim(),
+              inicial: _ubicacion,
+              habilitado: !_saving,
+              onChanged: (c) => _ubicacion = c,
+            ),
             if (_error != null) ...[
               const SizedBox(height: AppSpacing.sm),
               Text(_error!, style: TextStyle(color: AppColors.errorRed, fontSize: 13)),
@@ -471,7 +438,7 @@ class _RecorridoFormState extends State<_RecorridoForm> {
               children: [
                 DsButton(label: 'Cancelar', variant: DsButtonVariant.ghost, onPressed: _saving ? null : widget.onCancel),
                 DsButton(
-                  label: _saving ? 'Guardando...' : (_isEdit ? 'Guardar cambios' : 'Crear y subir fotos'),
+                  label: _saving ? 'Guardando...' : (_isEdit ? 'Guardar cambios' : 'Crear y subir escenarios'),
                   variant: DsButtonVariant.primary,
                   accent: AppColors.adminViolet,
                   onPressed: _saving ? null : _save,
@@ -505,6 +472,7 @@ class _RecorridoFormState extends State<_RecorridoForm> {
 
 class _RecorridoRow extends StatelessWidget {
   final Recorrido360 recorrido;
+  final bool sinUbicacion;
   final bool busy;
   final ValueChanged<bool> onToggle;
   final VoidCallback onAbrir;
@@ -513,6 +481,7 @@ class _RecorridoRow extends StatelessWidget {
 
   const _RecorridoRow({
     required this.recorrido,
+    required this.sinUbicacion,
     required this.busy,
     required this.onToggle,
     required this.onAbrir,
@@ -524,6 +493,7 @@ class _RecorridoRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final r = recorrido;
     final portada = r.escenas.isEmpty ? null : r.escenas.first.miniaturaUrl;
+    final sinFlechas = r.escenas.length > 1 ? r.escenas.where((e) => e.enlaces.isEmpty).length : 0;
     return Opacity(
       opacity: r.activo ? 1 : 0.6,
       child: DsCard(
@@ -569,15 +539,18 @@ class _RecorridoRow extends StatelessWidget {
                         icon: r.negocioNombre != null ? Icons.apartment_outlined : Icons.public,
                       ),
                       DsBadge(
-                        text: '${r.escenas.length} de $fotosPorRecorrido fotos',
-                        tone: r.escenas.length == fotosPorRecorrido ? BadgeTone.success : BadgeTone.warning,
+                        text: '${r.escenas.length} ${r.escenas.length == 1 ? 'escenario' : 'escenarios'}',
+                        tone: r.escenas.isEmpty ? BadgeTone.warning : BadgeTone.success,
                         icon: Icons.photo_library_outlined,
                       ),
                       if (r.escenas.isNotEmpty)
                         DsBadge(text: _formatMb(r.pesoTotalBytes), tone: BadgeTone.neutral, icon: Icons.download_outlined),
+                      if (sinFlechas > 0)
+                        DsBadge(text: '$sinFlechas sin flechas', tone: BadgeTone.warning, icon: Icons.alt_route),
+                      if (sinUbicacion) const DsBadge(text: 'Sin coordenadas', tone: BadgeTone.warning, icon: Icons.location_off_outlined),
                       if (!r.activo) const DsBadge(text: 'Oculto', tone: BadgeTone.warning),
-                      if (r.activo && r.escenas.length < fotosPorRecorrido)
-                        const DsBadge(text: 'Faltan fotos: no aparece en la app', tone: BadgeTone.warning),
+                      if (r.activo && r.escenas.isEmpty)
+                        const DsBadge(text: 'Sin escenarios', tone: BadgeTone.warning),
                     ],
                   ),
                 ],
@@ -605,9 +578,9 @@ class _RecorridoRow extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       IconButton(
-                        tooltip: 'Fotos del recorrido',
+                        tooltip: 'Escenarios y flechas',
                         onPressed: onAbrir,
-                        icon: Icon(Icons.photo_library_outlined, size: 18, color: AppColors.adminViolet),
+                        icon: Icon(Icons.threesixty, size: 18, color: AppColors.adminViolet),
                       ),
                       IconButton(
                         tooltip: 'Editar datos',
@@ -630,19 +603,21 @@ class _RecorridoRow extends StatelessWidget {
   }
 }
 
-/// Vista de detalle de un recorrido: sus 3 casillas de foto. Cada foto se
-/// sube en su casilla, así el orden (Foto 1 → 2 → 3) no depende de en qué
-/// orden se suban.
-class _EscenasEditor extends StatefulWidget {
+/// Vista de detalle de un recorrido: el visor 360° (igual al que verá el
+/// turista) para revisar cada escenario y colocar sus flechas, y la
+/// cuadrícula de escenarios para subir, ordenar y elegir cuál editar.
+class _EscenariosEditor extends StatefulWidget {
   final Recorrido360 recorrido;
+  final String? lugarNombre;
   final RecorridosService service;
   final ValueChanged<Recorrido360> onChanged;
   final VoidCallback onBack;
   final VoidCallback onEditarDatos;
 
-  const _EscenasEditor({
+  const _EscenariosEditor({
     super.key,
     required this.recorrido,
+    required this.lugarNombre,
     required this.service,
     required this.onChanged,
     required this.onBack,
@@ -650,28 +625,169 @@ class _EscenasEditor extends StatefulWidget {
   });
 
   @override
-  State<_EscenasEditor> createState() => _EscenasEditorState();
+  State<_EscenariosEditor> createState() => _EscenariosEditorState();
 }
 
-class _EscenasEditorState extends State<_EscenasEditor> {
-  /// Casillas (1–3) con una subida o un borrado en curso.
-  final Set<int> _busy = {};
-  final Map<int, String> _errores = {};
+class _EscenariosEditorState extends State<_EscenariosEditor> {
+  final _visor = Visor360Controller();
+  final _tituloEscena = TextEditingController();
+  final _descripcionEscena = TextEditingController();
+
+  String? _selId;
+  /// Modo "Colocar flechas": tocar la foto agrega una flecha y tocar una
+  /// flecha la edita. Si no, el visor se comporta como lo verá el turista.
+  bool _colocando = false;
+  bool _ocupado = false;
+
+  // Subida de varios escenarios a la vez.
+  int _subidaTotal = 0;
+  int _subidaHechas = 0;
+  String? _subidaArchivo;
+  final List<String> _erroresSubida = [];
 
   Recorrido360 get _r => widget.recorrido;
 
-  void _conFoto(int posicion, Escena360? escena) {
+  Escena360? get _sel {
+    for (final e in _r.escenas) {
+      if (e.id == _selId) return e;
+    }
+    return _r.escenas.isEmpty ? null : _r.escenas.first;
+  }
+
+  bool get _subiendo => _subidaTotal > 0 && _subidaHechas < _subidaTotal;
+
+  @override
+  void initState() {
+    super.initState();
+    _cargarCampos();
+  }
+
+  @override
+  void dispose() {
+    _tituloEscena.dispose();
+    _descripcionEscena.dispose();
+    super.dispose();
+  }
+
+  void _cargarCampos() {
+    final e = _sel;
+    _tituloEscena.text = e?.titulo ?? '';
+    _descripcionEscena.text = e?.descripcion ?? '';
+  }
+
+  void _seleccionar(String id) {
+    if (id == _sel?.id) return;
+    setState(() => _selId = id);
+    _cargarCampos();
+  }
+
+  String? get _token => SessionStorage.token;
+
+  void _snack(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  /// Reemplaza (o agrega) un escenario en el recorrido del padre.
+  void _conEscena(Escena360 escena) {
     final escenas = [
       for (final e in _r.escenas)
-        if (e.posicion != posicion) e,
-      if (escena != null) escena,
+        if (e.posicion != escena.posicion) e,
+      escena,
     ]..sort((a, b) => a.posicion.compareTo(b.posicion));
     widget.onChanged(_r.copyWith(escenas: escenas));
   }
 
-  Future<void> _subir(int posicion) async {
-    // Como stream (no `withData`): el navegador no carga la foto completa
-    // (hasta 30 MB) en memoria, la va leyendo mientras la sube.
+  Future<void> _recargar() async {
+    final token = _token;
+    if (token == null) return;
+    final lista = await widget.service.listRecorridos(token);
+    for (final r in lista) {
+      if (r.id == _r.id) widget.onChanged(r);
+    }
+  }
+
+  Future<void> _accion(Future<void> Function(String token) fn, String error) async {
+    final token = _token;
+    if (token == null) return;
+    setState(() => _ocupado = true);
+    try {
+      await fn(token);
+    } catch (err) {
+      _snack(err is AuthError ? err.message : error);
+    } finally {
+      if (mounted) setState(() => _ocupado = false);
+    }
+  }
+
+  // --- Subida -------------------------------------------------------------
+
+  Future<void> _subirVarios() async {
+    final libres = [
+      for (var p = 1; p <= maxEscenarios; p++)
+        if (_r.foto(p) == null) p,
+    ];
+    if (libres.isEmpty) {
+      _snack('El recorrido ya tiene los $maxEscenarios escenarios. Quita alguno para subir otro.');
+      return;
+    }
+    // Como stream (no `withData`): el navegador no carga todas las fotos en
+    // memoria a la vez, las va leyendo mientras las sube.
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['jpg', 'jpeg', 'png'],
+      allowMultiple: true,
+      withReadStream: true,
+    );
+    if (result == null || result.files.isEmpty) return;
+    final archivos = [...result.files]..sort((a, b) => _compararNatural(a.name, b.name));
+    if (archivos.length > libres.length) {
+      _snack('Elegiste ${archivos.length} fotos pero solo quedan ${libres.length} lugares (máx. $maxEscenarios).');
+      return;
+    }
+    final token = _token;
+    if (token == null) return;
+
+    setState(() {
+      _subidaTotal = archivos.length;
+      _subidaHechas = 0;
+      _erroresSubida.clear();
+    });
+    String? primeraNueva;
+    for (var i = 0; i < archivos.length; i++) {
+      final file = archivos[i];
+      final posicion = libres[i];
+      if (!mounted) return;
+      setState(() => _subidaArchivo = file.name);
+      try {
+        if (file.size > _maxMb * 1024 * 1024) throw const AuthError('pesa más de $_maxMb MB');
+        if (file.readStream == null) throw const AuthError('no se pudo leer el archivo');
+        final escena = await widget.service.setEscena(
+          token,
+          _r.id,
+          posicion,
+          bytes: file.readStream!,
+          length: file.size,
+          filename: file.name,
+        );
+        if (!mounted) return;
+        _conEscena(escena);
+        primeraNueva ??= escena.id;
+      } catch (err) {
+        _erroresSubida.add('${file.name}: ${err is AuthError ? err.message : 'no se pudo subir'}');
+      }
+      if (mounted) setState(() => _subidaHechas = i + 1);
+    }
+    if (!mounted) return;
+    setState(() => _subidaArchivo = null);
+    if (_selId == null && primeraNueva != null) _seleccionar(primeraNueva);
+    final ok = archivos.length - _erroresSubida.length;
+    _snack(_erroresSubida.isEmpty
+        ? '$ok ${ok == 1 ? 'escenario subido' : 'escenarios subidos'}. Ahora conéctalos con flechas.'
+        : '$ok de ${archivos.length} subidos. Revisa los que fallaron.');
+  }
+
+  Future<void> _reemplazarFoto(Escena360 escena) async {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['jpg', 'jpeg', 'png'],
@@ -679,124 +795,166 @@ class _EscenasEditorState extends State<_EscenasEditor> {
     );
     final file = result?.files.single;
     if (file == null) return;
-    if (file.size > _maxMb * 1024 * 1024) {
-      setState(() => _errores[posicion] = 'La foto pesa más de $_maxMb MB');
+    if (file.size > _maxMb * 1024 * 1024 || file.readStream == null) {
+      _snack(file.readStream == null ? 'No se pudo leer el archivo' : 'La foto pesa más de $_maxMb MB');
       return;
     }
-    if (file.readStream == null) {
-      setState(() => _errores[posicion] = 'No se pudo leer el archivo');
-      return;
-    }
-
-    final token = SessionStorage.token;
-    if (token == null) return;
-    setState(() {
-      _busy.add(posicion);
-      _errores.remove(posicion);
-    });
-    try {
-      final escena = await widget.service.setEscena(
+    await _accion((token) async {
+      _conEscena(await widget.service.setEscena(
         token,
         _r.id,
-        posicion,
+        escena.posicion,
         bytes: file.readStream!,
         length: file.size,
         filename: file.name,
-      );
-      if (!mounted) return;
-      _conFoto(posicion, escena);
-    } catch (err) {
-      if (!mounted) return;
-      setState(() => _errores[posicion] = err is AuthError ? err.message : 'No se pudo subir la foto');
-    } finally {
-      if (mounted) setState(() => _busy.remove(posicion));
-    }
+      ));
+    }, 'No se pudo subir la foto');
   }
 
-  Future<void> _quitar(int posicion) async {
+  Future<void> _quitar(Escena360 escena) async {
+    final entradas = _r.escenas.where((e) => e.enlaces.any((l) => l.destino == escena.posicion)).length;
     final confirmed = await _confirmar(
       context,
-      titulo: 'Quitar Foto $posicion',
-      mensaje: 'Mientras falte esta foto, el recorrido no aparecerá en la app.',
+      titulo: 'Quitar "${escena.nombre}"',
+      mensaje: 'Se borra la foto y sus flechas'
+          '${entradas > 0 ? ', y también las $entradas flechas de otros escenarios que llevan a él' : ''}.',
     );
     if (!confirmed) return;
+    await _accion((token) async {
+      await widget.service.deleteEscena(token, _r.id, escena.posicion);
+      if (_selId == escena.id) _selId = null;
+      await _recargar();
+      _cargarCampos();
+    }, 'No se pudo quitar el escenario');
+  }
 
-    final token = SessionStorage.token;
-    if (token == null) return;
-    setState(() => _busy.add(posicion));
-    try {
-      await widget.service.deleteEscena(token, _r.id, posicion);
-      if (!mounted) return;
-      _conFoto(posicion, null);
-    } catch (err) {
-      if (!mounted) return;
-      setState(() => _errores[posicion] = err is AuthError ? err.message : 'No se pudo quitar la foto');
-    } finally {
-      if (mounted) setState(() => _busy.remove(posicion));
+  // --- Datos del escenario ------------------------------------------------
+
+  Future<void> _guardarDatos(Escena360 escena) async {
+    await _accion((token) async {
+      _conEscena(await widget.service.updateEscena(token, _r.id, escena.posicion, {
+        'titulo': _tituloEscena.text.trim(),
+        'descripcion': _descripcionEscena.text.trim(),
+      }));
+      _snack('Escenario guardado');
+    }, 'No se pudo guardar el escenario');
+  }
+
+  Future<void> _fijarVistaInicial(Escena360 escena) async {
+    final yaw = _normalizarYaw(_visor.yaw);
+    await _accion((token) async {
+      _conEscena(await widget.service.updateEscena(token, _r.id, escena.posicion, {'yawInicial': yaw}));
+      _snack('El turista entrará a "${escena.nombre}" mirando hacia aquí (${yaw.round()}°).');
+    }, 'No se pudo guardar la vista inicial');
+  }
+
+  // --- Flechas ------------------------------------------------------------
+
+  Future<void> _guardarFlechas(Escena360 escena, List<Enlace360> enlaces) async {
+    await _accion((token) async {
+      _conEscena(await widget.service.setEnlaces(token, _r.id, escena.posicion, enlaces));
+    }, 'No se pudieron guardar las flechas');
+  }
+
+  Future<void> _agregarFlecha(double yaw, double pitch) async {
+    final escena = _sel;
+    if (escena == null || _ocupado) return;
+    final ocupados = escena.enlaces.map((l) => l.destino).toSet();
+    final opciones = [
+      for (final e in _r.escenas)
+        if (e.posicion != escena.posicion && !ocupados.contains(e.posicion)) e,
+    ];
+    if (opciones.isEmpty) {
+      _snack(_r.escenas.length < 2
+          ? 'Sube al menos otro escenario para poder conectarlos.'
+          : 'Este escenario ya tiene flecha hacia todos los demás.');
+      return;
     }
+    final elegido = await showDialog<(int, String)>(
+      context: context,
+      builder: (_) => _DialogoFlecha(opciones: opciones),
+    );
+    if (elegido == null) return;
+    await _guardarFlechas(escena, [
+      ...escena.enlaces,
+      Enlace360(destino: elegido.$1, yaw: _normalizarYaw(yaw), pitch: double.parse(pitch.toStringAsFixed(1)), etiqueta: elegido.$2),
+    ]);
   }
 
-  void _verCompleta(Escena360 escena) {
-    // Solo aquí se descarga la foto grande (~1–2 MB), cuando se pide.
-    showDialog<void>(
+  Future<void> _editarFlecha(EnlaceVisor flecha) async {
+    final escena = _sel;
+    if (escena == null) return;
+    Escena360? destino;
+    for (final e in _r.escenas) {
+      if (e.id == flecha.destinoId) destino = e;
+    }
+    if (destino == null) return;
+    final enlace = escena.enlaces.firstWhere((l) => l.destino == destino!.posicion);
+    final res = await showDialog<_EdicionFlecha>(
       context: context,
-      builder: (context) => Dialog(
-        backgroundColor: AppColors.panelNavySoft,
-        insetPadding: const EdgeInsets.all(AppSpacing.lg),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.sm, AppSpacing.sm, 0),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      'Foto ${escena.posicion} — ${escena.ancho}×${escena.alto} · ${_formatMb(escena.pesoBytes)}',
-                      style: AppTypography.bodySmall,
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: Icon(Icons.close, color: AppColors.slate400),
-                  ),
-                ],
-              ),
-            ),
-            Flexible(
-              child: InteractiveViewer(
-                maxScale: 6,
-                child: AspectRatio(
-                  aspectRatio: 2,
-                  child: Image.network(
-                    escena.imagenUrl,
-                    fit: BoxFit.cover,
-                    loadingBuilder: (_, child, progress) => progress == null
-                        ? child
-                        : Center(child: CircularProgressIndicator(color: AppColors.adminViolet)),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
+      builder: (_) => _DialogoEditarFlecha(destino: destino!, etiqueta: enlace.etiqueta),
     );
+    if (res == null) return;
+    await _guardarFlechas(escena, [
+      for (final l in escena.enlaces)
+        if (l.destino != enlace.destino)
+          l
+        else if (!res.eliminar)
+          Enlace360(destino: l.destino, yaw: l.yaw, pitch: l.pitch, etiqueta: res.etiqueta),
+    ]);
   }
+
+  Future<void> _quitarFlecha(Escena360 escena, Enlace360 enlace) =>
+      _guardarFlechas(escena, [for (final l in escena.enlaces) if (l.destino != enlace.destino) l]);
+
+  /// Primera versión rápida de las flechas: cada escenario con el anterior
+  /// (atrás) y el siguiente (al frente, hacia su vista inicial). Las que ya
+  /// existen no se tocan; luego el admin acomoda cada flecha donde va.
+  Future<void> _conectarEnOrden() async {
+    final escenas = [..._r.escenas]..sort((a, b) => a.posicion.compareTo(b.posicion));
+    if (escenas.length < 2) {
+      _snack('Sube al menos dos escenarios para conectarlos.');
+      return;
+    }
+    final ok = await _confirmar(
+      context,
+      titulo: 'Conectar en orden',
+      mensaje: 'Se conectarán los escenarios en orden: 1 ↔ 2 ↔ 3 … ↔ ${escenas.length}.',
+      accion: 'Conectar',
+      peligro: false,
+    );
+    if (!ok) return;
+    await _accion((token) async {
+      for (var i = 0; i < escenas.length; i++) {
+        final e = escenas[i];
+        final existentes = e.enlaces.map((l) => l.destino).toSet();
+        final nuevas = <Enlace360>[
+          if (i + 1 < escenas.length && !existentes.contains(escenas[i + 1].posicion))
+            Enlace360(destino: escenas[i + 1].posicion, yaw: _normalizarYaw(e.yawInicial), pitch: -20),
+          if (i > 0 && !existentes.contains(escenas[i - 1].posicion))
+            Enlace360(destino: escenas[i - 1].posicion, yaw: _normalizarYaw(e.yawInicial + 180), pitch: -20),
+        ];
+        if (nuevas.isEmpty) continue;
+        _conEscena(await widget.service.setEnlaces(token, _r.id, e.posicion, [...e.enlaces, ...nuevas]));
+      }
+      _snack('Listo: revisa cada escenario y acomoda las flechas.');
+    }, 'No se pudieron conectar los escenarios');
+  }
+
+  // --- UI -----------------------------------------------------------------
 
   @override
   Widget build(BuildContext context) {
     final r = _r;
-    final ocupado = _busy.isNotEmpty;
-    final faltan = fotosPorRecorrido - r.escenas.length;
+    final bloqueado = _ocupado || _subiendo;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         TextButton.icon(
-          onPressed: ocupado ? null : widget.onBack,
+          onPressed: bloqueado ? null : widget.onBack,
           icon: Icon(Icons.arrow_back, size: 16, color: AppColors.slate300),
-          label: Text('Recorridos 360°', style: TextStyle(color: AppColors.slate300)),
+          label: Text('Recorridos', style: TextStyle(color: AppColors.slate300)),
         ),
         const SizedBox(height: AppSpacing.sm),
         Wrap(
@@ -811,198 +969,242 @@ class _EscenasEditorState extends State<_EscenasEditor> {
                 Text(r.titulo, style: AppTypography.h1),
                 const SizedBox(height: 4),
                 Text(
-                  '${r.nombre} · ${r.negocioNombre ?? 'General del destino'}'
-                  '${r.escenas.isEmpty ? '' : ' · ${_formatMb(r.pesoTotalBytes)} en total'}',
+                  '${r.nombre} · ${widget.lugarNombre ?? 'General del destino'}',
                   style: AppTypography.body,
                 ),
               ],
             ),
-            DsButton(
-              label: 'Editar datos',
-              icon: Icons.edit_outlined,
-              variant: DsButtonVariant.ghost,
-              onPressed: ocupado ? null : widget.onEditarDatos,
+            Wrap(
+              spacing: AppSpacing.sm,
+              runSpacing: AppSpacing.sm,
+              children: [
+                DsButton(
+                  label: 'Editar datos',
+                  icon: Icons.edit_outlined,
+                  variant: DsButtonVariant.ghost,
+                  onPressed: bloqueado ? null : widget.onEditarDatos,
+                ),
+                if (r.escenas.length > 1)
+                  DsButton(
+                    label: 'Conectar en orden',
+                    icon: Icons.alt_route,
+                    variant: DsButtonVariant.secondary,
+                    accent: AppColors.adminViolet,
+                    onPressed: bloqueado ? null : _conectarEnOrden,
+                  ),
+                DsButton(
+                  label: 'Subir escenarios',
+                  icon: Icons.add_photo_alternate_outlined,
+                  variant: DsButtonVariant.primary,
+                  accent: AppColors.adminViolet,
+                  onPressed: bloqueado || r.escenas.length >= maxEscenarios ? null : _subirVarios,
+                ),
+              ],
             ),
           ],
         ),
         const SizedBox(height: AppSpacing.lg),
-        if (faltan > 0)
-          _Aviso(
-            icon: Icons.info_outline,
-            color: AppColors.amber,
-            texto: 'Faltan $faltan ${faltan == 1 ? 'foto' : 'fotos'}: el recorrido aparecerá en la app '
-                'cuando tenga las $fotosPorRecorrido.',
-          )
-        else
-          _Aviso(
-            icon: Icons.check_circle_outline,
-            color: AppColors.emerald,
-            texto: r.activo
-                ? 'Completo: la app muestra las fotos en este orden (Foto 1 → Foto 2 → Foto 3).'
-                : 'Completo, pero está oculto: actívalo en la lista para que aparezca en la app.',
+        if (_subidaTotal > 0 && (_subiendo || _erroresSubida.isNotEmpty)) ...[
+          const SizedBox(height: AppSpacing.md),
+          _ProgresoSubida(
+            total: _subidaTotal,
+            hechas: _subidaHechas,
+            archivo: _subidaArchivo,
+            errores: _erroresSubida,
+            onCerrar: _subiendo ? null : () => setState(() => _subidaTotal = 0),
           ),
+        ],
         const SizedBox(height: AppSpacing.lg),
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final casillas = [
-              for (var posicion = 1; posicion <= fotosPorRecorrido; posicion++)
-                _CasillaFoto(
-                  posicion: posicion,
-                  escena: r.foto(posicion),
-                  busy: _busy.contains(posicion),
-                  error: _errores[posicion],
-                  onSubir: () => _subir(posicion),
-                  onQuitar: () => _quitar(posicion),
-                  onVer: (e) => _verCompleta(e),
-                ),
-            ];
-            if (constraints.maxWidth < 720) {
-              return Column(
-                children: [
-                  for (final c in casillas) Padding(padding: const EdgeInsets.only(bottom: AppSpacing.md), child: c),
-                ],
-              );
-            }
-            return Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                for (var i = 0; i < casillas.length; i++) ...[
-                  if (i > 0) const SizedBox(width: AppSpacing.md),
-                  Expanded(child: casillas[i]),
-                ],
-              ],
-            );
-          },
-        ),
-        const SizedBox(height: AppSpacing.lg),
-        const _TipsFotos(),
+        if (r.escenas.isEmpty)
+          _SinEscenarios(onSubir: bloqueado ? null : _subirVarios)
+        else
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final visor = _panelVisor();
+              final cuadricula = _panelEscenarios(columnas: constraints.maxWidth >= 1040 ? 2 : 3);
+              if (constraints.maxWidth >= 1040) {
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: visor),
+                    const SizedBox(width: AppSpacing.lg),
+                    SizedBox(width: 340, child: cuadricula),
+                  ],
+                );
+              }
+              return Column(children: [visor, const SizedBox(height: AppSpacing.lg), cuadricula]);
+            },
+          ),
       ],
     );
   }
-}
 
-class _Aviso extends StatelessWidget {
-  final IconData icon;
-  final Color color;
-  final String texto;
+  Widget _panelVisor() {
+    final escena = _sel!;
+    final r = _r;
+    final porPosicion = {for (final e in r.escenas) e.posicion: e};
 
-  const _Aviso({required this.icon, required this.color, required this.texto});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(AppRadius.button),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, size: 16, color: color),
-          const SizedBox(width: AppSpacing.sm),
-          Expanded(child: Text(texto, style: AppTypography.bodySmall.copyWith(color: AppColors.textPrimary))),
-        ],
-      ),
-    );
-  }
-}
-
-/// Qué foto sirve: el error más común es subir una foto normal o las tomas
-/// sueltas de la cámara en vez de la panorámica 360° ya unida.
-class _TipsFotos extends StatelessWidget {
-  const _TipsFotos();
-
-  @override
-  Widget build(BuildContext context) {
-    final style = AppTypography.bodySmall;
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: AppColors.amber.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(AppRadius.button),
-        border: Border.all(color: AppColors.amber.withValues(alpha: 0.25)),
-      ),
+    return DsCard(
+      padding: EdgeInsets.zero,
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            children: [
-              Icon(Icons.lightbulb_outline, size: 14, color: AppColors.amber),
-              const SizedBox(width: 6),
-              Text('Cada foto es una foto 360° completa',
-                  style: style.copyWith(color: AppColors.amber, fontWeight: FontWeight.w600)),
-            ],
+          ClipRRect(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(AppRadius.card)),
+            child: SizedBox(
+              height: 460,
+              child: Visor360(
+                escenas: EscenaVisor.deRecorridoAdmin(r),
+                escenaId: escena.id,
+                onEscenaCambiada: _seleccionar,
+                titulo: r.titulo,
+                subtitulo: widget.lugarNombre,
+                acento: AppColors.adminViolet,
+                mostrarTira: false,
+                controller: _visor,
+                onTapPanorama: _colocando ? _agregarFlecha : null,
+                onFlechaTocada: _colocando ? _editarFlecha : null,
+              ),
+            ),
           ),
-          const SizedBox(height: 6),
-          Text('• Equirectangular, el doble de ancho que de alto (2:1), p. ej. 6080×3040', style: style),
-          Text('• Ya unida: la panorámica final, no las tomas sueltas de la cámara', style: style),
-          Text('• JPG o PNG, máx. $_maxMb MB — se optimiza sola a 4096×2048 para el celular', style: style),
-          Text('• El nombre del archivo no importa: el orden lo da la casilla', style: style),
+          Padding(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Wrap(
+                  spacing: AppSpacing.md,
+                  runSpacing: AppSpacing.sm,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    SegmentedButton<bool>(
+                      segments: const [
+                        ButtonSegment(value: false, icon: Icon(Icons.visibility_outlined, size: 16), label: Text('Vista del turista')),
+                        ButtonSegment(value: true, icon: Icon(Icons.add_location_alt_outlined, size: 16), label: Text('Colocar flechas')),
+                      ],
+                      selected: {_colocando},
+                      onSelectionChanged: (s) => setState(() => _colocando = s.first),
+                      style: ButtonStyle(
+                        foregroundColor: WidgetStateProperty.resolveWith(
+                          (states) => states.contains(WidgetState.selected) ? Colors.white : AppColors.slate300,
+                        ),
+                        backgroundColor: WidgetStateProperty.resolveWith(
+                          (states) => states.contains(WidgetState.selected) ? AppColors.adminViolet : Colors.transparent,
+                        ),
+                      ),
+                    ),
+                    DsButton(
+                      label: 'Fijar vista inicial aquí',
+                      icon: Icons.center_focus_strong_outlined,
+                      size: DsButtonSize.sm,
+                      variant: DsButtonVariant.ghost,
+                      onPressed: _ocupado ? null : () => _fijarVistaInicial(escena),
+                    ),
+                    if (_ocupado) SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.adminViolet)),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: DsBadge(
+                    text: 'Escenario ${escena.posicion}${escena.posicion == r.escenas.first.posicion ? ' · Entrada' : ''}',
+                    tone: BadgeTone.info,
+                    icon: Icons.threesixty,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                AppTextField(
+                  label: 'Nombre del escenario',
+                  icon: Icons.title,
+                  controller: _tituloEscena,
+                  hintText: 'Ej. Entrada, Palapas, Malecón',
+                  accentColor: AppColors.adminViolet,
+                ),
+                const SizedBox(height: AppSpacing.md),
+                AppTextField(
+                  label: 'Descripción (opcional)',
+                  icon: Icons.notes,
+                  controller: _descripcionEscena,
+                  maxLines: 2,
+                  hintText: 'Ej. Vista hacia la bahía desde el malecón.',
+                  accentColor: AppColors.adminViolet,
+                ),
+                const SizedBox(height: AppSpacing.md),
+                Wrap(
+                  spacing: AppSpacing.sm,
+                  runSpacing: AppSpacing.sm,
+                  children: [
+                    DsButton(
+                      label: 'Guardar escenario',
+                      icon: Icons.check,
+                      size: DsButtonSize.sm,
+                      variant: DsButtonVariant.primary,
+                      accent: AppColors.adminViolet,
+                      onPressed: _ocupado ? null : () => _guardarDatos(escena),
+                    ),
+                    DsButton(
+                      label: 'Reemplazar foto',
+                      icon: Icons.upload_outlined,
+                      size: DsButtonSize.sm,
+                      variant: DsButtonVariant.secondary,
+                      accent: AppColors.adminViolet,
+                      onPressed: _ocupado ? null : () => _reemplazarFoto(escena),
+                    ),
+                    DsButton(
+                      label: 'Quitar escenario',
+                      icon: Icons.delete_outline,
+                      size: DsButtonSize.sm,
+                      variant: DsButtonVariant.danger,
+                      onPressed: _ocupado ? null : () => _quitar(escena),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                Text('Flechas de este escenario', style: AppTypography.h3),
+                const SizedBox(height: AppSpacing.sm),
+                if (escena.enlaces.isEmpty)
+                  Text(
+                    'Sin flechas.',
+                    style: AppTypography.bodySmall,
+                  )
+                else
+                  for (final l in escena.enlaces)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Row(
+                        children: [
+                          Icon(Icons.arrow_forward, size: 16, color: AppColors.adminViolet),
+                          const SizedBox(width: AppSpacing.sm),
+                          Expanded(
+                            child: Text(
+                              '${porPosicion[l.destino]?.nombre ?? 'Escenario ${l.destino}'}'
+                              '${l.etiqueta.isEmpty ? '' : ' · "${l.etiqueta}"'}',
+                              style: AppTypography.bodySmall.copyWith(color: AppColors.textPrimary),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          Text('${l.yaw.round()}° · ${l.pitch.round()}°', style: AppTypography.caption),
+                          IconButton(
+                            tooltip: 'Quitar flecha',
+                            visualDensity: VisualDensity.compact,
+                            onPressed: _ocupado ? null : () => _quitarFlecha(escena, l),
+                            icon: Icon(Icons.close, size: 16, color: AppColors.errorRed),
+                          ),
+                        ],
+                      ),
+                    ),
+              ],
+            ),
+          ),
         ],
       ),
     );
   }
-}
 
-class _CasillaFoto extends StatelessWidget {
-  final int posicion;
-  final Escena360? escena;
-  final bool busy;
-  final String? error;
-  final VoidCallback onSubir;
-  final VoidCallback onQuitar;
-  final ValueChanged<Escena360> onVer;
-
-  const _CasillaFoto({
-    required this.posicion,
-    required this.escena,
-    required this.busy,
-    required this.error,
-    required this.onSubir,
-    required this.onQuitar,
-    required this.onVer,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final e = escena;
-    final Widget contenido;
-    if (busy) {
-      contenido = Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.adminViolet)),
-            const SizedBox(height: AppSpacing.sm),
-            Text('Subiendo y optimizando…', style: AppTypography.caption),
-          ],
-        ),
-      );
-    } else if (e != null) {
-      contenido = InkWell(
-        onTap: () => onVer(e),
-        child: Image.network(
-          e.miniaturaUrl,
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => Icon(Icons.broken_image_outlined, color: AppColors.slate500),
-        ),
-      );
-    } else {
-      contenido = InkWell(
-        onTap: onSubir,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.add_photo_alternate_outlined, size: 28, color: AppColors.slate400),
-            const SizedBox(height: 4),
-            Text('Sin foto', style: AppTypography.caption),
-          ],
-        ),
-      );
-    }
-
+  Widget _panelEscenarios({required int columnas}) {
+    final r = _r;
+    final sel = _sel;
+    final entrada = r.escenas.first.posicion;
     return DsCard(
       padding: const EdgeInsets.all(AppSpacing.md),
       child: Column(
@@ -1010,53 +1212,365 @@ class _CasillaFoto extends StatelessWidget {
         children: [
           Row(
             children: [
-              Text('Foto $posicion', style: AppTypography.h3),
+              Text('Escenarios', style: AppTypography.h3),
               const Spacer(),
-              if (e != null) const DsBadge(text: 'Lista', tone: BadgeTone.success, icon: Icons.check),
+              Text('${r.escenas.length} / $maxEscenarios', style: AppTypography.caption),
             ],
           ),
-          const SizedBox(height: AppSpacing.sm),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(AppRadius.button),
-            child: AspectRatio(
-              aspectRatio: 2,
-              child: Material(color: AppColors.panelNavySoft, child: contenido),
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            e == null ? 'JPG o PNG 2:1' : '${e.ancho}×${e.alto} · ${_formatMb(e.pesoBytes)}',
-            style: AppTypography.caption,
-          ),
-          if (error != null) ...[
-            const SizedBox(height: 4),
-            Text(error!, style: TextStyle(color: AppColors.errorRed, fontSize: 12)),
-          ],
-          const SizedBox(height: AppSpacing.sm),
-          Wrap(
-            spacing: AppSpacing.sm,
-            runSpacing: AppSpacing.sm,
+          const SizedBox(height: AppSpacing.md),
+          GridView.count(
+            crossAxisCount: columnas,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            mainAxisSpacing: AppSpacing.sm,
+            crossAxisSpacing: AppSpacing.sm,
+            childAspectRatio: 1.35,
             children: [
-              DsButton(
-                label: e == null ? 'Subir Foto $posicion' : 'Reemplazar',
-                icon: Icons.upload_outlined,
-                size: DsButtonSize.sm,
-                variant: e == null ? DsButtonVariant.primary : DsButtonVariant.secondary,
-                accent: AppColors.adminViolet,
-                onPressed: busy ? null : onSubir,
-              ),
-              if (e != null)
-                DsButton(
-                  label: 'Quitar',
-                  icon: Icons.delete_outline,
-                  size: DsButtonSize.sm,
-                  variant: DsButtonVariant.danger,
-                  onPressed: busy ? null : onQuitar,
+              for (final e in r.escenas)
+                _TarjetaEscenario(
+                  escena: e,
+                  seleccionada: e.id == sel?.id,
+                  entrada: e.posicion == entrada,
+                  sinFlechas: r.escenas.length > 1 && e.enlaces.isEmpty,
+                  onTap: () => _seleccionar(e.id),
+                ),
+              if (r.escenas.length < maxEscenarios)
+                InkWell(
+                  onTap: _ocupado || _subiendo ? null : _subirVarios,
+                  borderRadius: BorderRadius.circular(AppRadius.button),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(AppRadius.button),
+                      border: Border.all(color: AppColors.adminViolet.withValues(alpha: 0.4)),
+                      color: AppColors.adminViolet.withValues(alpha: 0.05),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.add_photo_alternate_outlined, color: AppColors.adminViolet),
+                        const SizedBox(height: 4),
+                        Text('Agregar', style: TextStyle(color: AppColors.adminViolet, fontSize: 12, fontWeight: FontWeight.w600)),
+                      ],
+                    ),
+                  ),
                 ),
             ],
           ),
         ],
       ),
+    );
+  }
+}
+
+class _TarjetaEscenario extends StatelessWidget {
+  final Escena360 escena;
+  final bool seleccionada;
+  final bool entrada;
+  final bool sinFlechas;
+  final VoidCallback onTap;
+
+  const _TarjetaEscenario({
+    required this.escena,
+    required this.seleccionada,
+    required this.entrada,
+    required this.sinFlechas,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(AppRadius.button),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(AppRadius.button),
+          border: Border.all(
+            color: seleccionada ? AppColors.adminViolet : AppColors.borderSubtle,
+            width: seleccionada ? 2.5 : 1,
+          ),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Image.network(
+                    escena.miniaturaUrl,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Icon(Icons.broken_image_outlined, color: AppColors.slate500),
+                  ),
+                  Positioned(
+                    left: 4,
+                    top: 4,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: entrada ? AppColors.adminViolet : Colors.black54,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        entrada ? '${escena.posicion} · Entrada' : '${escena.posicion}',
+                        style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                  ),
+                  if (sinFlechas)
+                    Positioned(
+                      right: 4,
+                      top: 4,
+                      child: Tooltip(
+                        message: 'Sin flechas',
+                        child: Container(
+                          padding: const EdgeInsets.all(3),
+                          decoration: BoxDecoration(color: AppColors.amber, shape: BoxShape.circle),
+                          child: const Icon(Icons.priority_high, size: 12, color: Colors.black),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            Container(
+              color: AppColors.panelNavySoft,
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      escena.nombre,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: AppColors.textPrimary, fontSize: 12, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                  Icon(Icons.alt_route, size: 12, color: AppColors.slate400),
+                  const SizedBox(width: 2),
+                  Text('${escena.enlaces.length}', style: AppTypography.caption),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SinEscenarios extends StatelessWidget {
+  final VoidCallback? onSubir;
+
+  const _SinEscenarios({required this.onSubir});
+
+  @override
+  Widget build(BuildContext context) {
+    return DsCard(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.xl),
+        child: Column(
+          children: [
+            Icon(Icons.threesixty, size: 48, color: AppColors.adminViolet),
+            const SizedBox(height: AppSpacing.md),
+            Text('Sube los escenarios del recorrido', style: AppTypography.h2),
+            const SizedBox(height: AppSpacing.lg),
+            DsButton(
+              label: 'Elegir fotos 360°',
+              icon: Icons.add_photo_alternate_outlined,
+              variant: DsButtonVariant.primary,
+              accent: AppColors.adminViolet,
+              onPressed: onSubir,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ProgresoSubida extends StatelessWidget {
+  final int total;
+  final int hechas;
+  final String? archivo;
+  final List<String> errores;
+  final VoidCallback? onCerrar;
+
+  const _ProgresoSubida({required this.total, required this.hechas, required this.archivo, required this.errores, this.onCerrar});
+
+  @override
+  Widget build(BuildContext context) {
+    final terminado = hechas >= total;
+    return DsCard(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  terminado ? 'Subida terminada: $hechas de $total' : 'Subiendo y optimizando ${hechas + 1} de $total · ${archivo ?? ''}',
+                  style: AppTypography.bodySmall.copyWith(color: AppColors.textPrimary),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              if (onCerrar != null)
+                IconButton(
+                  visualDensity: VisualDensity.compact,
+                  onPressed: onCerrar,
+                  icon: Icon(Icons.close, size: 16, color: AppColors.slate400),
+                ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          LinearProgressIndicator(
+            value: total == 0 ? 0 : hechas / total,
+            color: AppColors.adminViolet,
+            backgroundColor: AppColors.overlay(0.08),
+          ),
+          for (final e in errores) ...[
+            const SizedBox(height: 4),
+            Text('✕ $e', style: TextStyle(color: AppColors.errorRed, fontSize: 12)),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Destino y texto de una flecha nueva.
+class _DialogoFlecha extends StatefulWidget {
+  final List<Escena360> opciones;
+
+  const _DialogoFlecha({required this.opciones});
+
+  @override
+  State<_DialogoFlecha> createState() => _DialogoFlechaState();
+}
+
+class _DialogoFlechaState extends State<_DialogoFlecha> {
+  late int _destino = widget.opciones.first.posicion;
+  final _etiqueta = TextEditingController();
+
+  @override
+  void dispose() {
+    _etiqueta.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: AppColors.panelNavySoft,
+      title: Text('Nueva flecha', style: TextStyle(color: AppColors.textPrimary)),
+      content: SizedBox(
+        width: 380,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text('¿A qué escenario lleva?', style: AppTypography.bodySmall),
+            const SizedBox(height: AppSpacing.sm),
+            DropdownButtonFormField<int>(
+              initialValue: _destino,
+              isExpanded: true,
+              dropdownColor: AppColors.panelNavySoft,
+              style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
+              items: [
+                for (final e in widget.opciones)
+                  DropdownMenuItem(value: e.posicion, child: Text('${e.posicion}. ${e.nombre}', overflow: TextOverflow.ellipsis)),
+              ],
+              onChanged: (v) => setState(() => _destino = v ?? _destino),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            AppTextField(
+              label: 'Texto de la flecha (opcional)',
+              icon: Icons.label_outline,
+              controller: _etiqueta,
+              hintText: 'Ej. Ir a las palapas',
+              accentColor: AppColors.adminViolet,
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text('Cancelar', style: TextStyle(color: AppColors.slate400)),
+        ),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop((_destino, _etiqueta.text.trim())),
+          child: Text('Agregar flecha', style: TextStyle(color: AppColors.adminViolet)),
+        ),
+      ],
+    );
+  }
+}
+
+class _EdicionFlecha {
+  final String etiqueta;
+  final bool eliminar;
+
+  const _EdicionFlecha(this.etiqueta, {this.eliminar = false});
+}
+
+class _DialogoEditarFlecha extends StatefulWidget {
+  final Escena360 destino;
+  final String etiqueta;
+
+  const _DialogoEditarFlecha({required this.destino, required this.etiqueta});
+
+  @override
+  State<_DialogoEditarFlecha> createState() => _DialogoEditarFlechaState();
+}
+
+class _DialogoEditarFlechaState extends State<_DialogoEditarFlecha> {
+  late final _etiqueta = TextEditingController(text: widget.etiqueta);
+
+  @override
+  void dispose() {
+    _etiqueta.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: AppColors.panelNavySoft,
+      title: Text('Flecha a "${widget.destino.nombre}"', style: TextStyle(color: AppColors.textPrimary)),
+      content: SizedBox(
+        width: 380,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            AppTextField(
+              label: 'Texto de la flecha',
+              icon: Icons.label_outline,
+              controller: _etiqueta,
+              hintText: 'Ej. Ir a las palapas',
+              accentColor: AppColors.adminViolet,
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(const _EdicionFlecha('', eliminar: true)),
+          child: Text('Quitar flecha', style: TextStyle(color: AppColors.errorRed)),
+        ),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text('Cancelar', style: TextStyle(color: AppColors.slate400)),
+        ),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(_EdicionFlecha(_etiqueta.text.trim())),
+          child: Text('Guardar', style: TextStyle(color: AppColors.adminViolet)),
+        ),
+      ],
     );
   }
 }

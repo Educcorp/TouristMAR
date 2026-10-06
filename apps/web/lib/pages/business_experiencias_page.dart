@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../models/business_profile.dart';
 import '../models/lugar.dart';
+import '../navegacion/rutas.dart';
+import '../services/auth_service.dart' show AuthError;
 import '../services/lugares_service.dart';
 import '../services/recorridos_service.dart';
 import '../theme/app_theme.dart';
@@ -11,7 +13,6 @@ import '../widgets/admin/ds_card.dart';
 import '../widgets/experiencias/experiencia_viewport.dart';
 import '../widgets/experiencias/experiencias_lugar.dart';
 import '../widgets/mapa/mapa_lugares.dart';
-import 'lugar_detalle_page.dart';
 
 /// Sección "Mapa y experiencias" del panel de empresa: el negocio fija su
 /// punto en el mapa, sube los recursos de sus tres experiencias y ve cómo
@@ -47,6 +48,7 @@ class _BusinessExperienciasContentState extends State<BusinessExperienciasConten
   @override
   void initState() {
     super.initState();
+    if (_b.latitud != null && _b.longitud != null) _ubicacion = Coordenadas(_b.latitud!, _b.longitud!);
     _cargarRecorridos();
   }
 
@@ -85,6 +87,8 @@ class _BusinessExperienciasContentState extends State<BusinessExperienciasConten
       await accion();
     } on PendienteBackend catch (e) {
       if (mounted) _aviso(e.toString());
+    } on AuthError catch (e) {
+      if (mounted) _aviso(e.message);
     } finally {
       if (mounted) setState(() => _guardando = false);
     }
@@ -252,7 +256,13 @@ class _BusinessExperienciasContentState extends State<BusinessExperienciasConten
                   accent: AppColors.businessOrange,
                   onPressed: _ubicacion == null || _guardando
                       ? null
-                      : () => _ejecutar(() => widget.service.guardarUbicacion(_b.id, _ubicacion!)),
+                      : () => _ejecutar(() async {
+                            await widget.service.guardarUbicacion(_b.id, _ubicacion!);
+                            _b
+                              ..latitud = _ubicacion!.lat
+                              ..longitud = _ubicacion!.lng;
+                            if (mounted) _aviso('Ubicación guardada: así aparece tu negocio en el mapa.');
+                          }),
                 ),
               ],
             ),
@@ -310,7 +320,7 @@ class _BusinessExperienciasContentState extends State<BusinessExperienciasConten
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: Text(
-                    '${r.textoParaMostrar.split('\n').first} · ${r.escenas} fotos 360°',
+                    '${r.titulo} · ${r.escenas.length} ${r.escenas.length == 1 ? 'escenario' : 'escenarios'} 360°',
                     style: AppTypography.body.copyWith(fontSize: 12, color: AppColors.textPrimary),
                   ),
                 ),
@@ -336,9 +346,7 @@ class _BusinessExperienciasContentState extends State<BusinessExperienciasConten
                 icon: Icons.open_in_new,
                 size: DsButtonSize.sm,
                 accent: AppColors.businessOrange,
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => LugarDetallePage(lugar: _lugar, vistaPrevia: true)),
-                ),
+                onPressed: () => abrirLugar(context, _lugar, vistaPrevia: true),
               ),
             ],
           ),
@@ -387,7 +395,7 @@ class _RecursoCard extends StatelessWidget {
             'Tu negocio debe tener su punto guardado en el mapa.',
           ],
         ExperienciaTipo.recorrido360 => [
-            'Los recorridos 360° (3 fotos 360° del lugar) los da de alta '
+            'Los recorridos 360° (escenarios 360° conectados del lugar) los da de alta '
                 'la administración de TouristMAR.',
             'Si quieres uno para tu negocio, solicítalo a un administrador.',
           ],

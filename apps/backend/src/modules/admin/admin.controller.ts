@@ -15,6 +15,15 @@ import {
   CannotModifyAdminError,
 } from '../auth/auth.service'
 import { toPublicUser } from '../auth/auth.controller'
+import {
+  setUbicacionNegocio,
+  crearLugarAdmin,
+  actualizarLugarAdmin,
+  eliminarLugarAdmin,
+  LugarNotFoundError,
+  SinSuperAdminError,
+} from '../lugares/lugares.service'
+import type { NegocioProfile } from '@prisma/client'
 import type { AuthedRequest } from '../auth/auth.middleware'
 
 export async function dashboard(_req: AuthedRequest, res: Response) {
@@ -54,27 +63,139 @@ export async function listPendingNegocios(_req: AuthedRequest, res: Response) {
   }
 }
 
+type NegocioConDueño = NegocioProfile & { user: { email: string; nombres: string } }
+
+function toAdminNegocio(n: NegocioConDueño) {
+  return {
+    id: n.id,
+    ownerId: n.userId,
+    nombre: n.nombre,
+    categoria: n.categoria,
+    descripcion: n.descripcion,
+    direccion: n.direccion,
+    estado: n.estado,
+    email: n.user.email,
+    contacto: n.user.nombres,
+    solicitadoEn: n.createdAt,
+    archivo360: n.archivo360,
+    arMarcador: n.arMarcador,
+    arGeo: n.arGeo,
+    latitud: n.latitud,
+    longitud: n.longitud,
+  }
+}
+
 export async function listNegocios(_req: AuthedRequest, res: Response) {
   try {
     const negocios = await listNegociosAll()
-    return res.json({
-      negocios: negocios.map((n) => ({
-        id: n.id,
-        ownerId: n.userId,
-        nombre: n.nombre,
-        categoria: n.categoria,
-        estado: n.estado,
-        email: n.user.email,
-        contacto: n.user.nombres,
-        solicitadoEn: n.createdAt,
-        archivo360: n.archivo360,
-        arMarcador: n.arMarcador,
-        arGeo: n.arGeo,
-      })),
-    })
+    return res.json({ negocios: negocios.map(toAdminNegocio) })
   } catch (err) {
     if (err instanceof DatabaseNotReadyError) {
       return res.status(503).json({ error: err.message })
+    }
+    return res.status(500).json({ error: 'Error interno' })
+  }
+}
+
+// Pin del mapa: los dos juntos o ninguno (null los quita).
+const lugarSchema = z
+  .object({
+    nombre: z.string().trim().min(1).max(120),
+    categoria: z.string().trim().max(60).nullable().optional(),
+    descripcion: z.string().trim().max(350).nullable().optional(),
+    direccion: z.string().trim().max(200).nullable().optional(),
+    latitud: z.number().min(-90).max(90).nullable().optional(),
+    longitud: z.number().min(-180).max(180).nullable().optional(),
+  })
+
+const ambasCoordenadas = (d: { latitud?: number | null; longitud?: number | null }) =>
+  (d.latitud === undefined) === (d.longitud === undefined) && (d.latitud === null) === (d.longitud === null)
+
+const crearLugarSchema = lugarSchema.refine(ambasCoordenadas, { message: 'latitud y longitud van juntas' })
+const actualizarLugarSchema = lugarSchema.partial().refine(ambasCoordenadas, { message: 'latitud y longitud van juntas' })
+
+/// Un admin registra un lugar que no tiene dueño (FIME, un mirador…).
+export async function createLugar(req: AuthedRequest, res: Response) {
+  const parsed = crearLugarSchema.safeParse(req.body)
+  if (!parsed.success) {
+    return res.status(400).json({ error: 'Datos inválidos', details: parsed.error.flatten() })
+  }
+  try {
+    const lugar = await crearLugarAdmin(parsed.data)
+    return res.status(201).json({ negocio: toAdminNegocio(lugar) })
+  } catch (err) {
+    if (err instanceof DatabaseNotReadyError) {
+      return res.status(503).json({ error: err.message })
+    }
+    if (err instanceof SinSuperAdminError) {
+      return res.status(409).json({ error: err.message })
+    }
+    return res.status(500).json({ error: 'Error interno' })
+  }
+}
+
+/// Datos del lugar que corrige un admin: dirección, descripción y su pin.
+export async function updateLugar(req: AuthedRequest, res: Response) {
+  const parsed = actualizarLugarSchema.safeParse(req.body)
+  if (!parsed.success) {
+    return res.status(400).json({ error: 'Datos inválidos', details: parsed.error.flatten() })
+  }
+  try {
+    const lugar = await actualizarLugarAdmin(req.params.negocioId, parsed.data)
+    return res.json({ negocio: toAdminNegocio(lugar) })
+  } catch (err) {
+    if (err instanceof DatabaseNotReadyError) {
+      return res.status(503).json({ error: err.message })
+    }
+    if (err instanceof LugarNotFoundError) {
+      return res.status(404).json({ error: err.message })
+    }
+    return res.status(500).json({ error: 'Error interno' })
+  }
+}
+
+/// Borra un lugar con sus recorridos 360° y marcadores (y sus archivos).
+export async function deleteLugar(req: AuthedRequest, res: Response) {
+  try {
+    await eliminarLugarAdmin(req.params.negocioId)
+    return res.status(204).send()
+  } catch (err) {
+    if (err instanceof DatabaseNotReadyError) {
+      return res.status(503).json({ error: err.message })
+    }
+    if (err instanceof LugarNotFoundError) {
+      return res.status(404).json({ error: err.message })
+    }
+    return res.status(500).json({ error: 'Error interno' })
+  }
+}
+
+const ubicacionSchema = z.object({
+  ubicacion: z
+    .object({
+      latitud: z.number().min(-90).max(90),
+      longitud: z.number().min(-180).max(180),
+    })
+    .nullable(),
+})
+
+/// El pin del lugar en el mapa público. Es del lugar, no del recorrido 360°
+/// ni de los marcadores: esos solo se ligan al negocio.
+export async function updateNegocioUbicacion(req: AuthedRequest, res: Response) {
+  const parsed = ubicacionSchema.safeParse(req.body)
+  if (!parsed.success) {
+    return res.status(400).json({ error: 'Ubicación inválida', details: parsed.error.flatten().fieldErrors })
+  }
+
+  try {
+    const n = await setUbicacionNegocio(req.params.negocioId, parsed.data.ubicacion)
+    return res.json({ negocio: { id: n.id, latitud: n.latitud, longitud: n.longitud } })
+  } catch (err) {
+    if (err instanceof DatabaseNotReadyError) {
+      return res.status(503).json({ error: err.message })
+    }
+    if (err instanceof LugarNotFoundError) {
+      return res.status(404).json({ error: err.message })
     }
     return res.status(500).json({ error: 'Error interno' })
   }

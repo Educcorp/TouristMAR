@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-import '../pages/login_page.dart';
+import '../navegacion/sesion.dart';
 import '../services/auth_service.dart';
 import '../services/session_storage.dart';
 
@@ -59,11 +59,9 @@ class _SessionGuardState extends State<SessionGuard> {
     if (_handled || !mounted) return;
     _handled = true;
     _timer?.cancel();
-    SessionStorage.clearToken();
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => LoginPage(initialError: message)),
-      (route) => false,
-    );
+    // El enrutador escucha la sesión: al cerrarla manda solo al login, donde
+    // se muestra el aviso.
+    Sesion.cerrar(mensaje: message);
   }
 
   @override

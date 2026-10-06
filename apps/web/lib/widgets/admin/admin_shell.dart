@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../pages/login_page.dart';
+import '../../navegacion/rutas.dart';
 import '../../services/auth_service.dart';
-import '../../services/session_storage.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/breakpoints.dart';
 import '../notification_bell.dart';
@@ -24,16 +23,26 @@ AdminSection? adminSectionForNotification(String tipo) {
   }
 }
 
-/// Destinos disponibles en el panel admin.
-enum AdminSection { inicio, solicitudes, usuarios, negocios, mapa, realidadAumentada, recorridos360, admins, reportes, configuracion, ayuda }
+/// Destinos disponibles en el panel admin. Los recorridos 360° viven dentro
+/// de "Mapa y RA" (en cada lugar), ya no son una sección aparte.
+enum AdminSection { inicio, solicitudes, usuarios, negocios, mapa, realidadAumentada, admins, reportes, configuracion, ayuda }
 
-void adminLogout(BuildContext context) {
-  SessionStorage.clearToken();
-  Navigator.of(context).pushAndRemoveUntil(
-    MaterialPageRoute(builder: (_) => const LoginPage()),
-    (route) => false,
-  );
+/// Nombre de cada sección en la URL (`/admin/<slug>`).
+extension AdminSectionSlug on AdminSection {
+  String get slug => switch (this) {
+        AdminSection.realidadAumentada => 'ra',
+        _ => name,
+      };
+
+  static AdminSection? desdeSlug(String? slug) {
+    for (final s in AdminSection.values) {
+      if (s.slug == slug) return s;
+    }
+    return null;
+  }
 }
+
+void adminLogout(BuildContext context) => cerrarSesion(context);
 
 class _AdminNavLeaf {
   final AdminSection section;
@@ -49,7 +58,6 @@ const _adminNavItems = [
   _AdminNavLeaf(AdminSection.negocios, Icons.apartment_outlined, 'Negocios'),
   _AdminNavLeaf(AdminSection.mapa, Icons.view_in_ar_outlined, 'Mapa y RA'),
   _AdminNavLeaf(AdminSection.realidadAumentada, Icons.view_in_ar_outlined, 'Realidad aumentada'),
-  _AdminNavLeaf(AdminSection.recorridos360, Icons.threesixty, 'Recorridos 360°'),
   _AdminNavLeaf(AdminSection.admins, Icons.shield_outlined, 'Admins'),
   _AdminNavLeaf(AdminSection.reportes, Icons.bar_chart_outlined, 'Reportes'),
   _AdminNavLeaf(AdminSection.configuracion, Icons.settings_outlined, 'Configuración'),

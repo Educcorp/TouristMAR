@@ -6,8 +6,10 @@ export class EscenaImagenInvalidaError extends Error {}
 /// media (y el máximo que conviene descargar por datos): una foto 360° de 8K
 /// sale de la cámara con 15–25 MB y aquí queda en ~1–2 MB.
 export const ESCENA_ANCHO_MAX = 4096
-/// Por debajo de esto la foto se ve pixelada al hacer zoom en el visor.
-export const ESCENA_ANCHO_MIN = 2048
+/// 1280×640 es lo que exporta la app de captura que usa el equipo (no hay
+/// opción de más resolución). Se ve algo suave al hacer zoom, pero por
+/// debajo de esto ya se nota pixelada en el visor.
+export const ESCENA_ANCHO_MIN = 1280
 const MINIATURA_ANCHO = 640
 
 /// Tolerancia para el 2:1: algunas cámaras/apps de unión exportan unos

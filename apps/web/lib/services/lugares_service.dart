@@ -1,7 +1,8 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/lugar.dart';
-import 'auth_service.dart' show apiUrl, NegocioInfo;
+import 'auth_service.dart' show apiUrl, AuthError, NegocioInfo;
+import 'session_storage.dart';
 
 /// Lo que todavía no existe en el backend. La interfaz lo atrapa y muestra
 /// un aviso en lugar de fallar en silencio.
@@ -20,7 +21,6 @@ class PendienteBackend implements Exception {
 /// existentes todavía no tiene coordenadas cargadas) y completa el resto del
 /// catálogo con el listado de ejemplo, para no perder la vitrina completa
 /// mientras el resto de los negocios no tenga su pin. Falta todavía:
-///   - `PUT  /api/auth/profile/negocios/:id/ubicacion`   { lat, lng }
 ///   - `PUT/DELETE /api/auth/profile/negocios/:id/experiencias/:tipo` (multipart)
 ///   - `PUT  /api/admin/experiencias/config`   { radioDesbloqueo, ... }
 class LugaresService {
@@ -50,8 +50,18 @@ class LugaresService {
     return [...reales, ..._lugaresDemo.where((l) => !nombresReales.contains(l.nombre))];
   }
 
+  /// El dueño fija el pin de su negocio.
   Future<void> guardarUbicacion(String negocioId, Coordenadas ubicacion) async {
-    throw const PendienteBackend('Guardar la ubicación del negocio');
+    final token = SessionStorage.token;
+    if (token == null) throw const AuthError('Tu sesión expiró. Vuelve a iniciar sesión.');
+    final res = await http.patch(
+      Uri.parse('$apiUrl/auth/profile/negocios/$negocioId'),
+      headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+      body: jsonEncode({'latitud': ubicacion.lat, 'longitud': ubicacion.lng}),
+    );
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      throw const AuthError('No se pudo guardar la ubicación');
+    }
   }
 
   Future<void> subirRecurso(String negocioId, ExperienciaTipo tipo) async {

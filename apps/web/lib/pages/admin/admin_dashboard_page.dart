@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../navegacion/rutas.dart';
 import '../../services/auth_service.dart';
 import '../../services/session_storage.dart';
 import '../../theme/app_theme.dart';
@@ -12,7 +14,6 @@ import '../../widgets/admin/ds_stat_card.dart';
 import '../../widgets/themed_builder.dart';
 import 'admin_admins_page.dart';
 import 'admin_ar_page.dart';
-import 'admin_recorridos_page.dart';
 import 'admin_businesses_page.dart';
 import 'admin_help_page.dart';
 import 'admin_mapa_page.dart';
@@ -28,15 +29,28 @@ class AdminDashboardPage extends StatefulWidget {
   final AuthUser admin;
   final AuthService authService;
 
-  AdminDashboardPage({super.key, required this.admin, AuthService? authService})
-      : authService = authService ?? AuthService();
+  /// Sección visible (viene de la URL: `/admin/<seccion>`).
+  final AdminSection seccion;
+
+  /// Lugar abierto dentro de "Mapa y RA" (`/admin/mapa/lugar/<id>`).
+  final String? lugarId;
+
+  AdminDashboardPage({
+    super.key,
+    required this.admin,
+    AuthService? authService,
+    this.seccion = AdminSection.inicio,
+    this.lugarId,
+  }) : authService = authService ?? AuthService();
 
   @override
   State<AdminDashboardPage> createState() => _AdminDashboardPageState();
 }
 
 class _AdminDashboardPageState extends State<AdminDashboardPage> {
-  AdminSection _selected = AdminSection.inicio;
+  AdminSection get _selected => widget.seccion;
+
+  void _ir(AdminSection seccion) => context.go(rutaAdmin(seccion));
 
   @override
   Widget build(BuildContext context) => ThemedBuilder(builder: _buildShell);
@@ -45,7 +59,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     return AdminShell(
       admin: widget.admin,
       selected: _selected,
-      onSelect: (s) => setState(() => _selected = s),
+      onSelect: _ir,
       onNotificationTap: _handleNotificationTap,
       body: _buildBody(),
     );
@@ -53,13 +67,13 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
 
   void _handleNotificationTap(AppNotification notification) {
     final section = adminSectionForNotification(notification.tipo);
-    if (section != null) setState(() => _selected = section);
+    if (section != null) _ir(section);
   }
 
   Widget _buildBody() {
     switch (_selected) {
       case AdminSection.inicio:
-        return _InicioContent(admin: widget.admin, authService: widget.authService, onNavigate: (s) => setState(() => _selected = s));
+        return _InicioContent(admin: widget.admin, authService: widget.authService, onNavigate: _ir);
       case AdminSection.solicitudes:
         return AdminRequestsPage(authService: widget.authService);
       case AdminSection.usuarios:
@@ -67,11 +81,9 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
       case AdminSection.negocios:
         return AdminBusinessesPage(authService: widget.authService);
       case AdminSection.mapa:
-        return AdminMapaPage(admin: widget.admin, authService: widget.authService);
+        return AdminMapaPage(admin: widget.admin, authService: widget.authService, lugarId: widget.lugarId);
       case AdminSection.realidadAumentada:
         return AdminArPage(authService: widget.authService);
-      case AdminSection.recorridos360:
-        return AdminRecorridosPage(authService: widget.authService);
       case AdminSection.admins:
         return AdminAdminsPage(currentAdmin: widget.admin, authService: widget.authService);
       case AdminSection.reportes:
