@@ -6,11 +6,12 @@ import { procesarEscena } from './escena-imagen'
 
 export class RecorridoNotFoundError extends Error {}
 export class RecorridoNombreDuplicadoError extends Error {}
+export class EnlaceInvalidoError extends Error {}
 
-/// Cada recorrido lleva exactamente 3 fotos 360° ("Foto 1", "Foto 2",
-/// "Foto 3"): Unity las lee en ese orden, así que un recorrido solo se
-/// publica cuando tiene las tres.
-export const FOTOS_POR_RECORRIDO = 3
+/// Un recorrido tiene de 1 a 32 escenarios (casillas "Escenario 1"…"32"). El
+/// Escenario 1 es por donde entra el turista. Mismo límite que el CHECK de
+/// `recorrido_360_escenas.orden` en la base.
+export const MAX_ESCENARIOS = 32
 
 export interface RecorridoInput {
   nombre: string
@@ -18,22 +19,45 @@ export interface RecorridoInput {
   texto: string
   negocioId?: string | null
   activo?: boolean
+  latitud?: number | null
+  longitud?: number | null
 }
 
-const escenasOrdenadas = { orderBy: { orden: 'asc' as const } }
+export interface EscenaInfo {
+  titulo?: string
+  descripcion?: string
+  yawInicial?: number
+}
+
+/// Flecha tal como la manda el panel: el destino es la casilla (1–32) de
+/// otro escenario del mismo recorrido.
+export interface EnlaceInput {
+  destino: number
+  yaw: number
+  pitch?: number
+  etiqueta?: string
+}
+
+const escenasOrdenadas = {
+  orderBy: { orden: 'asc' as const },
+  include: {
+    enlaces: {
+      include: { destino: { select: { orden: true } } },
+      orderBy: { destino: { orden: 'asc' as const } },
+    },
+  },
+}
 
 const includeAdmin = {
   negocio: { select: { nombre: true } },
   escenas: escenasOrdenadas,
 }
 
-const completo = (r: { escenas: unknown[] }) => r.escenas.length === FOTOS_POR_RECORRIDO
-
-/// Lo que ve Unity: recorridos activos, con sus 3 fotos, que no pertenezcan
-/// a un negocio sin aprobar (igual que los marcadores).
+/// Lo que ve Unity: recorridos activos, con al menos un escenario, que no
+/// pertenezcan a un negocio sin aprobar (igual que los marcadores).
 export async function listPublicRecorridos(negocioId?: string) {
-  return withDbGuard(async () => {
-    const recorridos = await prisma.recorrido360.findMany({
+  return withDbGuard(() =>
+    prisma.recorrido360.findMany({
       where: {
         activo: true,
         escenas: { some: {} },
@@ -42,9 +66,8 @@ export async function listPublicRecorridos(negocioId?: string) {
       },
       include: { escenas: escenasOrdenadas },
       orderBy: { createdAt: 'asc' },
-    })
-    return recorridos.filter(completo)
-  })
+    }),
+  )
 }
 
 export async function getPublicRecorrido(nombre: string) {
@@ -56,7 +79,7 @@ export async function getPublicRecorrido(nombre: string) {
     const visible =
       recorrido &&
       recorrido.activo &&
-      completo(recorrido) &&
+      recorrido.escenas.length > 0 &&
       (!recorrido.negocio || recorrido.negocio.estado === 'aprobado')
     if (!visible) {
       throw new RecorridoNotFoundError('No se encontró ese recorrido')
@@ -163,10 +186,11 @@ export async function deleteRecorrido(id: string) {
   })
 }
 
-/// Sube la foto de una casilla (1 = "Foto 1"…). Si la casilla ya tenía foto
-/// la reemplaza, así el orden lo decide la casilla y no el orden de subida.
-/// La foto se optimiza antes de subirla (ver procesarEscena).
-export async function setEscena(recorridoId: string, posicion: number, buffer: Buffer) {
+/// Sube la foto de una casilla (1 = "Escenario 1"…). Si la casilla ya tenía
+/// foto la reemplaza (conservando su título y sus flechas), así el orden lo
+/// decide la casilla y no el orden de subida. La foto se optimiza antes de
+/// subirla (ver procesarEscena).
+export async function setEscena(recorridoId: string, posicion: number, buffer: Buffer, info: EscenaInfo = {}) {
   return withDbGuard(async () => {
     const recorrido = await findRecorrido(recorridoId)
     const orden = posicion - 1
@@ -198,8 +222,9 @@ export async function setEscena(recorridoId: string, posicion: number, buffer: B
     }
     const escena = await prisma.recorrido360Escena.upsert({
       where: { recorridoId_orden: { recorridoId, orden } },
-      create: { recorridoId, orden, ...datos },
-      update: datos,
+      create: { recorridoId, orden, ...info, ...datos },
+      update: { ...info, ...datos },
+      include: escenasOrdenadas.include,
     })
     if (anterior) {
       await supabase.storage.from(RECORRIDOS_360_BUCKET).remove(rutasDe([anterior]))
@@ -208,14 +233,77 @@ export async function setEscena(recorridoId: string, posicion: number, buffer: B
   })
 }
 
+async function findEscena(recorridoId: string, posicion: number) {
+  const escena = await prisma.recorrido360Escena.findUnique({
+    where: { recorridoId_orden: { recorridoId, orden: posicion - 1 } },
+  })
+  if (!escena) {
+    throw new RecorridoNotFoundError(`El Escenario ${posicion} no existe`)
+  }
+  return escena
+}
+
+/// Título, descripción y hacia dónde mira la cámara al entrar.
+export async function updateEscena(recorridoId: string, posicion: number, info: EscenaInfo) {
+  return withDbGuard(async () => {
+    const escena = await findEscena(recorridoId, posicion)
+    return prisma.recorrido360Escena.update({
+      where: { id: escena.id },
+      data: info,
+      include: escenasOrdenadas.include,
+    })
+  })
+}
+
+/// Reemplaza todas las flechas de un escenario de una vez (el panel manda la
+/// lista completa al guardar). Cada destino tiene que ser otro escenario de
+/// este mismo recorrido que ya tenga foto.
+export async function setEnlaces(recorridoId: string, posicion: number, enlaces: EnlaceInput[]) {
+  return withDbGuard(async () => {
+    const recorrido = await findRecorrido(recorridoId)
+    const origen = recorrido.escenas.find((e) => e.orden === posicion - 1)
+    if (!origen) {
+      throw new RecorridoNotFoundError(`El Escenario ${posicion} no existe`)
+    }
+
+    const vistos = new Set<number>()
+    const filas = enlaces.map((enlace) => {
+      if (enlace.destino === posicion) {
+        throw new EnlaceInvalidoError('Una flecha no puede llevar al mismo escenario donde está')
+      }
+      if (vistos.has(enlace.destino)) {
+        throw new EnlaceInvalidoError(`Hay dos flechas hacia el Escenario ${enlace.destino}`)
+      }
+      vistos.add(enlace.destino)
+      const destino = recorrido.escenas.find((e) => e.orden === enlace.destino - 1)
+      if (!destino) {
+        throw new EnlaceInvalidoError(`El Escenario ${enlace.destino} todavía no tiene foto`)
+      }
+      return {
+        origenId: origen.id,
+        destinoId: destino.id,
+        yaw: enlace.yaw,
+        pitch: enlace.pitch ?? 0,
+        etiqueta: enlace.etiqueta ?? '',
+      }
+    })
+
+    await prisma.$transaction([
+      prisma.recorrido360Enlace.deleteMany({ where: { origenId: origen.id } }),
+      prisma.recorrido360Enlace.createMany({ data: filas }),
+    ])
+    return prisma.recorrido360Escena.findUniqueOrThrow({
+      where: { id: origen.id },
+      include: escenasOrdenadas.include,
+    })
+  })
+}
+
+/// Quita un escenario. Sus flechas y las que llegaban a él se borran solas
+/// (ON DELETE CASCADE).
 export async function deleteEscena(recorridoId: string, posicion: number) {
   return withDbGuard(async () => {
-    const escena = await prisma.recorrido360Escena.findUnique({
-      where: { recorridoId_orden: { recorridoId, orden: posicion - 1 } },
-    })
-    if (!escena) {
-      throw new RecorridoNotFoundError('Esa foto no existe')
-    }
+    const escena = await findEscena(recorridoId, posicion)
     await prisma.recorrido360Escena.delete({ where: { id: escena.id } })
     await supabase.storage.from(RECORRIDOS_360_BUCKET).remove(rutasDe([escena]))
   })

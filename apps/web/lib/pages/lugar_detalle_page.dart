@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/lugar.dart';
 import '../theme/app_theme.dart';
 import '../theme/breakpoints.dart';
+import '../utils/como_llegar.dart';
 import '../widgets/cover_image.dart';
 import '../widgets/experiencias/experiencias_lugar.dart';
 import '../widgets/mapa/mapa_lugares.dart';
@@ -314,6 +315,20 @@ class _Lateral extends StatelessWidget {
                           ),
                         ],
                       ),
+                    if (lugar.ubicacion != null) ...[
+                      const SizedBox(height: AppSpacing.sm),
+                      OutlinedButton.icon(
+                        onPressed: () => abrirComoLlegar(lugar.ubicacion!),
+                        icon: const Icon(Icons.directions, size: 18),
+                        label: const Text('Cómo llegar', style: TextStyle(fontWeight: FontWeight.w700)),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.brandTeal,
+                          side: BorderSide(color: AppColors.brandTeal),
+                          minimumSize: const Size.fromHeight(44),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.button)),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),

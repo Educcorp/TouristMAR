@@ -50,12 +50,64 @@ void main() {
     expect(r.publicado, isTrue);
   });
 
-  test('un recorrido al que le falta una foto no cuenta como publicado', () {
+  test('ya no hacen falta 3 fotos: con un escenario cuenta como publicado; sin ninguno, no', () {
     final r = Recorrido360.fromJson(_recorridoJson(overrides: {
       'escenas': [_escenaJson('e-1', 1), _escenaJson('e-3', 3)],
     }));
-    expect(r.publicado, isFalse);
+    expect(r.publicado, isTrue);
     expect(r.foto(2), isNull);
+
+    expect(Recorrido360.fromJson(_recorridoJson(overrides: {'escenas': []})).publicado, isFalse);
+  });
+
+  test('un escenario trae su nombre, vista inicial y flechas (destino = casilla)', () {
+    final e = Escena360.fromJson({
+      ..._escenaJson('e-1', 1),
+      'titulo': '',
+      'yawInicial': 90,
+      'enlaces': [
+        {'destino': 2, 'yaw': 45, 'pitch': -10, 'etiqueta': 'Explanada'},
+      ],
+    });
+    expect(e.nombre, 'Escenario 1');
+    expect(e.yawInicial, 90);
+    expect(e.enlaces.single.destino, 2);
+    expect(e.enlaces.single.etiqueta, 'Explanada');
+  });
+
+  test('setEnlaces reemplaza las flechas del escenario con PUT .../enlaces', () async {
+    late http.Request called;
+    final client = MockClient((request) async {
+      called = request;
+      return http.Response(jsonEncode({'escena': {..._escenaJson('e-1', 1), 'enlaces': jsonDecode(request.body)['enlaces']}}), 200);
+    });
+
+    final escena = await RecorridosService(client: client).setEnlaces('jwt', 'r-1', 1, const [
+      Enlace360(destino: 2, yaw: 30, pitch: -20),
+    ]);
+
+    expect(called.method, 'PUT');
+    expect(called.url.path, endsWith('/admin/recorridos/r-1/escenas/1/enlaces'));
+    expect(jsonDecode(called.body), {
+      'enlaces': [
+        {'destino': 2, 'yaw': 30.0, 'pitch': -20.0, 'etiqueta': ''},
+      ],
+    });
+    expect(escena.enlaces.single.yaw, 30);
+  });
+
+  test('updateEscena manda título y vista inicial con PATCH', () async {
+    late http.Request called;
+    final client = MockClient((request) async {
+      called = request;
+      return http.Response(jsonEncode({'escena': {..._escenaJson('e-1', 1), 'titulo': 'Lobby', 'yawInicial': -30}}), 200);
+    });
+
+    final escena = await RecorridosService(client: client).updateEscena('jwt', 'r-1', 1, {'titulo': 'Lobby', 'yawInicial': -30});
+
+    expect(called.method, 'PATCH');
+    expect(called.url.path, endsWith('/admin/recorridos/r-1/escenas/1'));
+    expect(escena.nombre, 'Lobby');
   });
 
   test('createRecorrido manda JSON con negocioId null si es general', () async {
@@ -126,10 +178,20 @@ void main() {
               'textoParaMostrar': 'Hotel\nInfo',
               'negocioId': 'n-1',
               'urlPortada': 'https://cdn/min.jpg',
+              'escenaInicial': 'e-1',
               'escenas': [
-                {'titulo': 'Foto 1', 'urlImagen': 'https://cdn/1.jpg'},
-                {'titulo': 'Foto 2', 'urlImagen': 'https://cdn/2.jpg'},
-                {'titulo': 'Foto 3', 'urlImagen': 'https://cdn/3.jpg'},
+                {
+                  'id': 'e-1',
+                  'titulo': 'Entrada',
+                  'descripcion': '',
+                  'urlImagen': 'https://cdn/1.jpg',
+                  'urlMiniatura': 'https://cdn/1_min.jpg',
+                  'yawInicial': 0,
+                  'enlaces': [
+                    {'destino': 'e-2', 'yaw': 10, 'pitch': -15, 'etiqueta': 'Lobby'},
+                  ],
+                },
+                {'id': 'e-2', 'titulo': 'Lobby', 'urlImagen': 'https://cdn/2.jpg', 'enlaces': []},
               ],
             },
           ],
@@ -143,7 +205,12 @@ void main() {
     expect(called.url.path, endsWith('/recorridos'));
     expect(called.url.queryParameters, {'negocioId': 'n-1'});
     expect(called.headers.containsKey('Authorization'), isFalse);
-    expect(list.single.escenas, 3);
+    final r = list.single;
+    expect(r.escenaInicial, 'e-1');
+    expect(r.escenas.map((e) => e.titulo), ['Entrada', 'Lobby']);
+    expect(r.escenas.first.enlaces.single.destino, 'e-2');
+    expect(r.titulo, 'Hotel');
+    expect(r.descripcion, 'Info');
   });
 
   group('recorridoDeLugar', () {
@@ -152,7 +219,6 @@ void main() {
           textoParaMostrar: '$titulo\nInfo',
           negocioId: negocioId,
           urlPortada: '',
-          escenas: 3,
         );
 
     final publicados = [

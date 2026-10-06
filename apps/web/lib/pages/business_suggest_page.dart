@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 
 import '../models/business_profile.dart';
+import '../models/lugar.dart';
 import '../services/auth_service.dart';
 import '../services/session_storage.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_button.dart';
 import '../widgets/app_text_field.dart';
+import '../widgets/mapa/ubicacion_lugar.dart';
 import '../widgets/themed_builder.dart';
 
 /// Formulario para que una cuenta de negocio ya aprobada sugiera un negocio
@@ -24,6 +26,8 @@ class _BusinessSuggestPageState extends State<BusinessSuggestPage> {
   final _categoryController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _addressController = TextEditingController();
+  /// Pin en el mapa (opcional al sugerir).
+  Coordenadas? _ubicacion;
   final _authService = AuthService();
   bool _isSaving = false;
   String? _error;
@@ -58,6 +62,8 @@ class _BusinessSuggestPageState extends State<BusinessSuggestPage> {
         categoria: _categoryController.text.trim(),
         descripcion: _descriptionController.text.trim(),
         direccion: _addressController.text.trim(),
+        latitud: _ubicacion?.lat,
+        longitud: _ubicacion?.lng,
       );
       final nuevo = updated.negocios.last;
       if (mounted) Navigator.of(context).pop(BusinessProfile.fromNegocioInfo(updated, nuevo));
@@ -124,6 +130,13 @@ class _BusinessSuggestPageState extends State<BusinessSuggestPage> {
                       controller: _addressController,
                       hintText: 'Calle, número, colonia…',
                       accentColor: AppColors.businessOrange,
+                    ),
+                    const SizedBox(height: 20),
+                    CampoCoordenadas(
+                      lugar: _nameController.text.trim().isEmpty ? 'el negocio' : _nameController.text.trim(),
+                      acento: AppColors.businessOrange,
+                      habilitado: !_isSaving,
+                      onChanged: (c) => _ubicacion = c,
                     ),
                     const SizedBox(height: 20),
                     Text('Descripción', style: TextStyle(color: AppColors.slate300, fontSize: 14)),

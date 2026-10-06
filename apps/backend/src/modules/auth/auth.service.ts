@@ -204,6 +204,9 @@ export interface NegocioProfileInput {
   sitioWeb?: string
   horario?: string
   portada?: string
+  /// Pin del lugar en el mapa público (null = quitarlo).
+  latitud?: number | null
+  longitud?: number | null
 }
 
 /// Confirma que `negocioId` existe y le pertenece a `userId`. Todas las
@@ -347,6 +350,8 @@ export interface SuggestNegocioInput {
   categoria?: string
   descripcion?: string
   direccion?: string
+  latitud?: number
+  longitud?: number
 }
 
 /// Una cuenta de negocio ya aprobada sugiere un negocio adicional — cae en la
@@ -371,6 +376,8 @@ export async function suggestNegocio(userId: string, input: SuggestNegocioInput)
         categoria: input.categoria,
         descripcion: input.descripcion,
         direccion: input.direccion,
+        latitud: input.latitud,
+        longitud: input.longitud,
       },
     })
 

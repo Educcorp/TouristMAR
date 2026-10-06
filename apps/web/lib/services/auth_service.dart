@@ -141,6 +141,8 @@ class NegocioSummary {
   final String? ownerId;
   final String nombre;
   final String? categoria;
+  final String? descripcion;
+  final String? direccion;
   final String estado;
   final String email;
   final String contacto;
@@ -149,12 +151,17 @@ class NegocioSummary {
   final String? arMarcador;
   final String? arGeo;
   final bool esAdicional;
+  /// Pin del lugar en el mapa público (null = no aparece en el mapa).
+  final double? latitud;
+  final double? longitud;
 
   const NegocioSummary({
     required this.id,
     this.ownerId,
     required this.nombre,
     this.categoria,
+    this.descripcion,
+    this.direccion,
     required this.estado,
     required this.email,
     required this.contacto,
@@ -163,7 +170,11 @@ class NegocioSummary {
     this.arMarcador,
     this.arGeo,
     this.esAdicional = false,
+    this.latitud,
+    this.longitud,
   });
+
+  bool get tieneUbicacion => latitud != null && longitud != null;
 
   bool get pendiente => estado == 'pendiente';
   bool get aprobado => estado == 'aprobado';
@@ -174,6 +185,8 @@ class NegocioSummary {
         ownerId: json['ownerId'] as String?,
         nombre: json['nombre'] as String,
         categoria: json['categoria'] as String?,
+        descripcion: json['descripcion'] as String?,
+        direccion: json['direccion'] as String?,
         estado: json['estado'] as String? ?? 'pendiente',
         email: json['email'] as String,
         contacto: json['contacto'] as String,
@@ -182,6 +195,8 @@ class NegocioSummary {
         arMarcador: json['arMarcador'] as String?,
         arGeo: json['arGeo'] as String?,
         esAdicional: json['esAdicional'] as bool? ?? false,
+        latitud: (json['latitud'] as num?)?.toDouble(),
+        longitud: (json['longitud'] as num?)?.toDouble(),
       );
 }
 
@@ -419,7 +434,9 @@ class AuthService {
     return AuthUser.fromJson(data['user'] as Map<String, dynamic>);
   }
 
-  Future<AuthUser> updateNegocio(String token, String negocioId, Map<String, String> fields) async {
+  /// `fields`: textos del negocio y, opcionales, `latitud`/`longitud` (números,
+  /// juntos; null los quita).
+  Future<AuthUser> updateNegocio(String token, String negocioId, Map<String, Object?> fields) async {
     final res = await _client.patch(
       Uri.parse('$apiUrl/auth/profile/negocios/$negocioId'),
       headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
@@ -441,6 +458,8 @@ class AuthService {
     String? categoria,
     String? descripcion,
     String? direccion,
+    double? latitud,
+    double? longitud,
   }) async {
     final res = await _client.post(
       Uri.parse('$apiUrl/auth/profile/negocios'),
@@ -450,6 +469,7 @@ class AuthService {
         if (categoria != null && categoria.trim().isNotEmpty) 'categoria': categoria,
         if (descripcion != null && descripcion.trim().isNotEmpty) 'descripcion': descripcion,
         if (direccion != null && direccion.trim().isNotEmpty) 'direccion': direccion,
+        if (latitud != null && longitud != null) ...{'latitud': latitud, 'longitud': longitud},
       }),
     );
 
@@ -485,6 +505,32 @@ class AuthService {
   Future<List<NegocioSummary>> adminListNegociosPendientes(String token) async {
     final data = await _get('/admin/negocios/pendientes', token);
     return (data['negocios'] as List).map((n) => NegocioSummary.fromJson(n as Map<String, dynamic>)).toList();
+  }
+
+  /// Registra un lugar sin dueño desde "Mapa y RA" (una facultad, un
+  /// mirador…): queda aprobado y a nombre del super admin. `datos`: nombre,
+  /// categoria, descripcion, direccion, latitud, longitud.
+  Future<NegocioSummary> adminCrearLugar(String token, Map<String, dynamic> datos) async {
+    final data = await _postJson('/admin/lugares', token, datos);
+    return NegocioSummary.fromJson(data['negocio'] as Map<String, dynamic>);
+  }
+
+  /// Corrige los datos de cualquier lugar (los mismos campos que [adminCrearLugar]).
+  Future<NegocioSummary> adminActualizarLugar(String token, String negocioId, Map<String, dynamic> datos) async {
+    final data = await _patch('/admin/negocios/$negocioId', token, datos);
+    return NegocioSummary.fromJson(data['negocio'] as Map<String, dynamic>);
+  }
+
+  /// Borra un lugar con sus recorridos 360° y marcadores.
+  Future<void> adminEliminarLugar(String token, String negocioId) async {
+    final res = await _client.delete(
+      Uri.parse('$apiUrl/admin/negocios/$negocioId'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      final data = _decode(res.body);
+      throw AuthError((data['error'] as String?) ?? 'No se pudo eliminar el lugar');
+    }
   }
 
   Future<void> adminApproveNegocio(String token, String negocioId) {

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import '../theme/breakpoints.dart';
 import '../theme/theme_controller.dart';
@@ -11,7 +12,10 @@ class LoginPage extends StatelessWidget {
   final String? initialError;
   final bool startInBusinessRegister;
 
-  const LoginPage({super.key, this.initialError, this.startInBusinessRegister = false});
+  /// Solo para pruebas: un servicio con un cliente HTTP falso.
+  final AuthService? authService;
+
+  const LoginPage({super.key, this.initialError, this.startInBusinessRegister = false, this.authService});
 
   @override
   Widget build(BuildContext context) {
@@ -28,13 +32,24 @@ class LoginPage extends StatelessWidget {
               final isWide = Breakpoints.isExpanded(constraints.maxWidth);
 
               if (!isWide) {
-                return LoginForm(initialError: initialError, startInBusinessRegister: startInBusinessRegister);
+                return LoginForm(
+                  authService: authService,
+                  initialError: initialError,
+                  startInBusinessRegister: startInBusinessRegister,
+                );
               }
 
               return Row(
                 children: [
                   const Expanded(flex: 58, child: HeroPanel()),
-                  Expanded(flex: 42, child: LoginForm(initialError: initialError, startInBusinessRegister: startInBusinessRegister)),
+                  Expanded(
+                    flex: 42,
+                    child: LoginForm(
+                      authService: authService,
+                      initialError: initialError,
+                      startInBusinessRegister: startInBusinessRegister,
+                    ),
+                  ),
                 ],
               );
             },

@@ -122,7 +122,7 @@ class CategoriaLugarDetector {
     CategoriaLugar.mirador: ['mirador', 'cerro', 'vista'],
     CategoriaLugar.restaurante: ['restaur', 'comida', 'mariscos', 'bar', 'café', 'cafe', 'cocina'],
     CategoriaLugar.hotel: ['hotel', 'hosped', 'hostal', 'posada', 'resort'],
-    CategoriaLugar.recreacion: ['recrea', 'laguna', 'buceo', 'tour', 'parque', 'aventura'],
+    CategoriaLugar.recreacion: ['recrea', 'laguna', 'buceo', 'tour', 'parque', 'aventura', 'nocturno', 'antro'],
     CategoriaLugar.cultura: ['cultur', 'museo', 'monumento', 'histór', 'histor', 'arte'],
   };
 

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../models/visitor_profile.dart';
+import '../navegacion/rutas.dart';
 import '../services/auth_service.dart';
 import '../services/lugares_service.dart';
-import '../services/session_storage.dart';
 import '../theme/app_theme.dart';
 import '../theme/breakpoints.dart';
 import '../widgets/app_shell.dart';
@@ -14,8 +14,6 @@ import '../widgets/themed_builder.dart';
 import '../utils/keyboard.dart';
 import '../widgets/user_avatar.dart';
 import '../widgets/notification_bell.dart';
-import 'login_page.dart';
-import 'lugar_detalle_page.dart';
 
 class _QuickAction {
   final IconData icon;
@@ -89,11 +87,7 @@ class _HomePageState extends State<HomePage> {
     );
     if (go != true || !mounted) return;
 
-    SessionStorage.clearToken();
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const LoginPage(startInBusinessRegister: true)),
-      (route) => false,
-    );
+    cerrarSesion(context, registroNegocio: true);
   }
 
   late final List<_FeaturedPlace> _places = [
@@ -106,7 +100,7 @@ class _HomePageState extends State<HomePage> {
     final lugares = await const LugaresService().listarPublicos();
     final lugar = lugares.where((l) => l.id == lugarId).firstOrNull;
     if (lugar == null || !mounted) return;
-    Navigator.of(context).push(MaterialPageRoute(builder: (_) => LugarDetallePage(lugar: lugar)));
+    await abrirLugar(context, lugar);
   }
 
   String get _greeting {

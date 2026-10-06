@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../models/visitor_profile.dart';
-import '../pages/explorar_mapa_page.dart';
-import '../pages/login_page.dart';
-import '../pages/profile_page.dart';
-import '../services/session_storage.dart';
+import '../navegacion/rutas.dart';
 import '../theme/app_theme.dart';
 import '../theme/breakpoints.dart';
 import 'notification_bell.dart';
@@ -33,35 +31,17 @@ void _comingSoon(BuildContext context) {
   );
 }
 
-/// Ruta sin animación de transición: navegar a "Mi perfil" desde el sidebar
-/// debe sentirse como cambiar de pestaña, no como abrir una pantalla nueva
-/// encima de la anterior.
-Route<T> _instantRoute<T>(WidgetBuilder builder) {
-  return PageRouteBuilder<T>(
-    pageBuilder: (context, animation, secondaryAnimation) => builder(context),
-    transitionDuration: Duration.zero,
-    reverseTransitionDuration: Duration.zero,
-  );
-}
-
-void _logout(BuildContext context) {
-  SessionStorage.clearToken();
-  Navigator.of(context).pushAndRemoveUntil(
-    MaterialPageRoute(builder: (_) => const LoginPage()),
-    (route) => false,
-  );
-}
+void _logout(BuildContext context) => cerrarSesion(context);
 
 /// Qué página del flujo de visitante está activa — decide qué ítem del nav
 /// se resalta. Antes el resaltado era fijo por ítem ("Mi perfil" siempre
 /// marcado); ahora cada página que arma la lista dice cuál es, vía [current].
 enum VisitorSection { home, mapa, profile }
 
-/// Abre el mapa del visitante (sin animación, como un cambio de pestaña).
-/// Desde el propio mapa no hace nada, para no apilar otra copia.
+/// Abre el mapa del visitante (`/mapa`, sin animación, como un cambio de pestaña).
 void openVisitorMap(BuildContext context, VisitorProfile profile, {VisitorSection? from}) {
   if (from == VisitorSection.mapa) return;
-  Navigator.of(context).push(_instantRoute((_) => ExplorarMapaPage(profile: profile)));
+  context.go('/mapa');
 }
 
 List<NavItem> visitorNavItems(
@@ -74,7 +54,7 @@ List<NavItem> visitorNavItems(
       icon: Icons.home_outlined,
       label: 'Inicio',
       highlight: current == VisitorSection.home,
-      onTap: () => Navigator.of(context).popUntil((r) => r.isFirst),
+      onTap: () => context.go('/inicio'),
     ),
     NavItem(
       icon: Icons.map_outlined,
@@ -87,9 +67,7 @@ List<NavItem> visitorNavItems(
       icon: Icons.person_outline,
       label: 'Mi perfil',
       highlight: current == VisitorSection.profile,
-      onTap: () => Navigator.of(context).push(
-        _instantRoute((_) => ProfilePage(profile: profile)),
-      ),
+      onTap: () => context.go('/perfil'),
     ),
     NavItem(
       icon: Icons.notifications_outlined,

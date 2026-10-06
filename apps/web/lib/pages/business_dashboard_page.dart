@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../models/business_profile.dart';
 import '../theme/app_theme.dart';
 import '../theme/breakpoints.dart';
 import '../widgets/cover_image.dart';
-import 'business_edit_page.dart';
-import 'business_gallery_page.dart';
 
 /// Contenido de la sección "Dashboard" embebido en [BusinessShell] — sin
 /// Scaffold/AppBar propio, igual que las páginas del panel admin.
@@ -29,9 +28,7 @@ class BusinessDashboardContent extends StatefulWidget {
 
 class _BusinessDashboardContentState extends State<BusinessDashboardContent> {
   Future<void> _openEdit() async {
-    final changed = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(builder: (_) => BusinessEditPage(business: widget.business)),
-    );
+    final changed = await context.push<bool>('/empresa/editar?negocio=${widget.business.id}');
     if (changed == true && mounted) {
       setState(() {});
       widget.onNegocioUpdated();
@@ -39,9 +36,7 @@ class _BusinessDashboardContentState extends State<BusinessDashboardContent> {
   }
 
   Future<void> _openGallery() async {
-    final changed = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(builder: (_) => BusinessGalleryPage(business: widget.business)),
-    );
+    final changed = await context.push<bool>('/empresa/galeria?negocio=${widget.business.id}');
     if (changed == true && mounted) {
       setState(() {});
       widget.onNegocioUpdated();

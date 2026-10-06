@@ -179,10 +179,11 @@ model ArEscaneo {
   @@map("ar_escaneos")
 }
 
-/// Recorrido 360° de un lugar: exactamente 3 fotos 360° equirectangulares
-/// ("Foto 1", "Foto 2", "Foto 3", en ese orden). Lo da de alta un admin desde
-/// el panel web; el módulo de Unity descarga la lista pública
-/// (`GET /api/recorridos`) y baja cada foto cuando la necesita.
+/// Recorrido 360° de un lugar: de 1 a 32 escenarios (cada uno una foto 360°
+/// equirectangular ya unida) conectados entre sí con flechas. El turista
+/// entra por el escenario 1 y pasa de uno a otro tocando las flechas. Lo da
+/// de alta un admin desde el panel web; el módulo de Unity descarga la lista
+/// pública (`GET /api/recorridos`) y baja cada foto cuando la necesita.
 model Recorrido360 {
   id        String          @id @default(uuid()) @db.Uuid
   /// Opcional: el recorrido puede ser de un negocio (su hotel, su
@@ -194,6 +195,11 @@ model Recorrido360 {
   nombre    String          @unique
   titulo    String
   texto     String
+  /// Dónde está el recorrido (pin en el mapa). Propio del recorrido: un
+  /// recorrido general (FIME, un mirador) no tiene negocio del cual tomarlo.
+  /// null = sin ubicación (solo se abre desde la ficha del lugar).
+  latitud   Float?
+  longitud  Float?
   activo    Boolean         @default(true)
   creadoPor String?         @map("creado_por") @db.Uuid
   autor     User?           @relation(fields: [creadoPor], references: [id], onDelete: SetNull)
@@ -207,15 +213,22 @@ model Recorrido360 {
   @@map("recorridos_360")
 }
 
-/// Una de las 3 fotos 360° del recorrido ("Foto 1", "Foto 2", "Foto 3").
-/// `orden` es la casilla (0 = Foto 1): el admin sube cada foto en su casilla,
-/// así el orden no depende de en qué orden se suban. El backend la guarda ya
-/// optimizada (JPG de máx. 4096×2048) más una miniatura para el panel.
+/// Un escenario del recorrido: un punto donde se paró la cámara 360° (la
+/// entrada, el lobby, la alberca…). `orden` es su casilla (0 = Escenario 1,
+/// el de entrada): el admin sube cada foto en su casilla, así el orden no
+/// depende de en qué orden se suban. El backend la guarda ya optimizada (JPG
+/// de máx. 4096×2048) más una miniatura para el panel.
 model Recorrido360Escena {
   id            String       @id @default(uuid()) @db.Uuid
   recorridoId   String       @map("recorrido_id") @db.Uuid
   recorrido     Recorrido360 @relation(fields: [recorridoId], references: [id], onDelete: Cascade)
   orden         Int
+  /// Nombre que ve el turista ("Lobby", "Alberca"). Vacío = "Escenario N".
+  titulo        String       @default("")
+  descripcion   String       @default("")
+  /// Hacia dónde mira la cámara al entrar al escenario, en grados (0 = el
+  /// centro de la foto equirectangular, positivo hacia la derecha).
+  yawInicial    Float        @default(0) @map("yaw_inicial")
   imagenUrl     String       @map("imagen_url")
   /// Rutas dentro del bucket — hacen falta para borrar los archivos de
   /// Storage al reemplazar la foto o eliminar el recorrido.
@@ -229,6 +242,31 @@ model Recorrido360Escena {
   createdAt     DateTime     @default(now()) @map("created_at")
   updatedAt     DateTime     @updatedAt @map("updated_at")
 
+  enlaces  Recorrido360Enlace[] @relation("EnlaceOrigen")
+  entradas Recorrido360Enlace[] @relation("EnlaceDestino")
+
   @@unique([recorridoId, orden])
   @@map("recorrido_360_escenas")
+}
+
+/// Flecha (hotspot) dentro de un escenario que lleva a otro escenario del
+/// mismo recorrido. `yaw`/`pitch` son la posición de la flecha en la foto,
+/// en grados: yaw -180…180 (0 = centro de la foto), pitch -90…90 (0 = el
+/// horizonte, negativo = hacia el piso).
+model Recorrido360Enlace {
+  id        String             @id @default(uuid()) @db.Uuid
+  origenId  String             @map("origen_id") @db.Uuid
+  origen    Recorrido360Escena @relation("EnlaceOrigen", fields: [origenId], references: [id], onDelete: Cascade)
+  destinoId String             @map("destino_id") @db.Uuid
+  destino   Recorrido360Escena @relation("EnlaceDestino", fields: [destinoId], references: [id], onDelete: Cascade)
+  yaw       Float
+  pitch     Float              @default(0)
+  /// Texto opcional junto a la flecha ("Ir a la alberca"). Vacío = el
+  /// título del escenario destino.
+  etiqueta  String             @default("")
+  createdAt DateTime           @default(now()) @map("created_at")
+
+  @@unique([origenId, destinoId])
+  @@index([destinoId])
+  @@map("recorrido_360_enlaces")
 }

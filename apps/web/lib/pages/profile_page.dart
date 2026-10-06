@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../models/visitor_profile.dart';
 import '../theme/app_theme.dart';
@@ -7,7 +8,6 @@ import '../widgets/app_button.dart';
 import '../widgets/app_shell.dart';
 import '../widgets/themed_builder.dart';
 import '../widgets/user_avatar.dart';
-import 'edit_profile_page.dart';
 
 class ProfilePage extends StatefulWidget {
   final VisitorProfile profile;
@@ -20,9 +20,7 @@ class ProfilePage extends StatefulWidget {
 
 class _ProfilePageState extends State<ProfilePage> {
   Future<void> _editProfile() async {
-    final changed = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(builder: (_) => EditProfilePage(profile: widget.profile)),
-    );
+    final changed = await context.push<bool>('/perfil/editar');
     if (changed == true && mounted) setState(() {});
   }
 

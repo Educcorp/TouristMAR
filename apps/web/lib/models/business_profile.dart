@@ -66,6 +66,9 @@ class BusinessProfile {
   String? archivo360;
   String? arMarcador;
   String? arGeo;
+  /// Pin del negocio en el mapa público (null = todavía sin ubicar).
+  double? latitud;
+  double? longitud;
 
   BusinessProfile({
     required this.id,
@@ -90,6 +93,8 @@ class BusinessProfile {
     this.archivo360,
     this.arMarcador,
     this.arGeo,
+    this.latitud,
+    this.longitud,
   });
 
   /// Un negocio puntual de una cuenta (una cuenta puede tener varios). Las
@@ -120,6 +125,8 @@ class BusinessProfile {
       archivo360: negocio.archivo360,
       arMarcador: negocio.arMarcador,
       arGeo: negocio.arGeo,
+      latitud: negocio.latitud,
+      longitud: negocio.longitud,
     );
   }
 }
