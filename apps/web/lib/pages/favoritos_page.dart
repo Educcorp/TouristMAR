@@ -102,23 +102,29 @@ class _FavoritosPageState extends State<FavoritosPage> {
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 960),
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Mis favoritos',
-                      style: TextStyle(color: AppColors.textPrimary, fontSize: 22, fontWeight: FontWeight.w700)),
-                  const SizedBox(height: 4),
-                  Text(
-                    _cargando
-                        ? 'Cargando…'
-                        : '${_lugares.length} ${_lugares.length == 1 ? 'lugar guardado' : 'lugares guardados'}',
-                    style: TextStyle(color: AppColors.slate400, fontSize: 13),
-                  ),
-                  const SizedBox(height: 20),
-                  _buildContenido(),
-                ],
+            // Ocupa todo el ancho posible (hasta 960): si no, la columna
+            // se encoge al elemento más ancho (la tarjeta) y se centra.
+            child: SizedBox(
+              width: double.infinity,
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Mis favoritos', style: AppTypography.h2),
+                    const SizedBox(height: 4),
+                    Text('Los lugares que guardaste para volver a visitar.', style: AppTypography.bodySmall),
+                    const SizedBox(height: AppSpacing.lg),
+                    Text(
+                      _cargando
+                          ? 'Cargando…'
+                          : '${_lugares.length} ${_lugares.length == 1 ? 'lugar' : 'lugares'}',
+                      style: AppTypography.caption,
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    _buildContenido(),
+                  ],
+                ),
               ),
             ),
           ),
@@ -199,12 +205,10 @@ class _Mensaje extends StatelessWidget {
           children: [
             Icon(icon, size: 44, color: AppColors.slate500),
             const SizedBox(height: 12),
-            Text(titulo,
-                textAlign: TextAlign.center,
-                style: TextStyle(color: AppColors.textPrimary, fontSize: 15, fontWeight: FontWeight.w600)),
+            Text(titulo, textAlign: TextAlign.center, style: AppTypography.h3),
             if (detalle != null) ...[
               const SizedBox(height: 4),
-              Text(detalle!, textAlign: TextAlign.center, style: TextStyle(color: AppColors.slate400, fontSize: 13)),
+              Text(detalle!, textAlign: TextAlign.center, style: AppTypography.body),
             ],
             if (accion != null) ...[const SizedBox(height: 8), accion!],
           ],
