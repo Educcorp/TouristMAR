@@ -12,7 +12,7 @@ import '../../widgets/admin/ds_button.dart';
 import '../../widgets/admin/ds_card.dart';
 import '../../widgets/admin/ds_states.dart';
 import '../../widgets/app_text_field.dart';
-import '../../widgets/mapa/selector_ubicacion.dart';
+import '../../widgets/mapa/ubicacion_lugar.dart';
 import '../../widgets/themed_builder.dart';
 
 /// Contenido de RA que el admin puede ligar a un negocio desde su solicitud.
@@ -25,7 +25,8 @@ class ResultadoDetalleNegocio {
   /// `true` = aprobado, `false` = rechazado, `null` = sin decidir.
   final bool? aprobado;
 
-  /// Si el admin pidió ir a añadir contenido de RA para este negocio.
+  /// Si el admin pidió ir a añadir contenido de RA para este negocio (se
+  /// agrega en su ficha dentro de "Mapa y RA").
   final ContenidoNegocio? abrirContenido;
 
   /// Si se guardaron cambios en los datos (para recargar listas).
@@ -319,10 +320,13 @@ class _AdminNegocioDetallePageState extends State<AdminNegocioDetallePage> {
                         accentColor: AppColors.adminViolet,
                       ),
                       const SizedBox(height: AppSpacing.md),
-                      UbicacionField(
-                        value: _ubicacion,
-                        accent: AppColors.adminViolet,
-                        enabled: !ocupado,
+                      CampoCoordenadas(
+                        // Se vuelve a crear con lo guardado en el servidor.
+                        key: ValueKey('coordenadas-${n.latitud}-${n.longitud}'),
+                        lugar: n.nombre,
+                        inicial: _ubicacion,
+                        acento: AppColors.adminViolet,
+                        habilitado: !ocupado,
                         onChanged: (v) => setState(() {
                           _ubicacion = v;
                           _dirty = true;
@@ -385,7 +389,8 @@ class _AdminNegocioDetallePageState extends State<AdminNegocioDetallePage> {
               _SeccionContenido(
                 icon: Icons.view_in_ar_outlined,
                 titulo: 'RA por marcador',
-                descripcion: 'Imágenes (letrero, menú, placa) que la cámara de la app reconoce para mostrar información.',
+                descripcion: 'Imágenes (letrero, menú, placa) que la cámara de la app reconoce para mostrar información. '
+                    'Se agregan en la ficha del lugar en "Mapa y RA".',
                 vacio: 'Este negocio todavía no tiene marcadores de RA.',
                 items: n.marcadores,
                 boton: 'Añadir RA por marcador',
@@ -395,7 +400,8 @@ class _AdminNegocioDetallePageState extends State<AdminNegocioDetallePage> {
               _SeccionContenido(
                 icon: Icons.threesixty,
                 titulo: 'Recorrido 3D / 360°',
-                descripcion: 'Fotos 360° del lugar para recorrerlo desde la app antes de visitarlo.',
+                descripcion: 'Fotos 360° del lugar para recorrerlo desde la app antes de visitarlo. '
+                    'Se agregan en la ficha del lugar en "Mapa y RA".',
                 vacio: 'Este negocio todavía no tiene recorridos 360°.',
                 items: n.recorridos,
                 boton: 'Añadir recorrido 360°',

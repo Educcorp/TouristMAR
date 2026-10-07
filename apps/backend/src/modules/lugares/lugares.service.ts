@@ -16,6 +16,11 @@ export interface LugarAdminInput {
   categoria?: string | null
   descripcion?: string | null
   direccion?: string | null
+  // Contacto: lo manda la empresa en su solicitud y el admin lo puede
+  // corregir desde el detalle de la solicitud.
+  telefono?: string | null
+  sitioWeb?: string | null
+  horario?: string | null
   latitud?: number | null
   longitud?: number | null
 }

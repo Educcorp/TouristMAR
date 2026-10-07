@@ -21,11 +21,7 @@ class AdminArPage extends StatefulWidget {
   final AuthService authService;
   final ArService arService;
 
-  /// Si viene, el formulario de alta se abre con este negocio ya elegido
-  /// (cuando el admin llega aquí desde el detalle de una solicitud).
-  final String? initialNegocioId;
-
-  AdminArPage({super.key, AuthService? authService, ArService? arService, this.initialNegocioId})
+  AdminArPage({super.key, AuthService? authService, ArService? arService})
       : authService = authService ?? AuthService(),
         arService = arService ?? ArService();
 
@@ -43,7 +39,6 @@ class _AdminArPageState extends State<AdminArPage> {
   // Formulario: abierto para alta (`_editing == null`) o para editar uno.
   bool _showForm = false;
   ArMarcador? _editing;
-  bool _initialAplicado = false;
 
   @override
   void initState() {
@@ -66,18 +61,10 @@ class _AdminArPageState extends State<AdminArPage> {
       if (!mounted) return;
       setState(() {
         _marcadores = results[0] as List<ArMarcador>;
-        // Aprobados y pendientes: a una solicitud pendiente se le puede
-        // preparar su contenido desde ya. El endpoint público lo oculta hasta
-        // que el negocio se aprueba. Los rechazados no se ofrecen.
-        _negocios = (results[1] as List<NegocioSummary>).where((n) => !n.rechazado).toList()
+        // Solo negocios aprobados: el endpoint público oculta los marcadores
+        // de negocios pendientes/rechazados, así que ligarlos no serviría.
+        _negocios = (results[1] as List<NegocioSummary>).where((n) => n.aprobado).toList()
           ..sort((a, b) => a.nombre.toLowerCase().compareTo(b.nombre.toLowerCase()));
-        // Abierto desde el detalle de una solicitud: alta con el negocio ya
-        // elegido.
-        if (widget.initialNegocioId != null && !_initialAplicado) {
-          _initialAplicado = true;
-          _showForm = true;
-          _editing = null;
-        }
       });
     } catch (err) {
       if (!mounted) return;
@@ -226,7 +213,6 @@ class _AdminArPageState extends State<AdminArPage> {
                   // Cambiar de marcador reinicia el formulario (controllers nuevos).
                   key: ValueKey(_editing?.id ?? 'nuevo'),
                   marcador: _editing,
-                  initialNegocioId: _editing == null ? widget.initialNegocioId : null,
                   negocios: _negocios,
                   arService: widget.arService,
                   onCancel: _closeForm,
@@ -271,7 +257,6 @@ class _AdminArPageState extends State<AdminArPage> {
 
 class _MarcadorForm extends StatefulWidget {
   final ArMarcador? marcador;
-  final String? initialNegocioId;
   final List<NegocioSummary> negocios;
   final ArService arService;
   final VoidCallback onCancel;
@@ -280,7 +265,6 @@ class _MarcadorForm extends StatefulWidget {
   const _MarcadorForm({
     super.key,
     required this.marcador,
-    this.initialNegocioId,
     required this.negocios,
     required this.arService,
     required this.onCancel,
@@ -300,7 +284,7 @@ class _MarcadorFormState extends State<_MarcadorForm> {
   late final _anchoCm = TextEditingController(
     text: widget.marcador?.anchoMetros == null ? '' : _formatCm(widget.marcador!.anchoMetros! * 100),
   );
-  late String? _negocioId = widget.marcador?.negocioId ?? widget.initialNegocioId;
+  late String? _negocioId = widget.marcador?.negocioId;
 
   Uint8List? _imagen;
   String? _imagenNombre;
@@ -590,10 +574,7 @@ class _MarcadorFormState extends State<_MarcadorForm> {
           items: [
             const DropdownMenuItem<String?>(value: null, child: Text('General del destino (sin negocio)')),
             ...widget.negocios.map(
-              (n) => DropdownMenuItem<String?>(
-                value: n.id,
-                child: Text(n.pendiente ? '${n.nombre} (pendiente)' : n.nombre, overflow: TextOverflow.ellipsis),
-              ),
+              (n) => DropdownMenuItem<String?>(value: n.id, child: Text(n.nombre, overflow: TextOverflow.ellipsis)),
             ),
           ],
           onChanged: _saving ? null : (v) => setState(() => _negocioId = v),

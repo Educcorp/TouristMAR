@@ -23,6 +23,8 @@ const storageBucket = {
 vi.mock('../../../config/supabase', () => ({
   AVATARS_BUCKET: 'avatars',
   NEGOCIO_ASSETS_BUCKET: 'negocio-assets',
+  AR_MARCADORES_BUCKET: 'ar-marcadores',
+  RECORRIDOS_360_BUCKET: 'recorridos-360',
   supabase: { storage: { from: () => storageBucket } },
 }))
 
@@ -155,20 +157,20 @@ describe('Solicitud de negocio nuevo (empresa → admin)', () => {
     expect(res.body.negocios).toEqual([])
   })
 
-  it('PATCH /admin/negocios/:id edita los datos (texto vacío = borrar)', async () => {
+  it('PATCH /admin/negocios/:id edita los datos de la solicitud, incluido el contacto (null = borrar)', async () => {
     comoAdmin()
-    negocioFind.mockResolvedValue(detalleRow({ nombre: 'Mariscos Centro', telefono: null }) as any)
-    negocioUpdate.mockResolvedValue({} as any)
+    negocioFind.mockResolvedValue({ id: NEGOCIO_ID } as any)
+    negocioUpdate.mockResolvedValue(detalleRow({ nombre: 'Mariscos Centro', telefono: null, horario: 'Lun–Sáb' }) as any)
 
     const res = await request(buildApp())
       .patch(`/api/admin/negocios/${NEGOCIO_ID}`)
       .set('Authorization', `Bearer ${tokenFor('admin-1')}`)
-      .send({ nombre: 'Mariscos Centro', telefono: '', latitud: 19.06, longitud: -104.32 })
+      .send({ nombre: 'Mariscos Centro', telefono: null, horario: 'Lun–Sáb', latitud: 19.06, longitud: -104.32 })
 
     expect(res.status).toBe(200)
-    expect(negocioUpdate).toHaveBeenCalledWith({
+    expect(negocioUpdate.mock.calls[0][0]).toMatchObject({
       where: { id: NEGOCIO_ID },
-      data: { nombre: 'Mariscos Centro', telefono: null, latitud: 19.06, longitud: -104.32 },
+      data: { nombre: 'Mariscos Centro', telefono: null, horario: 'Lun–Sáb', latitud: 19.06, longitud: -104.32 },
     })
     expect(res.body.negocio.nombre).toBe('Mariscos Centro')
   })

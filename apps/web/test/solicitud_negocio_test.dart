@@ -19,6 +19,7 @@ import 'package:touristmar_web/pages/admin/admin_requests_page.dart';
 import 'package:touristmar_web/pages/business_suggest_page.dart';
 import 'package:touristmar_web/services/auth_service.dart';
 import 'package:touristmar_web/services/image_picker_service.dart';
+import 'package:touristmar_web/services/recorridos_service.dart';
 import 'package:touristmar_web/services/session_storage.dart';
 import 'package:touristmar_web/widgets/admin/admin_shell.dart';
 
@@ -104,6 +105,18 @@ void _pantallaCelular(WidgetTester tester, {double alto = 2400}) {
   tester.view.physicalSize = Size(430, alto);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
+}
+
+/// El detalle muestra un mini mapa con el pin. Con la fuente de pruebas
+/// (Ahem) la franja de créditos de OpenStreetMap no cabe; con la real sí.
+/// Solo se ignora ese aviso (igual que en negocio_coordenadas_test.dart).
+void _ignorarCreditosDelMapa() {
+  final onError = FlutterError.onError;
+  FlutterError.onError = (d) {
+    final creditos = d.toString().contains('flutter_map') && d.toString().contains('overflowed');
+    if (!creditos) onError?.call(d);
+  };
+  addTearDown(() => FlutterError.onError = onError);
 }
 
 void _simularFotoElegida() {
@@ -194,6 +207,7 @@ void main() {
 
   testWidgets('Empresa: el formulario envía la solicitud con imagen de portada', (tester) async {
     _pantallaCelular(tester);
+    _ignorarCreditosDelMapa();
     _simularFotoElegida();
     final peticiones = <_Peticion>[];
     final service = AuthService(
@@ -217,7 +231,7 @@ void main() {
     await tester.enterText(_campo('Nombre del negocio'), 'Mariscos La Bahía');
     await tester.enterText(_campo('Categoría'), 'Restaurantes');
     await tester.enterText(_campo('Teléfono (opcional)'), '314 000 0000');
-    expect(find.text('Sin ubicación marcada'), findsOneWidget);
+    expect(find.text('Coordenadas del lugar (pin en el mapa)'), findsOneWidget);
     expect(find.text('Elegir en el mapa'), findsOneWidget);
 
     await _tocar(tester, find.text('Enviar sugerencia'));
@@ -243,6 +257,8 @@ void main() {
           final body = r.body;
           peticiones.add(_Peticion(r.method, r.url.path, body));
           if (r.method == 'PATCH') {
+            // Como el backend real (updateLugar): regresa el resumen; la app
+            // vuelve a pedir el detalle completo después.
             final cambios = jsonDecode(body) as Map<String, dynamic>;
             return _respuesta(jsonEncode({'negocio': _detalle(nombre: cambios['nombre'] as String)}), 200);
           }
@@ -256,6 +272,7 @@ void main() {
 
     testWidgets('muestra imagen, título, ubicación y el contenido de RA', (tester) async {
       _pantallaCelular(tester);
+      _ignorarCreditosDelMapa();
       await tester.pumpWidget(MaterialApp(home: AdminNegocioDetallePage(negocioId: 'n-2', authService: service)));
       await tester.pumpAndSettle();
 
@@ -271,6 +288,7 @@ void main() {
 
     testWidgets('el admin edita los datos y los guarda', (tester) async {
       _pantallaCelular(tester);
+      _ignorarCreditosDelMapa();
       await tester.pumpWidget(MaterialApp(home: AdminNegocioDetallePage(negocioId: 'n-2', authService: service)));
       await tester.pumpAndSettle();
 
@@ -287,6 +305,7 @@ void main() {
 
     testWidgets('"Guardar y aprobar" guarda los cambios antes de aprobar', (tester) async {
       _pantallaCelular(tester);
+      _ignorarCreditosDelMapa();
       Object? devuelto;
       await tester.pumpWidget(
         _anfitrion(() => AdminNegocioDetallePage(negocioId: 'n-2', authService: service), (r) => devuelto = r),
@@ -300,6 +319,7 @@ void main() {
       expect(peticiones.map((p) => p.toString()).toList(), [
         'GET /api/admin/negocios/n-2',
         'PATCH /api/admin/negocios/n-2',
+        'GET /api/admin/negocios/n-2',
         'POST /api/admin/negocios/n-2/aprobar',
       ]);
       expect(devuelto, isA<ResultadoDetalleNegocio>());
@@ -308,6 +328,7 @@ void main() {
 
     testWidgets('"Añadir RA por marcador" regresa pidiendo abrir esa sección', (tester) async {
       _pantallaCelular(tester);
+      _ignorarCreditosDelMapa();
       Object? devuelto;
       await tester.pumpWidget(
         _anfitrion(() => AdminNegocioDetallePage(negocioId: 'n-2', authService: service), (r) => devuelto = r),
@@ -324,6 +345,7 @@ void main() {
 
   testWidgets('Admin: "Ver y editar" en Solicitudes abre el detalle', (tester) async {
     _pantallaCelular(tester);
+    _ignorarCreditosDelMapa();
     final service = AuthService(
       client: MockClient((r) async {
         if (r.url.path.endsWith('/pendientes')) {
@@ -350,7 +372,12 @@ void main() {
         return _respuesta(jsonEncode({'negocio': _detalle()}), 200);
       }),
     );
-    await tester.pumpWidget(MaterialApp(home: Scaffold(body: AdminRequestsPage(authService: service))));
+    final recorridos = RecorridosService(
+      client: MockClient((r) async => _respuesta(jsonEncode({'solicitudes': []}), 200)),
+    );
+    await tester.pumpWidget(
+      MaterialApp(home: Scaffold(body: AdminRequestsPage(authService: service, recorridosService: recorridos))),
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('Con ubicación'), findsOneWidget);
