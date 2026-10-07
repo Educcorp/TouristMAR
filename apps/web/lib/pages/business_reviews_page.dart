@@ -1,17 +1,85 @@
 import 'package:flutter/material.dart';
 
 import '../models/business_profile.dart';
+import '../services/resenas_service.dart';
 import '../theme/app_theme.dart';
+import '../utils/keyboard.dart';
 import '../widgets/admin/ds_states.dart';
+import '../widgets/resenas/resenas_widgets.dart';
 
 /// Contenido de la sección "Reseñas" embebido en [BusinessShell] — sin
-/// Scaffold/AppBar propio, igual que las páginas del panel admin.
-class BusinessReviewsContent extends StatelessWidget {
+/// Scaffold/AppBar propio, igual que las páginas del panel admin. Muestra las
+/// reseñas reales del negocio y deja responderlas.
+class BusinessReviewsContent extends StatefulWidget {
   final BusinessProfile business;
+  final ResenasService service;
 
-  const BusinessReviewsContent({super.key, required this.business});
+  BusinessReviewsContent({super.key, required this.business, ResenasService? service})
+      : service = service ?? ResenasService();
 
-  static const _distribution = [72, 18, 6, 3, 1];
+  @override
+  State<BusinessReviewsContent> createState() => _BusinessReviewsContentState();
+}
+
+class _BusinessReviewsContentState extends State<BusinessReviewsContent> {
+  ResenasLugar? _datos;
+  bool _cargando = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.business.verified) {
+      _cargar();
+    } else {
+      _cargando = false;
+    }
+  }
+
+  Future<void> _cargar() async {
+    setState(() {
+      _cargando = true;
+      _error = null;
+    });
+    final datos = await widget.business.cargarResenas(widget.service);
+    if (!mounted) return;
+    setState(() {
+      _datos = datos ?? _datos;
+      _error = datos == null ? 'No se pudieron cargar las reseñas' : null;
+      _cargando = false;
+    });
+  }
+
+  void _aviso(String texto) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(texto)));
+  }
+
+  Future<void> _responder(Resena resena) async {
+    final texto = await showDialog<String>(
+      context: context,
+      builder: (_) => _RespuestaDialog(inicial: resena.respuesta ?? ''),
+    );
+    if (texto == null || !mounted) return;
+    try {
+      await widget.service.responder(resena.id, texto);
+      if (!mounted) return;
+      _aviso('Respuesta publicada');
+      await _cargar();
+    } on ResenasError catch (e) {
+      if (mounted) _aviso(e.message);
+    }
+  }
+
+  Future<void> _quitarRespuesta(Resena resena) async {
+    try {
+      await widget.service.quitarRespuesta(resena.id);
+      if (!mounted) return;
+      _aviso('Respuesta eliminada');
+      await _cargar();
+    } on ResenasError catch (e) {
+      if (mounted) _aviso(e.message);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -26,17 +94,7 @@ class BusinessReviewsContent extends StatelessWidget {
               children: [
                 Text('Reseñas de clientes', style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 20)),
                 const SizedBox(height: 16),
-                if (!business.verified)
-                  const DsEmptyState(
-                    icon: Icons.forum_outlined,
-                    title: 'Aún no hay reseñas',
-                    subtitle: 'Este negocio todavía no está activo en el mapa.',
-                  )
-                else ...[
-                  _buildSummary(),
-                  const SizedBox(height: 20),
-                  ...businessReviews.map((r) => _buildReview(r)),
-                ],
+                _contenido(),
               ],
             ),
           ),
@@ -45,114 +103,118 @@ class BusinessReviewsContent extends StatelessWidget {
     );
   }
 
-  Widget _buildSummary() {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: AppColors.panelNavySoft,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.overlay(0.08)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
+  Widget _contenido() {
+    if (!widget.business.verified) {
+      return const DsEmptyState(
+        icon: Icons.forum_outlined,
+        title: 'Aún no hay reseñas',
+        subtitle: 'Este negocio todavía no está activo en el mapa.',
+      );
+    }
+    if (_cargando && _datos == null) {
+      return const Padding(padding: EdgeInsets.symmetric(vertical: 48), child: Center(child: CircularProgressIndicator()));
+    }
+    final datos = _datos;
+    if (datos == null) {
+      return Column(
         children: [
-          Column(
-            children: [
-              Text('${business.rating}', style: TextStyle(color: AppColors.textPrimary, fontSize: 36, fontWeight: FontWeight.w700)),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: List.generate(
-                  5,
-                  (i) => Icon(Icons.star, size: 13, color: i < business.rating.round() ? Colors.amber : AppColors.overlay(0.15)),
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text('${business.totalReviews} reseñas', style: TextStyle(color: AppColors.slate400, fontSize: 11)),
-            ],
-          ),
-          const SizedBox(width: 24),
-          Expanded(
-            child: Column(
-              children: List.generate(5, (i) {
-                final stars = 5 - i;
-                final pct = _distribution[i];
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 2),
-                  child: Row(
-                    children: [
-                      Text('$stars', style: TextStyle(color: AppColors.slate400, fontSize: 11)),
-                      const SizedBox(width: 4),
-                      const Icon(Icons.star, size: 10, color: Colors.amber),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(999),
-                          child: LinearProgressIndicator(
-                            value: pct / 100,
-                            minHeight: 6,
-                            backgroundColor: AppColors.overlay(0.08),
-                            valueColor: const AlwaysStoppedAnimation(Colors.amber),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      SizedBox(
-                        width: 28,
-                        child: Text('$pct%', textAlign: TextAlign.right, style: TextStyle(color: AppColors.slate400, fontSize: 11)),
-                      ),
-                    ],
+          DsEmptyState(icon: Icons.cloud_off_outlined, title: _error ?? 'No se pudieron cargar las reseñas', subtitle: ''),
+          TextButton(onPressed: _cargar, child: const Text('Reintentar')),
+        ],
+      );
+    }
+    if (datos.resenas.isEmpty) {
+      return const DsEmptyState(
+        icon: Icons.forum_outlined,
+        title: 'Aún no hay reseñas',
+        subtitle: 'Cuando un visitante califique tu negocio, aparecerá aquí.',
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        ResumenResenasCard(resumen: datos.resumen),
+        const SizedBox(height: 20),
+        ...datos.resenas.map(
+          (r) => ResenaTile(
+            resena: r,
+            acciones: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                if (r.respuesta != null && r.respuesta!.isNotEmpty)
+                  TextButton.icon(
+                    onPressed: () => _quitarRespuesta(r),
+                    icon: const Icon(Icons.delete_outline, size: 15),
+                    label: const Text('Quitar respuesta'),
+                    style: TextButton.styleFrom(foregroundColor: const Color(0xFFEF4444)),
                   ),
-                );
-              }),
+                TextButton.icon(
+                  onPressed: () => _responder(r),
+                  icon: const Icon(Icons.reply, size: 15),
+                  label: Text(r.respuesta == null || r.respuesta!.isEmpty ? 'Responder' : 'Editar respuesta'),
+                ),
+              ],
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
+}
 
-  Widget _buildReview(BusinessReview r) {
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.panelNavySoft,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.overlay(0.08)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  CircleAvatar(
-                    radius: 16,
-                    backgroundColor: AppColors.brandTeal.withValues(alpha: 0.15),
-                    child: Text(r.initials, style: TextStyle(color: AppColors.brandTeal, fontSize: 11, fontWeight: FontWeight.w700)),
-                  ),
-                  const SizedBox(width: 10),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(r.author, style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 13)),
-                      Text(r.dateLabel, style: TextStyle(color: AppColors.slate500, fontSize: 11)),
-                    ],
-                  ),
-                ],
-              ),
-              Row(
-                children: List.generate(5, (i) => Icon(Icons.star, size: 13, color: i < r.rating ? Colors.amber : AppColors.overlay(0.15))),
-              ),
-            ],
+/// Cuadro para escribir (o editar) la respuesta pública a una reseña.
+class _RespuestaDialog extends StatefulWidget {
+  final String inicial;
+
+  const _RespuestaDialog({required this.inicial});
+
+  @override
+  State<_RespuestaDialog> createState() => _RespuestaDialogState();
+}
+
+class _RespuestaDialogState extends State<_RespuestaDialog> {
+  late final _controller = TextEditingController(text: widget.inicial);
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final vacia = _controller.text.trim().isEmpty;
+    return AlertDialog(
+      backgroundColor: AppColors.panelNavySoft,
+      title: Text('Responder reseña', style: TextStyle(color: AppColors.textPrimary)),
+      content: SizedBox(
+        width: 420,
+        child: TextField(
+          controller: _controller,
+          autofocus: true,
+          minLines: 3,
+          maxLines: 6,
+          maxLength: 1000,
+          onChanged: (_) => setState(() {}),
+          onTapOutside: (_) => hideKeyboard(),
+          style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
+          decoration: InputDecoration(
+            hintText: 'Escribe una respuesta pública y amable',
+            hintStyle: TextStyle(color: AppColors.slate500),
           ),
-          const SizedBox(height: 8),
-          Text(r.text, style: TextStyle(color: AppColors.textSecondary, fontSize: 13, height: 1.4)),
-        ],
+        ),
       ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text('Cancelar', style: TextStyle(color: AppColors.slate400)),
+        ),
+        TextButton(
+          onPressed: vacia ? null : () => Navigator.of(context).pop(_controller.text.trim()),
+          child: const Text('Publicar', style: TextStyle(fontWeight: FontWeight.w600)),
+        ),
+      ],
     );
   }
 }

@@ -1,5 +1,6 @@
 import { Response } from 'express'
 import { addFavorito, esUuid, listFavoritos, removeFavorito } from './favoritos.service'
+import { resumenPorNegocios } from '../resenas/resenas.service'
 import { DatabaseNotReadyError } from '../../config/db-guard'
 import type { AuthedRequest } from '../auth/auth.middleware'
 
@@ -15,8 +16,11 @@ function fail(res: Response, err: unknown) {
 export async function listMine(req: AuthedRequest, res: Response) {
   try {
     const negocios = await listFavoritos(req.userId!)
+    const resenas = await resumenPorNegocios(negocios.map((n) => n.id))
     return res.json({
       favoritos: negocios.map((n) => ({
+        rating: resenas.get(n.id)?.promedio ?? 0,
+        totalResenas: resenas.get(n.id)?.total ?? 0,
         id: n.id,
         nombre: n.nombre,
         categoria: n.categoria,

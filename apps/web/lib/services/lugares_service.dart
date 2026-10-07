@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/lugar.dart';
-import 'auth_service.dart' show apiUrl, AuthError, NegocioInfo;
+import 'auth_service.dart' show apiUrl, AuthError;
 import 'session_storage.dart';
 
 /// Lo que todavía no existe en el backend. La interfaz lo atrapa y muestra
@@ -39,7 +39,7 @@ class LugaresService {
       if (res.statusCode >= 200 && res.statusCode < 300) {
         final data = jsonDecode(res.body) as Map<String, dynamic>;
         reales = (data['lugares'] as List)
-            .map((j) => Lugar.fromNegocioInfo(NegocioInfo.fromJson(j as Map<String, dynamic>)))
+            .map((j) => Lugar.fromJson(j as Map<String, dynamic>))
             .toList();
       }
     } catch (_) {

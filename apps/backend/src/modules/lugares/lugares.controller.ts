@@ -1,12 +1,16 @@
 import { Request, Response } from 'express'
 import { listLugaresPublicos } from './lugares.service'
+import { resumenPorNegocios } from '../resenas/resenas.service'
 import { DatabaseNotReadyError } from '../../config/db-guard'
 
 export async function listPublicos(_req: Request, res: Response) {
   try {
     const negocios = await listLugaresPublicos()
+    const resenas = await resumenPorNegocios(negocios.map((n) => n.id))
     return res.json({
       lugares: negocios.map((n) => ({
+        rating: resenas.get(n.id)?.promedio ?? 0,
+        totalResenas: resenas.get(n.id)?.total ?? 0,
         id: n.id,
         nombre: n.nombre,
         categoria: n.categoria,

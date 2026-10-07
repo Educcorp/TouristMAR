@@ -4,7 +4,9 @@ import 'package:go_router/go_router.dart';
 import '../models/business_profile.dart';
 import '../theme/app_theme.dart';
 import '../theme/breakpoints.dart';
+import '../services/resenas_service.dart';
 import '../widgets/cover_image.dart';
+import '../widgets/resenas/resenas_widgets.dart';
 
 /// Contenido de la sección "Dashboard" embebido en [BusinessShell] — sin
 /// Scaffold/AppBar propio, igual que las páginas del panel admin.
@@ -27,6 +29,21 @@ class BusinessDashboardContent extends StatefulWidget {
 }
 
 class _BusinessDashboardContentState extends State<BusinessDashboardContent> {
+  List<Resena>? _resenas;
+
+  @override
+  void initState() {
+    super.initState();
+    _cargarResenas();
+  }
+
+  Future<void> _cargarResenas() async {
+    if (!widget.business.verified) return;
+    final datos = await widget.business.cargarResenas();
+    if (!mounted) return;
+    setState(() => _resenas = datos?.resenas ?? const []);
+  }
+
   Future<void> _openEdit() async {
     final changed = await context.push<bool>('/empresa/editar?negocio=${widget.business.id}');
     if (changed == true && mounted) {
@@ -85,7 +102,7 @@ class _BusinessDashboardContentState extends State<BusinessDashboardContent> {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  ...businessReviews.take(2).map((r) => _RecentReviewTile(review: r)),
+                  ResenasRecientes(resenas: _resenas),
                   const SizedBox(height: 20),
                   _buildAlertBanner(),
                 ],
@@ -192,8 +209,8 @@ class _BusinessDashboardContentState extends State<BusinessDashboardContent> {
   Widget _buildStatsGrid(BusinessProfile business) {
     final stats = [
       (Icons.people_outline, '${business.monthlyVisits}', 'Visitas este mes', AppColors.brandTeal),
-      (Icons.star_outline, '${business.rating}★', 'Calificación promedio', Colors.amber),
-      (Icons.forum_outlined, '${business.newReviews}', 'Reseñas nuevas', AppColors.businessOrange),
+      (Icons.star_outline, business.totalReviews == 0 ? '—' : '${business.rating}★', 'Calificación promedio', Colors.amber),
+      (Icons.forum_outlined, '${business.newReviews}', 'Reseñas del mes', AppColors.businessOrange),
       (Icons.thumb_up_outlined, '${business.favorites}', 'Marcado favorito', Colors.greenAccent),
     ];
 
@@ -325,69 +342,6 @@ class _BusinessDashboardContentState extends State<BusinessDashboardContent> {
                     'Completar ahora →',
                     style: TextStyle(color: AppColors.businessOrange, fontSize: 12, fontWeight: FontWeight.w600),
                   ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _RecentReviewTile extends StatelessWidget {
-  final BusinessReview review;
-
-  const _RecentReviewTile({required this.review});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.overlay(0.03),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.overlay(0.08)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          CircleAvatar(
-            radius: 16,
-            backgroundColor: AppColors.brandTeal.withValues(alpha: 0.15),
-            child: Text(review.initials, style: TextStyle(color: AppColors.brandTeal, fontSize: 11, fontWeight: FontWeight.w700)),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(review.author, style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 13)),
-                    Row(
-                      children: [
-                        Row(
-                          children: List.generate(
-                            5,
-                            (i) => Icon(Icons.star, size: 11, color: i < review.rating ? Colors.amber : AppColors.overlay(0.15)),
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Text(review.dateLabel, style: TextStyle(color: AppColors.slate500, fontSize: 10)),
-                      ],
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  review.text,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: AppColors.textSecondary, fontSize: 12.5, height: 1.4),
                 ),
               ],
             ),
