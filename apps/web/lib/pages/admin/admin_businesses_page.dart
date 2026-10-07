@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../navegacion/rutas.dart';
 import '../../services/auth_service.dart';
 import '../../services/session_storage.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/admin/ds_badge.dart';
+import '../../widgets/admin/ds_button.dart';
 import '../../widgets/admin/ds_card.dart';
 import '../../widgets/admin/ds_icon_badge.dart';
 import '../../widgets/admin/ds_states.dart';
+import 'admin_negocio_detalle_page.dart';
 
 const _estadoFiltros = ['Todos', 'aprobado', 'pendiente', 'rechazado'];
 const _estadoLabels = {'aprobado': 'Activo', 'pendiente': 'Pendiente', 'rechazado': 'Rechazado'};
@@ -59,6 +63,19 @@ class _AdminBusinessesPageState extends State<AdminBusinessesPage> {
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  /// Detalle del negocio, editable por el admin (misma pantalla que usa
+  /// "Solicitudes" — ahí además puede aprobar/rechazar, aquí esos botones no
+  /// aparecen porque el negocio ya no está pendiente).
+  Future<void> _abrirDetalle(NegocioSummary negocio) async {
+    final resultado = await abrirDetalleNegocio(context, negocioId: negocio.id, authService: widget.authService);
+    if (!mounted || resultado == null) return;
+    if (resultado.abrirContenido != null) {
+      context.go(rutaLugarAdmin(negocio.id));
+      return;
+    }
+    if (resultado.editado || resultado.aprobado != null) _load();
   }
 
   List<String> get _categorias =>
@@ -180,7 +197,7 @@ class _AdminBusinessesPageState extends State<AdminBusinessesPage> {
           runSpacing: AppSpacing.md,
           children: filtered.map((n) {
             final width = columns == 1 ? constraints.maxWidth : (constraints.maxWidth - AppSpacing.md) / 2;
-            return SizedBox(width: width, child: _BusinessCard(negocio: n));
+            return SizedBox(width: width, child: _BusinessCard(negocio: n, onEdit: () => _abrirDetalle(n)));
           }).toList(),
         );
       },
@@ -227,8 +244,9 @@ class _FilterChip extends StatelessWidget {
 
 class _BusinessCard extends StatelessWidget {
   final NegocioSummary negocio;
+  final VoidCallback onEdit;
 
-  const _BusinessCard({required this.negocio});
+  const _BusinessCard({required this.negocio, required this.onEdit});
 
   @override
   Widget build(BuildContext context) {
@@ -240,32 +258,46 @@ class _BusinessCard extends StatelessWidget {
     final label = _estadoLabels[negocio.estado] ?? 'Pendiente';
 
     return DsCard(
-      child: Row(
+      onTap: onEdit,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          DsIconBadgeCircle(icon: Icons.apartment, color: AppColors.businessOrange, size: 40),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(negocio.nombre, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 13)),
-                const SizedBox(height: 2),
-                Text(negocio.categoria ?? 'Sin categoría', maxLines: 1, overflow: TextOverflow.ellipsis, style: AppTypography.bodySmall),
-              ],
-            ),
-          ),
           Row(
-            mainAxisSize: MainAxisSize.min,
+            children: [
+              DsIconBadgeCircle(icon: Icons.apartment, color: AppColors.businessOrange, size: 40),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(negocio.nombre, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 13)),
+                    const SizedBox(height: 2),
+                    Text(negocio.categoria ?? 'Sin categoría', maxLines: 1, overflow: TextOverflow.ellipsis, style: AppTypography.bodySmall),
+                  ],
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              DsBadge(text: label, tone: tone),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Row(
             children: [
               _AssetDot(label: '360', active: negocio.archivo360 != null),
               const SizedBox(width: 4),
               _AssetDot(label: 'M', active: negocio.arMarcador != null),
               const SizedBox(width: 4),
               _AssetDot(label: 'G', active: negocio.arGeo != null),
+              const Spacer(),
+              DsButton(
+                label: 'Editar',
+                icon: Icons.edit_outlined,
+                size: DsButtonSize.sm,
+                accent: AppColors.adminViolet,
+                onPressed: onEdit,
+              ),
             ],
           ),
-          const SizedBox(width: AppSpacing.sm),
-          DsBadge(text: label, tone: tone),
         ],
       ),
     );
