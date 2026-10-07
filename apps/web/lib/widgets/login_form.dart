@@ -335,7 +335,12 @@ class _LoginFormState extends State<LoginForm> {
     final accentColor = _isBusiness ? AppColors.businessOrange : AppColors.brandTeal;
     final isRegister = _mode == _Mode.register;
 
-    return Center(
+    // Alineado arriba (no Center): entre "Visitante" y "Empresa" cambia el
+    // alto del contenido (la tarjeta "Registra un lugar" solo sale en uno),
+    // y centrado verticalmente eso hacía que todo el bloque saltara de
+    // posición al cambiar de pestaña.
+    return Align(
+      alignment: Alignment.topCenter,
       child: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 48),
         child: ConstrainedBox(
@@ -458,31 +463,35 @@ class _LoginFormState extends State<LoginForm> {
                   const SizedBox(height: 12),
                   Text(_error!, style: TextStyle(color: AppColors.errorRed, fontSize: 14)),
                 ],
-                const SizedBox(height: 20),
-                Row(
-                  children: [
-                    Expanded(child: Divider(color: AppColors.overlay(0.1))),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      child: Text('o continúa con Google', style: TextStyle(color: AppColors.slate500, fontSize: 12)),
-                    ),
-                    Expanded(child: Divider(color: AppColors.overlay(0.1))),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                AppButton(
-                  variant: AppButtonVariant.google,
-                  onPressed: _handleGoogleOrBusinessClick,
-                  child: const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    mainAxisSize: MainAxisSize.min,
+                // El login con Google es solo para visitantes: una empresa
+                // siempre entra con correo y contraseña.
+                if (!_isBusiness) ...[
+                  const SizedBox(height: 20),
+                  Row(
                     children: [
-                      GoogleLogo(),
-                      SizedBox(width: 8),
-                      Text('Continuar con Google'),
+                      Expanded(child: Divider(color: AppColors.overlay(0.1))),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: Text('o continúa con Google', style: TextStyle(color: AppColors.slate500, fontSize: 12)),
+                      ),
+                      Expanded(child: Divider(color: AppColors.overlay(0.1))),
                     ],
                   ),
-                ),
+                  const SizedBox(height: 20),
+                  AppButton(
+                    variant: AppButtonVariant.google,
+                    onPressed: _handleGoogleOrBusinessClick,
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        GoogleLogo(),
+                        SizedBox(width: 8),
+                        Text('Continuar con Google'),
+                      ],
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 12),
                 AppButton(
                   variant: AppButtonVariant.primary,

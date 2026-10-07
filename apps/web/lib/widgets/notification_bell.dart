@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
@@ -214,13 +215,24 @@ class _NotificationsDialogState extends State<_NotificationsDialog> {
     );
   }
 
+  // Antes era un SizedBox de altura fija (120): le quedaba justo a
+  // DsLoadingState/DsErrorState, pero DsEmptyState (icono + título + texto)
+  // necesita más y se salía por abajo. Con un mínimo en vez de una altura
+  // fija, el contenido puede crecer si lo necesita.
   Widget _buildContent() {
-    if (_loading) return SizedBox(height: 120, child: DsLoadingState());
-    if (_error != null) return SizedBox(height: 120, child: DsErrorState(message: _error!, onRetry: _load));
+    if (_loading) {
+      return ConstrainedBox(constraints: const BoxConstraints(minHeight: 120), child: DsLoadingState());
+    }
+    if (_error != null) {
+      return ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 120),
+        child: DsErrorState(message: _error!, onRetry: _load),
+      );
+    }
     if (_notifications.isEmpty) {
-      return const SizedBox(
-        height: 120,
-        child: DsEmptyState(
+      return ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 120),
+        child: const DsEmptyState(
           icon: Icons.notifications_none,
           title: 'Sin notificaciones',
           subtitle: 'Cuando haya novedades, aparecerán aquí.',
@@ -228,8 +240,13 @@ class _NotificationsDialogState extends State<_NotificationsDialog> {
       );
     }
 
+    // 420 es cómodo en escritorio, pero en un celular la pantalla completa
+    // suele medir menos que eso: el diálogo se salía por abajo unos pixeles.
+    // Se limita también a un porcentaje de la altura disponible.
+    final maxHeight = math.min(420.0, MediaQuery.sizeOf(context).height * 0.55);
+
     return ConstrainedBox(
-      constraints: const BoxConstraints(maxHeight: 420),
+      constraints: BoxConstraints(maxHeight: maxHeight),
       child: ListView.separated(
         shrinkWrap: true,
         itemCount: _notifications.length,
