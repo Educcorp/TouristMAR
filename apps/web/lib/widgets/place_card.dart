@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import 'cover_image.dart';
+import 'favorito_button.dart' show colorFavorito;
 
 class PlaceCard extends StatelessWidget {
   final String image;
@@ -67,10 +68,8 @@ class PlaceCard extends StatelessWidget {
                         child: Icon(
                           isFavorite ? Icons.favorite : Icons.favorite_border,
                           size: 16,
-                          // Va sobre la foto (fondo negro translúcido), así que usa siempre el
-                          // cian claro: en modo claro brandTeal es un azul oscuro que casi
-                          // no se veía.
-                          color: isFavorite ? const Color(0xFF22D3EE) : Colors.white,
+                          // Rojo al estar guardado, blanco (sobre la foto) si no.
+                          color: isFavorite ? colorFavorito : Colors.white,
                         ),
                       ),
                     ),

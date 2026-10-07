@@ -27,8 +27,9 @@ class ExperienciaSituacion {
   static ExperienciaSituacion calcular(Lugar lugar, ExperienciaTipo tipo, Coordenadas? yo, {bool? tieneRecorrido360}) {
     final tiene = switch (tipo) {
       ExperienciaTipo.recorrido360 => tieneRecorrido360 ?? lugar.tiene(tipo),
-      // La RA por ubicación solo existe para las playas que conoce Unity.
-      ExperienciaTipo.arGeo => playaParaLugar(lugar.nombre) != null,
+      // Las playas que conoce Unity, o cualquier lugar con pin en el mapa
+      // (RA por ubicación de Flutter, ver RaUbicacionPage).
+      ExperienciaTipo.arGeo => playaParaLugar(lugar.nombre) != null || lugar.ubicacion != null,
       ExperienciaTipo.arMarcador => lugar.tiene(tipo),
     };
     if (!tiene) return ExperienciaSituacion(tipo, ExperienciaEstado.noDisponible);
@@ -104,7 +105,7 @@ class _ExperienciasLugarSectionState extends State<ExperienciasLugarSection> {
     setState(() => _yo = yo);
     if (yo == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('La ubicación estará disponible en la app móvil.')),
+        const SnackBar(content: Text('No se pudo obtener tu ubicación. Activa la ubicación y permite el acceso.')),
       );
     }
   }
@@ -491,10 +492,11 @@ class _DetalleExperienciaState extends State<_DetalleExperiencia> {
           ),
           const SizedBox(height: AppSpacing.lg),
           ExperienciasLauncher.current.mideDistancia(ExperienciaTipo.arGeo)
-              ? const _Pasos(pasos: [
+              ? _Pasos(pasos: [
                   ('Abre la cámara', 'Toca "Iniciar RA en el lugar" y permite la cámara y tu ubicación.'),
-                  ('Mira el resumen', 'Desde donde estés verás información del lugar y a qué distancia estás.'),
-                  ('Llega al lugar', 'A menos de 100 m se desbloquea la información completa.'),
+                  ('Apunta al lugar', 'Desde donde estés verás flotando el lugar, a qué distancia está y hacia dónde girar.'),
+                  ('Llega al lugar',
+                      'A menos de ${widget.lugar.radioDesbloqueo.round()} m se desbloquea la información completa.'),
                 ])
               : const _Pasos(pasos: [
                   ('Visita el lugar', 'Esta experiencia solo existe en el sitio físico.'),

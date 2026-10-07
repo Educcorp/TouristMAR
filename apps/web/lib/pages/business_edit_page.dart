@@ -6,10 +6,12 @@ import '../models/business_profile.dart';
 import '../models/lugar.dart';
 import '../services/auth_service.dart';
 import '../services/image_picker_service.dart';
+import '../services/recorridos_service.dart';
 import '../services/session_storage.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_button.dart';
 import '../widgets/app_text_field.dart';
+import '../widgets/business/solicitud_recorrido_card.dart';
 import '../widgets/cover_image.dart';
 import '../widgets/mapa/ubicacion_lugar.dart';
 import '../widgets/themed_builder.dart';
@@ -17,10 +19,11 @@ import '../widgets/themed_builder.dart';
 class BusinessEditPage extends StatefulWidget {
   final BusinessProfile business;
 
-  /// Solo para pruebas: permite usar un servicio con un cliente HTTP falso.
+  /// Solo para pruebas: permite usar servicios con un cliente HTTP falso.
   final AuthService? authService;
+  final RecorridosService? recorridosService;
 
-  const BusinessEditPage({super.key, required this.business, this.authService});
+  const BusinessEditPage({super.key, required this.business, this.authService, this.recorridosService});
 
   @override
   State<BusinessEditPage> createState() => _BusinessEditPageState();
@@ -40,8 +43,19 @@ class _BusinessEditPageState extends State<BusinessEditPage> {
   late final _websiteController = TextEditingController(text: widget.business.website);
   late final _hoursController = TextEditingController(text: widget.business.hours);
   late final AuthService _authService = widget.authService ?? AuthService();
+  late final RecorridosService _recorridosService = widget.recorridosService ?? RecorridosService();
   bool _isSaving = false;
   String? _error;
+
+  /// Si ya tiene recorrido 360° o una solicitud en curso (null = cargando).
+  /// Si no se pudo consultar, el bloque del recorrido no se muestra.
+  EstadoRecorridoNegocio? _recorrido;
+  bool _recorridoNoDisponible = false;
+
+  /// El pin que ya está guardado en el servidor (el de [_ubicacion] puede ser
+  /// uno nuevo sin guardar).
+  bool get _pinGuardado =>
+      _ubicacion != null && widget.business.latitud == _ubicacion!.lat && widget.business.longitud == _ubicacion!.lng;
 
   /// Portada elegida pero aún no guardada (Error 5.3). Antes se subía al
   /// elegirla y quedaba aplicada aunque se tocara "Cancelar"; ahora se sube
@@ -81,6 +95,26 @@ class _BusinessEditPageState extends State<BusinessEditPage> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    _cargarRecorrido();
+  }
+
+  Future<void> _cargarRecorrido() async {
+    final token = SessionStorage.token;
+    if (token == null) {
+      setState(() => _recorridoNoDisponible = true);
+      return;
+    }
+    try {
+      final estado = await _recorridosService.estadoNegocio(token, widget.business.id);
+      if (mounted) setState(() => _recorrido = estado);
+    } catch (_) {
+      if (mounted) setState(() => _recorridoNoDisponible = true);
+    }
+  }
+
+  @override
   void dispose() {
     _nameController.dispose();
     _categoryController.dispose();
@@ -92,7 +126,9 @@ class _BusinessEditPageState extends State<BusinessEditPage> {
     super.dispose();
   }
 
-  Future<void> _save() async {
+  /// Guarda el formulario y, con [solicitarRecorrido], después envía la
+  /// solicitud de recorrido 360° (el backend la pide con el pin ya guardado).
+  Future<void> _save({bool solicitarRecorrido = false}) async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
     final token = SessionStorage.token;
@@ -146,6 +182,25 @@ class _BusinessEditPageState extends State<BusinessEditPage> {
       business.longitud = negocio?.longitud;
       final portada = negocio?.portada ?? newCover;
       if (portada != null) business.coverImage = portada;
+
+      if (solicitarRecorrido) {
+        try {
+          final solicitud = await _recorridosService.solicitar(token, business.id);
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Cambios guardados y solicitud de recorrido 360° enviada')),
+          );
+          setState(() => _recorrido = EstadoRecorridoNegocio(tieneRecorrido: false, solicitud: solicitud));
+        } catch (err) {
+          // Los datos sí se guardaron: se queda en la página para que vea el
+          // motivo y pueda reintentar solo la solicitud.
+          if (mounted) {
+            setState(() => _error = 'Se guardaron los cambios, pero no se pudo enviar la solicitud: '
+                '${err is AuthError ? err.message : 'sin conexión con el servidor'}');
+          }
+          return;
+        }
+      }
       if (mounted) Navigator.of(context).pop(true);
     } catch (err) {
       setState(() => _error = err is AuthError ? err.message : 'No se pudo guardar el negocio');
@@ -288,8 +343,19 @@ class _BusinessEditPageState extends State<BusinessEditPage> {
                             inicial: _ubicacion,
                             acento: AppColors.businessOrange,
                             habilitado: !_isSaving,
-                            onChanged: (c) => _ubicacion = c,
+                            marcarEnMapa: true,
+                            onChanged: (c) => setState(() => _ubicacion = c),
                           ),
+                          if (!_recorridoNoDisponible) ...[
+                            const SizedBox(height: 16),
+                            SolicitudRecorridoCard(
+                              estado: _recorrido,
+                              tienePin: _ubicacion != null,
+                              pinGuardado: _pinGuardado,
+                              ocupado: _isSaving,
+                              onSolicitar: () => _save(solicitarRecorrido: true),
+                            ),
+                          ],
                           const SizedBox(height: 16),
                           AppTextField(
                             label: 'Teléfono',

@@ -49,6 +49,8 @@
 	</dict>
 	<key>NSCameraUsageDescription</key>
 	<string>TouristMAR usa la cámara para reconocer los marcadores y mostrar su información en realidad aumentada.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>TouristMAR usa tu ubicación para mostrarte la ruta a los lugares y la realidad aumentada por ubicación.</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<!-- Permite http:// solo hacia la red local (backend de desarrollo en

@@ -18,6 +18,7 @@ import {
   EnlaceInvalidoError,
 } from './recorridos.service'
 import { EscenaImagenInvalidaError } from './escena-imagen'
+import { completarSolicitudesDeNegocio } from './solicitudes.service'
 import { DatabaseNotReadyError } from '../../config/db-guard'
 import type { AuthedRequest } from '../auth/auth.middleware'
 
@@ -238,6 +239,13 @@ export async function createRecorridoAdmin(req: AuthedRequest, res: Response) {
 
   try {
     const recorrido = await createRecorrido(parsed.data, req.userId!)
+    if (recorrido.negocioId) {
+      // Si el negocio lo había pedido, su solicitud queda atendida. Un fallo
+      // aquí no deshace el recorrido recién creado.
+      await completarSolicitudesDeNegocio(recorrido.negocioId, req.userId!).catch((err) =>
+        console.error('No se pudieron cerrar las solicitudes de recorrido', err),
+      )
+    }
     return res.status(201).json({ recorrido: toAdminRecorrido(recorrido) })
   } catch (err) {
     return handleError(err, res)

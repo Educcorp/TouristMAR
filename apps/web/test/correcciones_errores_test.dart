@@ -24,6 +24,7 @@ import 'package:touristmar_web/services/auth_service.dart';
 import 'package:touristmar_web/services/image_picker_service.dart';
 import 'package:touristmar_web/services/session_storage.dart';
 import 'package:touristmar_web/theme/theme_controller.dart';
+import 'package:touristmar_web/widgets/favorito_button.dart' show colorFavorito;
 import 'package:touristmar_web/widgets/login_form.dart';
 import 'package:touristmar_web/widgets/notification_bell.dart';
 import 'package:touristmar_web/widgets/place_card.dart';
@@ -142,6 +143,17 @@ Future<void> _desmontar(WidgetTester tester) async {
 
 bool _buscadorTieneFoco(WidgetTester tester) {
   return tester.widget<EditableText>(find.byType(EditableText).first).focusNode.hasFocus;
+}
+
+/// "Editar negocio" siempre muestra el mapa para marcar el pin. Con la
+/// fuente de pruebas (Ahem) la franja de créditos de OpenStreetMap no cabe;
+/// con la real sí. Solo se ignora ese aviso.
+void _ignorarCreditosDelMapa() {
+  final onError = FlutterError.onError;
+  FlutterError.onError = (d) {
+    if (!(d.toString().contains('flutter_map') && d.toString().contains('overflowed'))) onError?.call(d);
+  };
+  addTearDown(() => FlutterError.onError = onError);
 }
 
 void main() {
@@ -292,6 +304,7 @@ void main() {
   group('Error 5.3 — portada del negocio (modo empresario)', () {
     testWidgets('una portada elegida y cancelada no se sube ni se aplica', (tester) async {
       _pantallaCelular(tester);
+      _ignorarCreditosDelMapa();
       _simularFotoElegida();
       final peticiones = <String>[];
       final negocio = _negocio();
@@ -309,6 +322,7 @@ void main() {
 
     testWidgets('al guardar se sube la portada junto con los datos', (tester) async {
       _pantallaCelular(tester);
+      _ignorarCreditosDelMapa();
       _simularFotoElegida();
       SessionStorage.saveToken('jwt');
       final peticiones = <String>[];
@@ -373,7 +387,7 @@ void main() {
     });
   });
 
-  testWidgets('Punto a verificar — el corazón de favoritos se ve azul claro en modo claro', (tester) async {
+  testWidgets('Punto a verificar — el corazón de favoritos se ve rojo al estar guardado', (tester) async {
     final temaOriginal = ThemeController.mode.value;
     ThemeController.set(ThemeMode.light);
     addTearDown(() => ThemeController.set(temaOriginal));
@@ -396,6 +410,6 @@ void main() {
     );
 
     final corazon = tester.widget<Icon>(find.byIcon(Icons.favorite));
-    expect(corazon.color, const Color(0xFF22D3EE));
+    expect(corazon.color, colorFavorito);
   });
 }

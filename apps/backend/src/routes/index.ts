@@ -5,7 +5,7 @@ import { notificationRouter } from '../modules/notifications/notification.routes
 import { marcadoresRouter, arAdminRouter } from '../modules/ar/ar.routes'
 import { recorridosRouter, recorridosAdminRouter } from '../modules/recorridos/recorridos.routes'
 import { favoritosRouter } from '../modules/favoritos/favoritos.routes'
-import { lugaresRouter } from '../modules/lugares/lugares.routes'
+import { lugaresRouter, raLugaresRouter } from '../modules/lugares/lugares.routes'
 
 export const apiRouter = Router()
 
@@ -21,5 +21,7 @@ apiRouter.use('/admin', adminRouter)
 apiRouter.use('/marcadores', marcadoresRouter)
 apiRouter.use('/recorridos', recorridosRouter)
 apiRouter.use('/lugares', lugaresRouter)
+// Contrato con Unity para la RA por ubicación (ver ra-lugares.controller.ts).
+apiRouter.use('/ra/lugares', raLugaresRouter)
 apiRouter.use('/favoritos', favoritosRouter)
 apiRouter.use('/notifications', notificationRouter)

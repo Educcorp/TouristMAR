@@ -317,8 +317,110 @@ String normalizarNombre(String texto, {bool esIdentificador = false}) {
   return t.replaceAll(RegExp(r'^playa\s+'), '');
 }
 
-/// Gestión de recorridos 360° para admin / super_admin. La app móvil no usa
-/// esto: Unity lee directo el endpoint público `GET /api/recorridos`.
+/// Estado de una [SolicitudRecorrido360].
+enum EstadoSolicitudRecorrido {
+  pendiente,
+  completada,
+  rechazada;
+
+  static EstadoSolicitudRecorrido fromJson(String? valor) =>
+      values.firstWhere((e) => e.name == valor, orElse: () => pendiente);
+}
+
+/// Datos del negocio que acompañan la solicitud en el panel del admin.
+class NegocioSolicitante {
+  final String id;
+  final String nombre;
+  final String categoria;
+  final String direccion;
+  final String telefono;
+  final double? latitud;
+  final double? longitud;
+  final String contacto;
+  final String email;
+
+  const NegocioSolicitante({
+    required this.id,
+    required this.nombre,
+    this.categoria = '',
+    this.direccion = '',
+    this.telefono = '',
+    this.latitud,
+    this.longitud,
+    this.contacto = '',
+    this.email = '',
+  });
+
+  factory NegocioSolicitante.fromJson(Map<String, dynamic> json) => NegocioSolicitante(
+        id: json['id'] as String,
+        nombre: json['nombre'] as String? ?? '',
+        categoria: json['categoria'] as String? ?? '',
+        direccion: json['direccion'] as String? ?? '',
+        telefono: json['telefono'] as String? ?? '',
+        latitud: (json['latitud'] as num?)?.toDouble(),
+        longitud: (json['longitud'] as num?)?.toDouble(),
+        contacto: json['contacto'] as String? ?? '',
+        email: json['email'] as String? ?? '',
+      );
+
+  Coordenadas? get ubicacion => latitud != null && longitud != null ? Coordenadas(latitud!, longitud!) : null;
+}
+
+/// Un negocio pide que un admin le haga su recorrido 360°. [negocio] solo
+/// viene en la lista del admin.
+class SolicitudRecorrido360 {
+  final String id;
+  final String negocioId;
+  final EstadoSolicitudRecorrido estado;
+  final String mensaje;
+  /// Respuesta del admin (sobre todo al rechazarla).
+  final String nota;
+  final DateTime creadaEn;
+  final DateTime? atendidaEn;
+  final NegocioSolicitante? negocio;
+
+  const SolicitudRecorrido360({
+    required this.id,
+    required this.negocioId,
+    required this.estado,
+    this.mensaje = '',
+    this.nota = '',
+    required this.creadaEn,
+    this.atendidaEn,
+    this.negocio,
+  });
+
+  factory SolicitudRecorrido360.fromJson(Map<String, dynamic> json) => SolicitudRecorrido360(
+        id: json['id'] as String,
+        negocioId: json['negocioId'] as String,
+        estado: EstadoSolicitudRecorrido.fromJson(json['estado'] as String?),
+        mensaje: json['mensaje'] as String? ?? '',
+        nota: json['nota'] as String? ?? '',
+        creadaEn: DateTime.parse(json['createdAt'] as String).toLocal(),
+        atendidaEn: json['atendidaEn'] == null ? null : DateTime.parse(json['atendidaEn'] as String).toLocal(),
+        negocio: json['negocio'] == null ? null : NegocioSolicitante.fromJson(json['negocio'] as Map<String, dynamic>),
+      );
+
+  bool get pendiente => estado == EstadoSolicitudRecorrido.pendiente;
+}
+
+/// Lo que ve el negocio en "Editar negocio": si ya tiene recorrido 360° y su
+/// solicitud más reciente (null = nunca lo ha pedido).
+class EstadoRecorridoNegocio {
+  final bool tieneRecorrido;
+  final SolicitudRecorrido360? solicitud;
+
+  const EstadoRecorridoNegocio({required this.tieneRecorrido, this.solicitud});
+
+  bool get solicitudPendiente => solicitud?.pendiente ?? false;
+
+  /// Se muestra el botón "Solicitar recorrido 360°".
+  bool get puedeSolicitar => !tieneRecorrido && !solicitudPendiente;
+}
+
+/// Gestión de recorridos 360° para admin / super_admin, más la solicitud de
+/// recorrido que hace un negocio. La app móvil no usa esto: Unity lee
+/// directo el endpoint público `GET /api/recorridos`.
 class RecorridosService {
   final http.Client _client;
 
@@ -442,6 +544,58 @@ class RecorridosService {
       headers: {'Authorization': 'Bearer $token'},
     );
     _check(res, 'No se pudo quitar la foto');
+  }
+
+  /// El negocio consulta si ya tiene recorrido y su última solicitud.
+  Future<EstadoRecorridoNegocio> estadoNegocio(String token, String negocioId) async {
+    final res = await _client.get(
+      Uri.parse('$apiUrl/auth/profile/negocios/$negocioId/recorrido-360'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+    final data = _check(res, 'No se pudo consultar el recorrido 360°');
+    final solicitud = data['solicitud'];
+    return EstadoRecorridoNegocio(
+      tieneRecorrido: data['tieneRecorrido'] as bool? ?? false,
+      solicitud: solicitud == null ? null : SolicitudRecorrido360.fromJson(solicitud as Map<String, dynamic>),
+    );
+  }
+
+  /// El negocio pide su recorrido 360° (necesita su pin ya guardado).
+  Future<SolicitudRecorrido360> solicitar(String token, String negocioId, {String mensaje = ''}) async {
+    final res = await _client.post(
+      Uri.parse('$apiUrl/auth/profile/negocios/$negocioId/recorrido-360/solicitud'),
+      headers: _jsonHeaders(token),
+      body: jsonEncode({if (mensaje.trim().isNotEmpty) 'mensaje': mensaje.trim()}),
+    );
+    final data = _check(res, 'No se pudo enviar la solicitud');
+    return SolicitudRecorrido360.fromJson(data['solicitud'] as Map<String, dynamic>);
+  }
+
+  /// Admin: solicitudes de los negocios (todas si [estado] es null).
+  Future<List<SolicitudRecorrido360>> listSolicitudes(String token, {EstadoSolicitudRecorrido? estado}) async {
+    final uri = Uri.parse('$apiUrl/admin/recorridos/solicitudes')
+        .replace(queryParameters: estado == null ? null : {'estado': estado.name});
+    final res = await _client.get(uri, headers: {'Authorization': 'Bearer $token'});
+    final data = _check(res, 'No se pudieron cargar las solicitudes de recorrido');
+    return (data['solicitudes'] as List)
+        .map((s) => SolicitudRecorrido360.fromJson(s as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// Admin: marca una solicitud pendiente como completada o rechazada.
+  Future<SolicitudRecorrido360> atenderSolicitud(
+    String token,
+    String id,
+    EstadoSolicitudRecorrido estado, {
+    String nota = '',
+  }) async {
+    final res = await _client.patch(
+      Uri.parse('$apiUrl/admin/recorridos/solicitudes/$id'),
+      headers: _jsonHeaders(token),
+      body: jsonEncode({'estado': estado.name, if (nota.trim().isNotEmpty) 'nota': nota.trim()}),
+    );
+    final data = _check(res, 'No se pudo actualizar la solicitud');
+    return SolicitudRecorrido360.fromJson(data['solicitud'] as Map<String, dynamic>);
   }
 
   Map<String, String> _jsonHeaders(String token) => {

@@ -31,6 +31,10 @@ class MapaBase extends StatelessWidget {
   final void Function(Coordenadas punto)? onTap;
   final bool interactivo;
 
+  /// false = la rueda del mouse no hace zoom (para mapas dentro de una página
+  /// con scroll: si no, al bajar por la página el mapa se "traga" la rueda).
+  final bool zoomConRueda;
+
   const MapaBase({
     super.key,
     this.controller,
@@ -39,6 +43,7 @@ class MapaBase extends StatelessWidget {
     this.children = const [],
     this.onTap,
     this.interactivo = true,
+    this.zoomConRueda = true,
   });
 
   @override
@@ -53,7 +58,9 @@ class MapaBase extends StatelessWidget {
         backgroundColor: AppColors.panelNavySoft,
         onTap: onTap == null ? null : (_, punto) => onTap!(toCoordenadas(punto)),
         interactionOptions: InteractionOptions(
-          flags: interactivo ? InteractiveFlag.all & ~InteractiveFlag.rotate : InteractiveFlag.none,
+          flags: !interactivo
+              ? InteractiveFlag.none
+              : InteractiveFlag.all & ~InteractiveFlag.rotate & (zoomConRueda ? InteractiveFlag.all : ~InteractiveFlag.scrollWheelZoom),
         ),
       ),
       children: [
