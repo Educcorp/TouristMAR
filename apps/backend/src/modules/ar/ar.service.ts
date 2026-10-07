@@ -32,12 +32,15 @@ export interface ArMarcadorInput {
 /// Lo que Unity necesita al arrancar la cámara: marcadores activos que no
 /// pertenezcan a un negocio sin aprobar (un negocio pendiente o rechazado no
 /// debe aparecer en la app pública, tampoco en AR).
-export async function listPublicMarcadores() {
+/// [negocioId] = solo los marcadores de ese lugar (la escena de marcadores
+/// abierta desde la RA por geolocalización de un lugar).
+export async function listPublicMarcadores(negocioId?: string) {
   return withDbGuard(() =>
     prisma.arMarcador.findMany({
       where: {
         activo: true,
         OR: [{ negocioId: null }, { negocio: { estado: 'aprobado' } }],
+        ...(negocioId ? { negocioId } : {}),
       },
       include: { negocio: { select: { nombre: true } } },
       orderBy: { createdAt: 'asc' },

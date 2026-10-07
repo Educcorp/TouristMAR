@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../models/lugar.dart';
 import '../../services/experiencias_launcher.dart';
 import '../../services/ra_geo_service.dart' show radioCercanoDefault, radioVisibleDefault;
-import '../../services/ra_ubicacion.dart';
 import '../../services/recorridos_service.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/breakpoints.dart';
@@ -28,9 +27,9 @@ class ExperienciaSituacion {
   static ExperienciaSituacion calcular(Lugar lugar, ExperienciaTipo tipo, Coordenadas? yo, {bool? tieneRecorrido360}) {
     final tiene = switch (tipo) {
       ExperienciaTipo.recorrido360 => tieneRecorrido360 ?? lugar.tiene(tipo),
-      // Las playas que conoce Unity, o cualquier lugar con pin en el mapa
-      // (RA por ubicación de Flutter, ver RaUbicacionPage).
-      ExperienciaTipo.arGeo => playaParaLugar(lugar.nombre) != null || lugar.ubicacion != null,
+      // Cualquier lugar con pin en el mapa (sus puntos de RA, o el pin
+      // mismo como punto único; ver RaUbicacionPage).
+      ExperienciaTipo.arGeo => lugar.ubicacion != null,
       ExperienciaTipo.arMarcador => lugar.tiene(tipo),
     };
     if (!tiene) return ExperienciaSituacion(tipo, ExperienciaEstado.noDisponible);

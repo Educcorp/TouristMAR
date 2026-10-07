@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../models/lugar.dart';
+import 'auth_service.dart' show crearClienteHttp;
 
 /// Ruta a pie calculada sobre las calles de OpenStreetMap.
 class RutaCalculada {
@@ -21,7 +22,7 @@ class RutaCalculada {
 class RutaService {
   final http.Client _client;
 
-  RutaService({http.Client? client}) : _client = client ?? http.Client();
+  RutaService({http.Client? client}) : _client = client ?? crearClienteHttp();
 
   static const _servidor = 'https://routing.openstreetmap.de/routed-foot/route/v1/foot';
 

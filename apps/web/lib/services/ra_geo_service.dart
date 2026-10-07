@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../models/lugar.dart';
-import 'auth_service.dart' show apiUrl, AuthError;
+import 'auth_service.dart' show apiUrl, AuthError, crearClienteHttp;
 
 /// Radios por defecto de las capas (metros). Mismos valores que el backend
 /// (RADIO_VISIBLE_DEFAULT / RADIO_CERCANO_DEFAULT en ra-geo.service.ts).
@@ -97,7 +97,7 @@ class RaGeoLugar {
 class RaGeoService {
   final http.Client _client;
 
-  RaGeoService({http.Client? client}) : _client = client ?? http.Client();
+  RaGeoService({http.Client? client}) : _client = client ?? crearClienteHttp();
 
   /// Público: los puntos activos de un lugar (nunca vacío si el lugar tiene
   /// pin: el backend manda el pin como punto único) y si tiene marcadores.

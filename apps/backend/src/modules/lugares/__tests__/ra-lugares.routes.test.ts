@@ -77,6 +77,7 @@ describe('GET /api/ra/lugares (contrato con Unity)', () => {
             radioCercano: 10,
           },
         ],
+        radioMetros: 100,
         tieneMarcadores: false,
       },
     ])
@@ -112,6 +113,8 @@ describe('GET /api/ra/lugares (contrato con Unity)', () => {
 
     const res = await request(buildApp()).get(`/api/ra/lugares/${FIME_ID}`)
 
+    // Compatibilidad con el contrato anterior: el radio visible del primer punto.
+    expect(res.body.lugar.radioMetros).toBe(80)
     expect(res.body.lugar.puntos).toEqual([
       {
         id: 'p-1',

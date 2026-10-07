@@ -120,6 +120,27 @@ describe('GET /api/marcadores', () => {
       }),
     )
   })
+
+  it('con ?negocioId= devuelve solo los marcadores de ese lugar (RA geo → marcadores)', async () => {
+    marcadorFindMany.mockResolvedValue([])
+    const lugar = 'f24442e4-6613-4427-99df-a7f962d6b99e'
+
+    const res = await request(buildApp()).get(`/api/marcadores?negocioId=${lugar}`)
+
+    expect(res.status).toBe(200)
+    expect(marcadorFindMany.mock.calls[0][0]).toMatchObject({ where: { activo: true, negocioId: lugar } })
+  })
+
+  it('un negocioId vacío es como no mandarlo; uno inválido es 400', async () => {
+    marcadorFindMany.mockResolvedValue([])
+
+    const vacio = await request(buildApp()).get('/api/marcadores?negocioId=')
+    const invalido = await request(buildApp()).get('/api/marcadores?negocioId=fime')
+
+    expect(vacio.status).toBe(200)
+    expect(marcadorFindMany.mock.calls[0][0].where).not.toHaveProperty('negocioId')
+    expect(invalido.status).toBe(400)
+  })
 })
 
 describe('POST /api/marcadores/:nombre/escaneo', () => {

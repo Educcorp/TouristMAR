@@ -9,6 +9,12 @@ import 'package:http_parser/http_parser.dart';
 /// `--dart-define=API_URL=http://<IP-de-la-PC>:5173/api` (scripts/mobile-dev.js).
 const String apiUrl = String.fromEnvironment('API_URL', defaultValue: '/api');
 
+/// Crea el cliente HTTP de los servicios que no reciben uno (`client:`). En la
+/// app es el normal; las pruebas lo reemplazan una sola vez para todas
+/// (test/flutter_test_config.dart), así ninguna sale a internet ni se queda
+/// esperando una respuesta.
+http.Client Function() crearClienteHttp = http.Client.new;
+
 class NegocioInfo {
   final String id;
   final String nombre;
@@ -380,7 +386,7 @@ class AuthError implements Exception {
 class AuthService {
   final http.Client _client;
 
-  AuthService({http.Client? client}) : _client = client ?? http.Client();
+  AuthService({http.Client? client}) : _client = client ?? crearClienteHttp();
 
   String get googleLoginUrl => '$apiUrl/auth/google';
 

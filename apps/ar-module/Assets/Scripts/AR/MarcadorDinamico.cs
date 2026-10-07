@@ -96,7 +96,10 @@ namespace TouristMAR.AR
             if (!PrepararBiblioteca()) yield break;
 
             ListaDesdeAdmin lista = null;
-            using (var req = UnityWebRequest.Get($"{config.apiBaseUrl.TrimEnd('/')}/marcadores"))
+            // Con lugarId, solo los marcadores de ese lugar (la app lo abre desde
+            // la RA por geolocalización o la ficha del lugar); sin él, todos.
+            var filtro = string.IsNullOrEmpty(config.lugarId) ? "" : $"?negocioId={UnityWebRequest.EscapeURL(config.lugarId)}";
+            using (var req = UnityWebRequest.Get($"{config.apiBaseUrl.TrimEnd('/')}/marcadores{filtro}"))
             {
                 yield return req.SendWebRequest();
                 if (req.result != UnityWebRequest.Result.Success)

@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/lugar.dart';
-import 'auth_service.dart' show apiUrl, AuthError;
+import 'auth_service.dart' show apiUrl, AuthError, crearClienteHttp;
 import 'session_storage.dart';
 
 /// Lo que todavía no existe en el backend. La interfaz lo atrapa y muestra
@@ -34,8 +34,9 @@ class LugaresService {
   /// mapa nunca debe quedar vacío por un error de red pasajero.
   Future<List<Lugar>> listarPublicos() async {
     var reales = const <Lugar>[];
+    final cliente = crearClienteHttp();
     try {
-      final res = await http.get(Uri.parse('$apiUrl/lugares'));
+      final res = await cliente.get(Uri.parse('$apiUrl/lugares'));
       if (res.statusCode >= 200 && res.statusCode < 300) {
         final data = jsonDecode(res.body) as Map<String, dynamic>;
         reales = (data['lugares'] as List)
@@ -44,6 +45,8 @@ class LugaresService {
       }
     } catch (_) {
       // Sin conexión con el backend: se sigue mostrando el catálogo de ejemplo.
+    } finally {
+      cliente.close();
     }
 
     final nombresReales = reales.map((l) => l.nombre).toSet();
@@ -54,11 +57,17 @@ class LugaresService {
   Future<void> guardarUbicacion(String negocioId, Coordenadas ubicacion) async {
     final token = SessionStorage.token;
     if (token == null) throw const AuthError('Tu sesión expiró. Vuelve a iniciar sesión.');
-    final res = await http.patch(
-      Uri.parse('$apiUrl/auth/profile/negocios/$negocioId'),
-      headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
-      body: jsonEncode({'latitud': ubicacion.lat, 'longitud': ubicacion.lng}),
-    );
+    final cliente = crearClienteHttp();
+    final http.Response res;
+    try {
+      res = await cliente.patch(
+        Uri.parse('$apiUrl/auth/profile/negocios/$negocioId'),
+        headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+        body: jsonEncode({'latitud': ubicacion.lat, 'longitud': ubicacion.lng}),
+      );
+    } finally {
+      cliente.close();
+    }
     if (res.statusCode < 200 || res.statusCode >= 300) {
       throw const AuthError('No se pudo guardar la ubicación');
     }

@@ -74,6 +74,7 @@ function puntoDelPin(n: NegocioProfile) {
 /// `tieneMarcadores`) dentro de `radioCercano` (metros).
 /// Si cambia, avisarles y actualizar ModelosLugarRA.cs en apps/ar-module.
 function toUnityLugar(n: LugarConPuntos) {
+  const puntos = n.puntosRaGeo.length > 0 ? n.puntosRaGeo.map(toUnityPunto) : [puntoDelPin(n)]
   return {
     id: n.id,
     nombre: n.nombre,
@@ -83,7 +84,10 @@ function toUnityLugar(n: LugarConPuntos) {
     urlPortada: n.portada ?? '',
     latitud: n.latitud!,
     longitud: n.longitud!,
-    puntos: n.puntosRaGeo.length > 0 ? n.puntosRaGeo.map(toUnityPunto) : [puntoDelPin(n)],
+    puntos,
+    /// Compatibilidad con la primera versión de este contrato (antes de
+    /// `puntos`): el radio visible del primer punto. Código nuevo: usar `puntos`.
+    radioMetros: puntos[0].radioVisible,
     /// Si el lugar tiene marcadores de imagen activos (GET /api/marcadores):
     /// al entrar al `radioCercano` de un punto la app ofrece pasar a ellos.
     tieneMarcadores: n._count.arMarcadores > 0,

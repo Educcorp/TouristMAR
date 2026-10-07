@@ -15,6 +15,15 @@ import 'package:touristmar_web/services/auth_service.dart';
 import 'package:touristmar_web/services/session_storage.dart';
 import 'package:touristmar_web/widgets/login_form.dart';
 
+/// Contraseña que cumple las reglas para crear cuenta (lib/utils/password_strength.dart:
+/// 8+ caracteres, un carácter especial, no común ni secuencia). Úsala en
+/// toda prueba de REGISTRO; si las reglas cambian, se cambia solo aquí.
+const _contrasenaSegura = 'Faro#Manzanillo26';
+
+/// Contraseña vieja y débil: el LOGIN la sigue aceptando (las cuentas que se
+/// crearon antes de las reglas nuevas deben poder entrar).
+const _contrasenaExistente = 'password123';
+
 Map<String, dynamic> _negocio({String estado = 'pendiente', String nombre = 'Café del Puerto'}) => {
       'id': 'n-1',
       'nombre': nombre,
@@ -70,7 +79,7 @@ Future<void> _tapText(WidgetTester tester, String text) async {
   await tester.tap(finder);
 }
 
-Future<void> _submitLogin(WidgetTester tester, {String password = 'password123'}) async {
+Future<void> _submitLogin(WidgetTester tester, {String password = _contrasenaExistente}) async {
   await tester.enterText(find.byKey(const ValueKey('email-field')), 'ana@correo.com');
   await tester.enterText(find.byKey(const ValueKey('password-field')), password);
   await _tapText(tester, 'Iniciar sesión');
@@ -185,7 +194,7 @@ void main() {
 
     await tester.enterText(find.byKey(const ValueKey('name-field')), 'Nueva');
     await tester.enterText(find.byKey(const ValueKey('email-field')), 'nueva@correo.com');
-    await tester.enterText(find.byKey(const ValueKey('password-field')), 'password123');
+    await tester.enterText(find.byKey(const ValueKey('password-field')), _contrasenaSegura);
     await _tapText(tester, 'Crear cuenta');
     await _pumpNavigation(tester);
 
@@ -215,7 +224,7 @@ void main() {
     await tester.tap(find.text('Restaurante').last);
     await tester.pumpAndSettle();
     await tester.enterText(find.byKey(const ValueKey('email-field')), 'cafe@correo.com');
-    await tester.enterText(find.byKey(const ValueKey('password-field')), 'password123');
+    await tester.enterText(find.byKey(const ValueKey('password-field')), _contrasenaSegura);
     await _tapText(tester, 'Solicitar registro');
     await tester.pumpAndSettle();
 
@@ -236,7 +245,7 @@ void main() {
 
     await tester.enterText(find.byKey(const ValueKey('name-field')), 'Kayaks Manzanillo');
     await tester.enterText(find.byKey(const ValueKey('email-field')), 'kayaks@correo.com');
-    await tester.enterText(find.byKey(const ValueKey('password-field')), 'password123');
+    await tester.enterText(find.byKey(const ValueKey('password-field')), _contrasenaSegura);
 
     // Sin elegir tipo no se manda.
     await _tapText(tester, 'Solicitar registro');
@@ -259,5 +268,35 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(bodies.single, containsPair('categoria', 'Renta de kayaks'));
+  });
+
+  testWidgets('registro: una contraseña débil no se manda y dice qué le falta', (tester) async {
+    final bodies = <Map<String, dynamic>>[];
+    final user = _user(id: '3', email: 'debil@correo.com', name: 'Débil');
+    await _pumpLoginForm(tester, AuthService(client: _authClient(user, bodies: bodies)));
+
+    await _tapText(tester, 'Regístrate gratis');
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const ValueKey('name-field')), 'Débil');
+    await tester.enterText(find.byKey(const ValueKey('email-field')), 'debil@correo.com');
+    await tester.enterText(find.byKey(const ValueKey('password-field')), _contrasenaExistente);
+    await _tapText(tester, 'Crear cuenta');
+    await tester.pumpAndSettle();
+
+    expect(find.text('Agrega un carácter especial (!@#\$...)'), findsOneWidget);
+    expect(bodies, isEmpty, reason: 'no se llama al backend con una contraseña que no cumple');
+    await _disposeTree(tester);
+  });
+
+  testWidgets('login: una cuenta existente entra aunque su contraseña no cumpla las reglas nuevas', (tester) async {
+    final bodies = <Map<String, dynamic>>[];
+    await _pumpLoginForm(tester, AuthService(client: _authClient(_user(), bodies: bodies)));
+
+    await _submitLogin(tester, password: _contrasenaExistente);
+    await _pumpNavigation(tester);
+
+    expect(bodies.single, containsPair('password', _contrasenaExistente));
+    expect(find.byType(HomePage), findsOneWidget);
+    await _disposeTree(tester);
   });
 }

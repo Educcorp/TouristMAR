@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
-import 'auth_service.dart' show apiUrl;
+import 'auth_service.dart' show apiUrl, crearClienteHttp;
 import 'session_storage.dart';
 
 /// Reseñas de los lugares (`/api/resenas`), compartidas por web y móvil. Solo
@@ -191,7 +191,7 @@ class ResenaAdmin {
 class ResenasService {
   final http.Client _client;
 
-  ResenasService({http.Client? client}) : _client = client ?? http.Client();
+  ResenasService({http.Client? client}) : _client = client ?? crearClienteHttp();
 
   Map<String, String> get _headers => {
         'Content-Type': 'application/json',

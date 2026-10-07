@@ -30,11 +30,15 @@ class ArBridge {
 
   /// Arranca el módulo: le dice a Unity de dónde bajar los marcadores y, si el
   /// turista inició sesión, con qué token registrar sus escaneos.
-  static ArMensaje configurar({required String apiBaseUrl, String? token}) {
+  ///
+  /// [lugarId] (opcional): el id del lugar, el mismo que usa Flutter en
+  /// GET /api/ra/lugares/{id}; Unity baja entonces solo los marcadores de ese
+  /// lugar (GET /api/marcadores?negocioId=...).
+  static ArMensaje configurar({required String apiBaseUrl, String? token, String? lugarId}) {
     return ArMensaje(
       gameObject,
       'Configurar',
-      jsonEncode({'apiBaseUrl': apiBaseUrl, 'token': token ?? ''}),
+      jsonEncode({'apiBaseUrl': apiBaseUrl, 'token': token ?? '', 'lugarId': lugarId ?? ''}),
     );
   }
 

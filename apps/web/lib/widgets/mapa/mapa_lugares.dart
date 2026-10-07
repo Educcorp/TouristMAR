@@ -46,6 +46,13 @@ class MapaBase extends StatelessWidget {
     this.zoomConRueda = true,
   });
 
+  /// false = sin mosaicos (el fondo del mapa) ni créditos de OpenStreetMap;
+  /// pines, círculos y rutas se dibujan igual. Solo para las pruebas: lo
+  /// apaga test/flutter_test_config.dart para todas. Con mosaicos reales, en
+  /// Chrome cada mosaico descargado se anima y `pumpAndSettle` nunca termina;
+  /// además las pruebas no deben pedirle mosaicos a OpenStreetMap.
+  static bool mostrarMosaicos = true;
+
   @override
   Widget build(BuildContext context) {
     return FlutterMap(
@@ -64,13 +71,14 @@ class MapaBase extends StatelessWidget {
         ),
       ),
       children: [
-        TileLayer(
-          urlTemplate: mapTileUrl,
-          userAgentPackageName: 'mx.touristmar.web',
-          tileBuilder: ThemeController.isDark ? darkModeTileBuilder : null,
-        ),
+        if (mostrarMosaicos)
+          TileLayer(
+            urlTemplate: mapTileUrl,
+            userAgentPackageName: 'mx.touristmar.web',
+            tileBuilder: ThemeController.isDark ? darkModeTileBuilder : null,
+          ),
         ...children,
-        const SimpleAttributionWidget(source: Text('OpenStreetMap contributors')),
+        if (mostrarMosaicos) const SimpleAttributionWidget(source: Text('OpenStreetMap contributors')),
       ],
     );
   }

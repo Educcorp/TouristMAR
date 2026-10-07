@@ -116,9 +116,15 @@ const escaneoSchema = z.object({
 /// La "lista de tareas" de Unity: se arma en cada petición con lo que hay en
 /// la base, así que refleja al instante lo que un admin guarda en el panel
 /// (no hace falta generar ningún archivo JSON aparte).
-export async function listMarcadoresPublic(_req: Request, res: Response) {
+/// GET /api/marcadores[?negocioId=<id del lugar>]. Sin `negocioId` (o vacío)
+/// devuelve todos, como siempre; con él, solo los de ese lugar.
+export async function listMarcadoresPublic(req: Request, res: Response) {
+  const negocioId = typeof req.query.negocioId === 'string' ? req.query.negocioId.trim() : ''
+  if (negocioId && !z.string().uuid().safeParse(negocioId).success) {
+    return res.status(400).json({ error: 'negocioId inválido' })
+  }
   try {
-    const marcadores = await listPublicMarcadores()
+    const marcadores = await listPublicMarcadores(negocioId || undefined)
     // Que ningún proxy/CDN guarde una versión vieja: Unity debe ver siempre
     // los marcadores recién dados de alta.
     res.set('Cache-Control', 'no-cache')

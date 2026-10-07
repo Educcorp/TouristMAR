@@ -31,6 +31,8 @@ namespace TouristMAR
         // over HTTP", o Unity rechaza la conexión.
         [Tooltip("API en el 5173 (http://<IP-de-la-PC>:5173/api). En un celular 'localhost' es el propio celular: usa la IP de tu PC o la URL de producción.")]
         [SerializeField] private string apiBaseUrlPorDefecto = "http://localhost:5173/api";
+        [Tooltip("Solo Editor: id del lugar cuyos marcadores bajar (vacío = todos). En el teléfono lo manda la app en el extra 'lugarId'.")]
+        [SerializeField] private string lugarIdPorDefecto = "";
 
         private bool configurado;
 
@@ -39,14 +41,24 @@ namespace TouristMAR
             Enviar(new EventoAR { evento = "listo" });
 
 #if UNITY_EDITOR || !FLUTTER_UNITY_WIDGET
-            // Sin app anfitriona nadie va a mandar "Configurar": se arranca solo.
-            if (!configurado) Configurar(JsonUtility.ToJson(new ConfigAR { apiBaseUrl = apiBaseUrlPorDefecto }));
+            // Sin flutter_unity_widget nadie va a mandar "Configurar": se arranca
+            // con lo que la app pasó en el Intent (ParametrosApp: apiBaseUrl y
+            // lugarId) o, en el Editor, con los valores por defecto.
+            ParametrosApp.ApiBaseUrlPorDefecto = apiBaseUrlPorDefecto;
+            if (!configurado)
+            {
+                Configurar(JsonUtility.ToJson(new ConfigAR
+                {
+                    apiBaseUrl = ParametrosApp.ApiBaseUrl,
+                    lugarId = ParametrosApp.Extra("lugarId") ?? lugarIdPorDefecto,
+                }));
+            }
 #endif
         }
 
         // --- Flutter → Unity (métodos invocados por nombre) -----------------
 
-        /// <summary>json: {"apiBaseUrl":"https://.../api","token":"<jwt opcional>"}</summary>
+        /// <summary>json: {"apiBaseUrl":"https://.../api","token":"<jwt opcional>","lugarId":"<id opcional>"}</summary>
         public void Configurar(string json)
         {
             var config = JsonUtility.FromJson<ConfigAR>(json);

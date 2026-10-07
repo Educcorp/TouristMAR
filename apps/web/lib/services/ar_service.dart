@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
-import 'auth_service.dart' show apiUrl, AuthError;
+import 'auth_service.dart' show apiUrl, AuthError, crearClienteHttp;
 
 /// Marcador AR tal como lo ve el panel de administración
 /// (`GET /api/admin/ar/marcadores`).
@@ -62,7 +62,7 @@ class ArMarcador {
 class ArService {
   final http.Client _client;
 
-  ArService({http.Client? client}) : _client = client ?? http.Client();
+  ArService({http.Client? client}) : _client = client ?? crearClienteHttp();
 
   Future<List<ArMarcador>> listMarcadores(String token) async {
     final res = await _client.get(

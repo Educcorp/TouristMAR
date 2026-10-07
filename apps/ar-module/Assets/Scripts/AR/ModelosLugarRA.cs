@@ -64,6 +64,12 @@ namespace TouristMAR.AR
         /// La app ofrece "Abrir RA con marcadores" al entrar al radioCercano.
         /// </summary>
         public bool tieneMarcadores;
+        /// <summary>
+        /// Obsoleto (formato anterior del contrato): el radio visible del primer
+        /// punto. Usa <see cref="puntos"/>; <see cref="CargadorLugarRA"/> lo usa
+        /// solo si la respuesta viene sin puntos.
+        /// </summary>
+        public float radioMetros;
     }
 
     /// <summary>Raíz de GET /api/ra/lugares: { "lugares": [ ... ] }.</summary>

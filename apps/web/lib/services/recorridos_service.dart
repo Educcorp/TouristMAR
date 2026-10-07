@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import '../models/lugar.dart';
-import 'auth_service.dart' show apiUrl, AuthError;
+import 'auth_service.dart' show apiUrl, AuthError, crearClienteHttp;
 
 /// Un recorrido tiene de 1 a 32 escenarios. Mismo valor que `MAX_ESCENARIOS`
 /// en el backend.
@@ -424,7 +424,7 @@ class EstadoRecorridoNegocio {
 class RecorridosService {
   final http.Client _client;
 
-  RecorridosService({http.Client? client}) : _client = client ?? http.Client();
+  RecorridosService({http.Client? client}) : _client = client ?? crearClienteHttp();
 
   Future<List<Recorrido360>> listRecorridos(String token) async {
     final res = await _client.get(

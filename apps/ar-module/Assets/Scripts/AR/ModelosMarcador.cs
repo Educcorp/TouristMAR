@@ -37,6 +37,12 @@ namespace TouristMAR.AR
         public string apiBaseUrl;
         /// <summary>JWT del turista si inició sesión; vacío = anónimo.</summary>
         public string token;
+        /// <summary>
+        /// Id del lugar desde el que se abrió (el mismo que usa Flutter). Si
+        /// viene, solo se bajan los marcadores de ese lugar
+        /// (GET /api/marcadores?negocioId=...); vacío = todos.
+        /// </summary>
+        public string lugarId;
     }
 
     /// <summary>Mensaje que Unity le manda a la app anfitriona (ver PuenteApp).</summary>
