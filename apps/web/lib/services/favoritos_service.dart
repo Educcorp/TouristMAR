@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import '../models/lugar.dart';
-import 'auth_service.dart' show apiUrl, NegocioInfo;
+import 'auth_service.dart' show apiUrl;
 import 'session_storage.dart';
 
 /// "Mis favoritos" del visitante, guardados en el backend (`/api/favoritos`)
@@ -33,7 +33,7 @@ class FavoritosService {
       throw FavoritosError((data['error'] as String?) ?? 'No se pudieron cargar tus favoritos');
     }
     final lugares = (data['favoritos'] as List)
-        .map((j) => Lugar.fromNegocioInfo(NegocioInfo.fromJson(j as Map<String, dynamic>)))
+        .map((j) => Lugar.fromJson(j as Map<String, dynamic>))
         .toList();
     ids.value = {for (final l in lugares) l.id};
     return lugares;

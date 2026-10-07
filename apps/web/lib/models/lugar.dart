@@ -201,7 +201,17 @@ class Lugar {
 
   int get totalExperiencias => ExperienciaTipo.values.where(tiene).length;
 
-  factory Lugar.fromNegocioInfo(NegocioInfo negocio, {Coordenadas? ubicacion}) => Lugar(
+  /// Un lugar tal como lo devuelven `GET /api/lugares` y `GET /api/favoritos`:
+  /// los datos del negocio más su calificación real (`rating`, `totalResenas`).
+  factory Lugar.fromJson(Map<String, dynamic> json) => Lugar.fromNegocioInfo(
+        NegocioInfo.fromJson(json),
+        rating: (json['rating'] as num?)?.toDouble() ?? 0,
+        totalResenas: (json['totalResenas'] as num?)?.toInt() ?? 0,
+      );
+
+  factory Lugar.fromNegocioInfo(NegocioInfo negocio, {Coordenadas? ubicacion, double rating = 0, int totalResenas = 0}) => Lugar(
+        rating: rating,
+        totalResenas: totalResenas,
         id: negocio.id,
         nombre: negocio.nombre,
         categoriaTexto: negocio.categoria ?? '',

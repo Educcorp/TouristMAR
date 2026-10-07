@@ -51,6 +51,10 @@ class _HomePageState extends State<HomePage> {
     super.initState();
     // Para que los corazones de tarjetas y fichas salgan ya marcados.
     FavoritosService.instance.cargarIds();
+    // Y para que el contador de reseñas del menú lateral sea el real.
+    _profile.cargarResenas().then((_) {
+      if (mounted) setState(() {});
+    });
   }
 
   late final _quickActions = [

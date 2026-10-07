@@ -4,7 +4,9 @@ import 'package:go_router/go_router.dart';
 import '../models/business_profile.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_button.dart';
+import '../services/resenas_service.dart';
 import '../widgets/cover_image.dart';
+import '../widgets/resenas/resenas_widgets.dart';
 
 /// Contenido de la sección "Mi negocio" embebido en [BusinessShell] — sin
 /// Scaffold/AppBar propio, igual que las páginas del panel admin.
@@ -25,6 +27,21 @@ class BusinessProfileContent extends StatefulWidget {
 }
 
 class _BusinessProfileContentState extends State<BusinessProfileContent> {
+  List<Resena>? _resenas;
+
+  @override
+  void initState() {
+    super.initState();
+    _cargarResenas();
+  }
+
+  Future<void> _cargarResenas() async {
+    if (!widget.business.verified) return;
+    final datos = await widget.business.cargarResenas();
+    if (!mounted) return;
+    setState(() => _resenas = datos?.resenas ?? const []);
+  }
+
   Future<void> _openEdit() async {
     final changed = await context.push<bool>('/empresa/editar?negocio=${widget.business.id}');
     if (changed == true && mounted) {
@@ -199,7 +216,7 @@ class _BusinessProfileContentState extends State<BusinessProfileContent> {
                         ],
                       ),
                       const SizedBox(height: 10),
-                      ...businessReviews.take(2).map((r) => _buildReviewPreview(r)),
+                      ResenasRecientes(resenas: _resenas),
                     ],
                   ],
                 ),
@@ -279,51 +296,6 @@ class _BusinessProfileContentState extends State<BusinessProfileContent> {
         ],
       );
     });
-  }
-
-  Widget _buildReviewPreview(BusinessReview r) {
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.panelNavySoft,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.overlay(0.08)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  CircleAvatar(
-                    radius: 14,
-                    backgroundColor: AppColors.brandTeal.withValues(alpha: 0.15),
-                    child: Text(r.initials, style: TextStyle(color: AppColors.brandTeal, fontSize: 10, fontWeight: FontWeight.w700)),
-                  ),
-                  const SizedBox(width: 10),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(r.author, style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 12.5)),
-                      Text(r.dateLabel, style: TextStyle(color: AppColors.slate500, fontSize: 10)),
-                    ],
-                  ),
-                ],
-              ),
-              Row(
-                children: List.generate(5, (i) => Icon(Icons.star, size: 11, color: i < r.rating ? Colors.amber : AppColors.overlay(0.15))),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(r.text, style: TextStyle(color: AppColors.textSecondary, fontSize: 13, height: 1.4)),
-        ],
-      ),
-    );
   }
 }
 

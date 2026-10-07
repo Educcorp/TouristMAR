@@ -1,47 +1,5 @@
 import '../services/auth_service.dart';
-
-class BusinessReview {
-  final String author;
-  final String initials;
-  final int rating;
-  final String dateLabel;
-  final String text;
-
-  const BusinessReview({
-    required this.author,
-    required this.initials,
-    required this.rating,
-    required this.dateLabel,
-    required this.text,
-  });
-}
-
-const businessReviews = <BusinessReview>[
-  BusinessReview(
-    author: 'Carlos M.',
-    initials: 'CM',
-    rating: 5,
-    dateLabel: '8 sep 2026',
-    text: 'Un lugar increíble, el agua está perfecta y el servicio es de '
-        'primera. Sin duda el mejor spot de la ciudad.',
-  ),
-  BusinessReview(
-    author: 'Laura P.',
-    initials: 'LP',
-    rating: 4,
-    dateLabel: '5 sep 2026',
-    text: 'Las instalaciones están muy bien mantenidas. El ceviche del bar '
-        'es delicioso, volvería solo por eso.',
-  ),
-  BusinessReview(
-    author: 'Rodrigo T.',
-    initials: 'RT',
-    rating: 5,
-    dateLabel: '1 sep 2026',
-    text: 'Mejor playa de Manzanillo sin duda. Volveré con la familia el '
-        'próximo puente.',
-  ),
-];
+import '../services/resenas_service.dart';
 
 class BusinessProfile {
   final String id;
@@ -97,10 +55,26 @@ class BusinessProfile {
     this.longitud,
   });
 
+  /// Trae las reseñas reales de este negocio y deja al día la calificación
+  /// promedio, el total y las reseñas del último mes. Devuelve null si no se
+  /// pudo (sin conexión): se conserva lo que ya había.
+  Future<ResenasLugar?> cargarResenas([ResenasService? service]) async {
+    try {
+      final datos = await (service ?? ResenasService()).listarDeLugar(id);
+      rating = datos.resumen.promedio;
+      totalReviews = datos.resumen.total;
+      final hace30Dias = DateTime.now().subtract(const Duration(days: 30));
+      newReviews = datos.resenas.where((r) => r.createdAt.isAfter(hace30Dias)).length;
+      return datos;
+    } on ResenasError {
+      return null;
+    }
+  }
+
   /// Un negocio puntual de una cuenta (una cuenta puede tener varios). Las
-  /// estadísticas (calificación, visitas, reseñas, favoritos) aún no existen
-  /// como feature en el backend, así que se muestran en cero en vez de datos
-  /// inventados.
+  /// estadísticas de visitas y favoritos aún no existen como feature en el
+  /// backend (se muestran en cero en vez de datos inventados); la calificación
+  /// y las reseñas se completan con [cargarResenas].
   factory BusinessProfile.fromNegocioInfo(AuthUser user, NegocioInfo negocio) {
     return BusinessProfile(
       id: negocio.id,
