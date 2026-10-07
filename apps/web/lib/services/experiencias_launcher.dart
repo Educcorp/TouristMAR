@@ -87,5 +87,20 @@ double distanciaMetros(Coordenadas a, Coordenadas b) {
   return 2 * radioTierra * math.asin(math.sqrt(h));
 }
 
+/// Rumbo de [desde] hacia [hasta] en grados (0 = norte, 90 = este), el
+/// mismo eje que la brújula.
+double rumboHacia(Coordenadas desde, Coordenadas hasta) {
+  double rad(double g) => g * math.pi / 180;
+  final f1 = rad(desde.lat);
+  final f2 = rad(hasta.lat);
+  final dl = rad(hasta.lng - desde.lng);
+  final y = math.sin(dl) * math.cos(f2);
+  final x = math.cos(f1) * math.sin(f2) - math.sin(f1) * math.cos(f2) * math.cos(dl);
+  return (math.atan2(y, x) * 180 / math.pi + 360) % 360;
+}
+
+/// Diferencia entre dos rumbos llevada a -180…180 (positivo = a la derecha).
+double diferenciaAngulo(double a, double b) => ((a - b + 540) % 360) - 180;
+
 String formatoDistancia(double metros) =>
     metros < 1000 ? '${metros.round()} m' : '${(metros / 1000).toStringAsFixed(1)} km';

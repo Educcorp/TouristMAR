@@ -12,6 +12,7 @@ import {
   setEnlacesAdmin,
   deleteEscenaAdmin,
 } from './recorridos.controller'
+import { listSolicitudesAdmin, atenderSolicitudAdmin } from './solicitudes.controller'
 import { requireAuth, requireRole } from '../auth/auth.middleware'
 
 /// Endpoints públicos que consume el módulo de Unity (se monta en
@@ -46,6 +47,9 @@ export const recorridosAdminRouter = Router()
 
 recorridosAdminRouter.use(requireAuth, requireRole('admin', 'super_admin'))
 
+// Solicitudes de recorrido que mandan los negocios (antes que `/:id`).
+recorridosAdminRouter.get('/solicitudes', listSolicitudesAdmin)
+recorridosAdminRouter.patch('/solicitudes/:id', atenderSolicitudAdmin)
 recorridosAdminRouter.get('/', listRecorridosAdmin)
 recorridosAdminRouter.post('/', createRecorridoAdmin)
 recorridosAdminRouter.patch('/:id', updateRecorridoAdmin)

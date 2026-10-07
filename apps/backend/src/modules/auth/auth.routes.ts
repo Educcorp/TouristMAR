@@ -14,6 +14,7 @@ import {
   googleMobileLogin,
 } from './auth.controller'
 import { requireAuth } from './auth.middleware'
+import { estadoRecorrido, crearSolicitud } from '../recorridos/solicitudes.controller'
 import { passport } from '../../config/passport'
 import { env, isGoogleAuthEnabled } from '../../config/env'
 import { signToken } from './auth.service'
@@ -39,6 +40,10 @@ authRouter.patch('/profile/negocios/:negocioId', requireAuth, updateNegocio)
 authRouter.post('/profile/negocios/:negocioId/avatar', requireAuth, upload.single('file'), uploadNegocioPortadaHandler)
 authRouter.post('/profile/negocios/:negocioId/galeria', requireAuth, upload.single('file'), uploadGaleriaImage)
 authRouter.delete('/profile/negocios/:negocioId/galeria', requireAuth, deleteGaleriaImage)
+// Recorrido 360° del negocio: si ya tiene uno y su última solicitud; el
+// negocio lo pide y un admin lo atiende en "Solicitudes".
+authRouter.get('/profile/negocios/:negocioId/recorrido-360', requireAuth, estadoRecorrido)
+authRouter.post('/profile/negocios/:negocioId/recorrido-360/solicitud', requireAuth, crearSolicitud)
 authRouter.post('/google/mobile', googleMobileLogin)
 
 if (isGoogleAuthEnabled) {

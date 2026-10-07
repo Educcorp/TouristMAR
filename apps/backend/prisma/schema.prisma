@@ -34,6 +34,16 @@ enum notificacion_tipo_enum {
   negocio_aprobado
   negocio_rechazado
   usuario_nuevo
+  recorrido_solicitado
+  recorrido_listo
+  recorrido_rechazado
+}
+
+/// Estado de una solicitud de recorrido 360° que manda un negocio.
+enum solicitud_recorrido_estado_enum {
+  pendiente
+  completada
+  rechazada
 }
 
 /// Qué muestra la app cuando la cámara reconoce un marcador. Por ahora el
@@ -64,12 +74,13 @@ model User {
   createdAt       DateTime   @default(now()) @map("created_at")
   updatedAt       DateTime   @updatedAt @map("updated_at")
 
-  negocios      NegocioProfile[]
-  notifications Notification[]
-  arMarcadores  ArMarcador[]
-  arEscaneos    ArEscaneo[]
-  recorridos360 Recorrido360[]
-  favoritos     Favorito[]
+  negocios                      NegocioProfile[]
+  notifications                 Notification[]
+  arMarcadores                  ArMarcador[]
+  arEscaneos                    ArEscaneo[]
+  recorridos360                 Recorrido360[]
+  favoritos                     Favorito[]
+  solicitudesRecorridoAtendidas SolicitudRecorrido360[] @relation("SolicitudAtendidaPor")
 
   @@map("users")
 }
@@ -98,9 +109,10 @@ model NegocioProfile {
   createdAt   DateTime            @default(now()) @map("created_at")
   updatedAt   DateTime            @updatedAt @map("updated_at")
 
-  arMarcadores  ArMarcador[]
-  recorridos360 Recorrido360[]
-  favoritos     Favorito[]
+  arMarcadores         ArMarcador[]
+  recorridos360        Recorrido360[]
+  favoritos            Favorito[]
+  solicitudesRecorrido SolicitudRecorrido360[]
 
   @@index([userId])
   @@map("negocio_profiles")
@@ -287,4 +299,27 @@ model Favorito {
   @@unique([userId, negocioId])
   @@index([userId, createdAt])
   @@map("favoritos")
+}
+
+/// Un negocio pide que un admin le haga su recorrido 360° (la toma de fotos
+/// la agenda el equipo; el negocio solo deja su ubicación en el mapa). Solo
+/// puede haber una pendiente por negocio. Cuando el admin crea un recorrido
+/// para ese negocio, sus solicitudes pendientes pasan a `completada` solas.
+model SolicitudRecorrido360 {
+  id          String                          @id @default(uuid()) @db.Uuid
+  negocioId   String                          @map("negocio_id") @db.Uuid
+  negocio     NegocioProfile                  @relation(fields: [negocioId], references: [id], onDelete: Cascade)
+  /// Comentario opcional del negocio ("mejor por las mañanas", "son 3 pisos").
+  mensaje     String                          @default("")
+  estado      solicitud_recorrido_estado_enum @default(pendiente)
+  /// Respuesta del admin al atenderla (sobre todo al rechazarla).
+  nota        String                          @default("")
+  atendidaPor String?                         @map("atendida_por") @db.Uuid
+  admin       User?                           @relation("SolicitudAtendidaPor", fields: [atendidaPor], references: [id], onDelete: SetNull)
+  atendidaEn  DateTime?                       @map("atendida_en")
+  createdAt   DateTime                        @default(now()) @map("created_at")
+
+  @@index([negocioId, createdAt])
+  @@index([estado, createdAt])
+  @@map("solicitudes_recorrido_360")
 }

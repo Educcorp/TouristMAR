@@ -4,6 +4,7 @@ import '../models/lugar.dart';
 import '../services/recorridos_service.dart';
 import '../theme/app_theme.dart';
 import 'cover_image.dart';
+import 'favorito_button.dart';
 
 /// Resumen de un lugar al seleccionarlo en el mapa (o en la lista de
 /// resultados), al estilo de la ficha de Google Maps: portada con acceso al
@@ -115,6 +116,7 @@ class LugarPreviewCard extends StatelessWidget {
                 imagen,
                 const SizedBox(width: AppSpacing.md),
                 Expanded(child: datos),
+                FavoritoButton(lugar: lugar, sobreFoto: false, size: 20),
                 if (onCerrar != null)
                   InkWell(
                     onTap: onCerrar,
@@ -130,6 +132,11 @@ class LugarPreviewCard extends StatelessWidget {
             Stack(
               children: [
                 imagen,
+                Positioned(
+                  right: onCerrar != null ? 44 : 8,
+                  top: 8,
+                  child: FavoritoButton(lugar: lugar, size: 16),
+                ),
                 if (onCerrar != null)
                   Positioned(
                     right: 8,

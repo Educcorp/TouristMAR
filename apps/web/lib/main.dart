@@ -6,6 +6,7 @@ import 'navegacion/rutas.dart';
 import 'navegacion/sesion.dart';
 import 'services/auth_service.dart';
 import 'services/experiencias_launcher.dart';
+import 'services/ubicacion_dispositivo.dart';
 import 'services/visor_flutter_launcher.dart';
 import 'theme/app_theme.dart';
 import 'theme/theme_controller.dart';
@@ -18,6 +19,8 @@ void main() {
   // En la web el recorrido 360° se ve con el visor de Flutter (la RA solo
   // existe en la app móvil, con Unity).
   ExperienciasLauncher.current = const VisorFlutterLauncher();
+  // Ubicación del navegador: ruta en el mapa y zona de RA por ubicación.
+  UbicacionProvider.current = const UbicacionDispositivo();
   runApp(const TouristMarApp());
 }
 

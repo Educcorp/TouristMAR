@@ -15,9 +15,10 @@ import 'package:touristmar_web/services/visor_flutter_launcher.dart';
 ///   reconoce cualquiera, así que no necesita saber de qué lugar se abrió.
 /// - Recorrido 360°: se le pasa el nombre del recorrido del lugar
 ///   (GET /api/recorridos); si el lugar no tiene uno, solo se avisa.
-/// - RA por ubicación: se le pasa el nombre de la playa del lugar (lista fija
-///   en Unity, ControladorPlayas.cs; el propio visor mide la distancia); si el
-///   lugar no es una de esas playas, solo se avisa.
+/// - RA por ubicación: si el lugar es una de las playas que conoce Unity
+///   (lista fija en ControladorPlayas.cs) se abre Unity con su nombre; si
+///   no, la RA por ubicación de Flutter ([VisorFlutterLauncher]) sobre el
+///   pin del lugar, sin dar nada de alta en Unity.
 class UnityExperienciasLauncher implements ExperienciasLauncher {
   static const _canal = MethodChannel('touristmar/ar');
 
@@ -36,13 +37,14 @@ class UnityExperienciasLauncher implements ExperienciasLauncher {
     return UnityExperienciasLauncher._(incluido);
   }
 
-  /// Sin Unity en el build, el recorrido 360° se abre igual con el visor de
-  /// Flutter (el mismo de la web); la RA sí necesita Unity.
+  /// Sin Unity en el build, el recorrido 360° y la RA por ubicación se abren
+  /// igual con Flutter (lo mismo que la web); la RA con marcador sí necesita Unity.
   @override
-  bool soporta(ExperienciaTipo tipo) => _unityIncluido || tipo == ExperienciaTipo.recorrido360;
+  bool soporta(ExperienciaTipo tipo) => _unityIncluido || const VisorFlutterLauncher().soporta(tipo);
 
+  /// Las dos versiones de la RA por ubicación (Unity y Flutter) miden la distancia.
   @override
-  bool mideDistancia(ExperienciaTipo tipo) => _unityIncluido && tipo == ExperienciaTipo.arGeo;
+  bool mideDistancia(ExperienciaTipo tipo) => tipo == ExperienciaTipo.arGeo;
 
   @override
   Future<void> abrir(BuildContext context, Lugar lugar, ExperienciaTipo tipo) async {
@@ -54,7 +56,14 @@ class UnityExperienciasLauncher implements ExperienciasLauncher {
       case ExperienciaTipo.recorrido360:
         await _abrirUnity('recorrido', await _recorridoDe(lugar));
       case ExperienciaTipo.arGeo:
-        await _abrirUnity('geo', _playaDe(lugar));
+        final playa = playaParaLugar(lugar.nombre);
+        if (playa != null) {
+          await _abrirUnity('geo', playa);
+        } else {
+          // Cualquier otro lugar con pin: la RA por ubicación de Flutter.
+          if (!context.mounted) return;
+          await const VisorFlutterLauncher().abrir(context, lugar, tipo);
+        }
     }
   }
 
@@ -82,11 +91,4 @@ class UnityExperienciasLauncher implements ExperienciasLauncher {
     return propio.nombre;
   }
 
-  /// Solo la playa del lugar (ver [playaParaLugar]). Si el lugar no tiene RA
-  /// por ubicación se avisa: nunca se ofrecen otras playas.
-  String _playaDe(Lugar lugar) {
-    final playa = playaParaLugar(lugar.nombre);
-    if (playa == null) throw ExperienciaError(sinRaUbicacion(lugar.nombre));
-    return playa;
-  }
 }

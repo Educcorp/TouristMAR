@@ -40,6 +40,10 @@ class CampoCoordenadas extends StatefulWidget {
   /// Color del panel donde se usa (violeta en admin, naranja en empresa).
   final Color? acento;
 
+  /// true = el mapa se ve siempre (aunque todavía no haya pin) y se puede
+  /// mover y tocar para poner el pin ahí mismo, sin abrir la ventana.
+  final bool marcarEnMapa;
+
   const CampoCoordenadas({
     super.key,
     required this.lugar,
@@ -47,6 +51,7 @@ class CampoCoordenadas extends StatefulWidget {
     required this.onChanged,
     this.habilitado = true,
     this.acento,
+    this.marcarEnMapa = false,
   });
 
   @override
@@ -152,7 +157,47 @@ class _CampoCoordenadasState extends State<CampoCoordenadas> {
             ),
           ],
         ),
-        if (_valor != null) ...[
+        if (widget.marcarEnMapa) ...[
+          const SizedBox(height: AppSpacing.sm),
+          Row(
+            children: [
+              Icon(Icons.touch_app_outlined, size: 14, color: AppColors.slate500),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  _valor == null
+                      ? 'Toca el mapa en la entrada de ${widget.lugar} para marcarlo.'
+                      : 'Toca otro punto del mapa para mover el pin.',
+                  style: AppTypography.bodySmall,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(AppRadius.button),
+            child: SizedBox(
+              height: 240,
+              child: MapaBase(
+                controller: _mapa,
+                centro: _valor ?? centroManzanillo,
+                zoom: _valor == null ? 12.5 : 16,
+                zoomConRueda: false,
+                onTap: widget.habilitado ? _cambiar : null,
+                children: [if (_valor != null) _capaPin(_valor!, _acento)],
+              ),
+            ),
+          ),
+          if (_valor != null)
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: widget.habilitado ? () => _cambiar(null) : null,
+                icon: Icon(Icons.wrong_location_outlined, size: 16, color: AppColors.slate400),
+                label: Text('Quitar pin', style: TextStyle(color: AppColors.slate400, fontSize: 12)),
+              ),
+            ),
+        ] else if (_valor != null) ...[
           const SizedBox(height: AppSpacing.sm),
           ClipRRect(
             borderRadius: BorderRadius.circular(AppRadius.button),

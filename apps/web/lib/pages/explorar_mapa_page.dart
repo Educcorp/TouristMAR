@@ -5,16 +5,18 @@ import '../models/lugar.dart';
 import '../models/visitor_profile.dart';
 import '../navegacion/rutas.dart';
 import '../services/experiencias_launcher.dart';
+import '../services/favoritos_service.dart';
 import '../services/lugares_service.dart';
 import '../services/recorridos_service.dart';
 import '../theme/app_theme.dart';
-import '../utils/como_llegar.dart';
 import '../utils/keyboard.dart';
 import '../widgets/app_shell.dart';
+import '../widgets/favorito_button.dart';
 import '../widgets/lugar_preview_card.dart';
 import '../widgets/mapa/mapa_lugares.dart';
 import '../widgets/themed_builder.dart';
 import '../widgets/user_avatar.dart';
+import 'ruta_lugar_page.dart';
 
 /// "Explorar mapa" del visitante: todos los lugares aprobados como pines por
 /// categoría, con búsqueda, filtros y una tarjeta de resumen al tocar uno.
@@ -44,6 +46,8 @@ class _ExplorarMapaPageState extends State<ExplorarMapaPage> {
     super.initState();
     _busqueda.addListener(() => setState(() {}));
     _cargar();
+    // Para que los corazones salgan bien aunque se entre directo a /mapa.
+    FavoritosService.instance.cargarIds();
   }
 
   @override
@@ -90,10 +94,8 @@ class _ExplorarMapaPageState extends State<ExplorarMapaPage> {
     }
   }
 
-  Future<void> _comoLlegar(Lugar lugar) async {
-    final ok = await abrirComoLlegar(lugar.ubicacion!);
-    if (!ok) _aviso('No se pudo abrir Google Maps.');
-  }
+  /// La ruta se ve en nuestro propio mapa (no se sale a Google Maps).
+  Future<void> _comoLlegar(Lugar lugar) => abrirRutaEnMapa(context, lugar);
 
   void _aviso(String texto) {
     if (!mounted) return;
@@ -310,6 +312,8 @@ class _ExplorarMapaPageState extends State<ExplorarMapaPage> {
                           const SizedBox(width: 2),
                           Text(l.rating.toStringAsFixed(1),
                               style: const TextStyle(color: Colors.amber, fontSize: 12, fontWeight: FontWeight.w600)),
+                          const SizedBox(width: 4),
+                          FavoritoButton(lugar: l, sobreFoto: false, size: 18),
                         ],
                       ),
                     ),
