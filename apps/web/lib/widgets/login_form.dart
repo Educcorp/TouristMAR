@@ -7,10 +7,12 @@ import '../services/auth_service.dart';
 import '../services/session_storage.dart';
 import '../theme/app_theme.dart';
 import '../theme/breakpoints.dart';
+import '../utils/password_strength.dart';
 import 'app_button.dart';
 import 'app_text_field.dart';
 import 'tipo_negocio_field.dart';
 import 'google_logo.dart';
+import 'password_strength_bar.dart';
 import 'register_place_banner.dart';
 import 'app_logo.dart';
 
@@ -416,12 +418,25 @@ class _LoginFormState extends State<LoginForm> {
                   obscureText: !_showPassword,
                   hintText: '••••••••',
                   accentColor: accentColor,
-                  validator: (v) => (v == null || v.length < 8) ? 'Mínimo 8 caracteres' : null,
+                  // En login se acepta cualquier contraseña ya existente
+                  // (min. 8, lo único que exigió siempre el backend); las
+                  // reglas estrictas de abajo solo aplican al crear cuenta.
+                  validator: (v) {
+                    if (v == null || v.isEmpty) return 'Ingresa tu contraseña';
+                    if (!isRegister) return v.length < 8 ? 'Mínimo 8 caracteres' : null;
+                    final resultado = evaluatePasswordStrength(v);
+                    return resultado.cumpleMinimo ? null : resultado.pendientes.first;
+                  },
                   suffixIcon: IconButton(
                     icon: Icon(_showPassword ? Icons.visibility_off : Icons.visibility, color: AppColors.slate500),
                     onPressed: () => setState(() => _showPassword = !_showPassword),
                   ),
                 ),
+                if (isRegister)
+                  ValueListenableBuilder<TextEditingValue>(
+                    valueListenable: _passwordController,
+                    builder: (context, value, _) => PasswordStrengthBar(password: value.text),
+                  ),
                 if (!isRegister) ...[
                   const SizedBox(height: 8),
                   Align(
