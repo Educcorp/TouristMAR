@@ -34,6 +34,16 @@ enum notificacion_tipo_enum {
   negocio_aprobado
   negocio_rechazado
   usuario_nuevo
+  recorrido_solicitado
+  recorrido_listo
+  recorrido_rechazado
+}
+
+/// Estado de una solicitud de recorrido 360° que manda un negocio.
+enum solicitud_recorrido_estado_enum {
+  pendiente
+  completada
+  rechazada
 }
 
 /// Qué muestra la app cuando la cámara reconoce un marcador. Por ahora el
@@ -64,11 +74,14 @@ model User {
   createdAt       DateTime   @default(now()) @map("created_at")
   updatedAt       DateTime   @updatedAt @map("updated_at")
 
-  negocios      NegocioProfile[]
-  notifications Notification[]
-  arMarcadores  ArMarcador[]
-  arEscaneos    ArEscaneo[]
-  recorridos360 Recorrido360[]
+  negocios                      NegocioProfile[]
+  notifications                 Notification[]
+  arMarcadores                  ArMarcador[]
+  arEscaneos                    ArEscaneo[]
+  recorridos360                 Recorrido360[]
+  favoritos                     Favorito[]
+  resenas                       Resena[]
+  solicitudesRecorridoAtendidas SolicitudRecorrido360[] @relation("SolicitudAtendidaPor")
 
   @@map("users")
 }
@@ -97,8 +110,12 @@ model NegocioProfile {
   createdAt   DateTime            @default(now()) @map("created_at")
   updatedAt   DateTime            @updatedAt @map("updated_at")
 
-  arMarcadores  ArMarcador[]
-  recorridos360 Recorrido360[]
+  arMarcadores         ArMarcador[]
+  recorridos360        Recorrido360[]
+  favoritos            Favorito[]
+  resenas              Resena[]
+  solicitudesRecorrido SolicitudRecorrido360[]
+  puntosRaGeo          PuntoRaGeo[]
 
   @@index([userId])
   @@map("negocio_profiles")
@@ -179,10 +196,11 @@ model ArEscaneo {
   @@map("ar_escaneos")
 }
 
-/// Recorrido 360° de un lugar: exactamente 3 fotos 360° equirectangulares
-/// ("Foto 1", "Foto 2", "Foto 3", en ese orden). Lo da de alta un admin desde
-/// el panel web; el módulo de Unity descarga la lista pública
-/// (`GET /api/recorridos`) y baja cada foto cuando la necesita.
+/// Recorrido 360° de un lugar: de 1 a 32 escenarios (cada uno una foto 360°
+/// equirectangular ya unida) conectados entre sí con flechas. El turista
+/// entra por el escenario 1 y pasa de uno a otro tocando las flechas. Lo da
+/// de alta un admin desde el panel web; el módulo de Unity descarga la lista
+/// pública (`GET /api/recorridos`) y baja cada foto cuando la necesita.
 model Recorrido360 {
   id        String          @id @default(uuid()) @db.Uuid
   /// Opcional: el recorrido puede ser de un negocio (su hotel, su
@@ -194,6 +212,11 @@ model Recorrido360 {
   nombre    String          @unique
   titulo    String
   texto     String
+  /// Dónde está el recorrido (pin en el mapa). Propio del recorrido: un
+  /// recorrido general (FIME, un mirador) no tiene negocio del cual tomarlo.
+  /// null = sin ubicación (solo se abre desde la ficha del lugar).
+  latitud   Float?
+  longitud  Float?
   activo    Boolean         @default(true)
   creadoPor String?         @map("creado_por") @db.Uuid
   autor     User?           @relation(fields: [creadoPor], references: [id], onDelete: SetNull)
@@ -207,15 +230,22 @@ model Recorrido360 {
   @@map("recorridos_360")
 }
 
-/// Una de las 3 fotos 360° del recorrido ("Foto 1", "Foto 2", "Foto 3").
-/// `orden` es la casilla (0 = Foto 1): el admin sube cada foto en su casilla,
-/// así el orden no depende de en qué orden se suban. El backend la guarda ya
-/// optimizada (JPG de máx. 4096×2048) más una miniatura para el panel.
+/// Un escenario del recorrido: un punto donde se paró la cámara 360° (la
+/// entrada, el lobby, la alberca…). `orden` es su casilla (0 = Escenario 1,
+/// el de entrada): el admin sube cada foto en su casilla, así el orden no
+/// depende de en qué orden se suban. El backend la guarda ya optimizada (JPG
+/// de máx. 4096×2048) más una miniatura para el panel.
 model Recorrido360Escena {
   id            String       @id @default(uuid()) @db.Uuid
   recorridoId   String       @map("recorrido_id") @db.Uuid
   recorrido     Recorrido360 @relation(fields: [recorridoId], references: [id], onDelete: Cascade)
   orden         Int
+  /// Nombre que ve el turista ("Lobby", "Alberca"). Vacío = "Escenario N".
+  titulo        String       @default("")
+  descripcion   String       @default("")
+  /// Hacia dónde mira la cámara al entrar al escenario, en grados (0 = el
+  /// centro de la foto equirectangular, positivo hacia la derecha).
+  yawInicial    Float        @default(0) @map("yaw_inicial")
   imagenUrl     String       @map("imagen_url")
   /// Rutas dentro del bucket — hacen falta para borrar los archivos de
   /// Storage al reemplazar la foto o eliminar el recorrido.
@@ -229,6 +259,126 @@ model Recorrido360Escena {
   createdAt     DateTime     @default(now()) @map("created_at")
   updatedAt     DateTime     @updatedAt @map("updated_at")
 
+  enlaces  Recorrido360Enlace[] @relation("EnlaceOrigen")
+  entradas Recorrido360Enlace[] @relation("EnlaceDestino")
+
   @@unique([recorridoId, orden])
   @@map("recorrido_360_escenas")
+}
+
+/// Flecha (hotspot) dentro de un escenario que lleva a otro escenario del
+/// mismo recorrido. `yaw`/`pitch` son la posición de la flecha en la foto,
+/// en grados: yaw -180…180 (0 = centro de la foto), pitch -90…90 (0 = el
+/// horizonte, negativo = hacia el piso).
+model Recorrido360Enlace {
+  id        String             @id @default(uuid()) @db.Uuid
+  origenId  String             @map("origen_id") @db.Uuid
+  origen    Recorrido360Escena @relation("EnlaceOrigen", fields: [origenId], references: [id], onDelete: Cascade)
+  destinoId String             @map("destino_id") @db.Uuid
+  destino   Recorrido360Escena @relation("EnlaceDestino", fields: [destinoId], references: [id], onDelete: Cascade)
+  yaw       Float
+  pitch     Float              @default(0)
+  /// Texto opcional junto a la flecha ("Ir a la alberca"). Vacío = el
+  /// título del escenario destino.
+  etiqueta  String             @default("")
+  createdAt DateTime           @default(now()) @map("created_at")
+
+  @@unique([origenId, destinoId])
+  @@index([destinoId])
+  @@map("recorrido_360_enlaces")
+}
+
+/// Lugar (negocio aprobado) que un visitante guardó en "Mis favoritos". Un
+/// visitante no puede repetir el mismo lugar; si el usuario o el negocio se
+/// borran, el favorito se va con ellos.
+model Favorito {
+  id        String         @id @default(uuid()) @db.Uuid
+  userId    String         @map("user_id") @db.Uuid
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  negocioId String         @map("negocio_id") @db.Uuid
+  negocio   NegocioProfile @relation(fields: [negocioId], references: [id], onDelete: Cascade)
+  createdAt DateTime       @default(now()) @map("created_at")
+
+  @@unique([userId, negocioId])
+  @@index([userId, createdAt])
+  @@map("favoritos")
+}
+
+/// Un negocio pide que un admin le haga su recorrido 360° (la toma de fotos
+/// la agenda el equipo; el negocio solo deja su ubicación en el mapa). Solo
+/// puede haber una pendiente por negocio. Cuando el admin crea un recorrido
+/// para ese negocio, sus solicitudes pendientes pasan a `completada` solas.
+model SolicitudRecorrido360 {
+  id          String                          @id @default(uuid()) @db.Uuid
+  negocioId   String                          @map("negocio_id") @db.Uuid
+  negocio     NegocioProfile                  @relation(fields: [negocioId], references: [id], onDelete: Cascade)
+  /// Comentario opcional del negocio ("mejor por las mañanas", "son 3 pisos").
+  mensaje     String                          @default("")
+  estado      solicitud_recorrido_estado_enum @default(pendiente)
+  /// Respuesta del admin al atenderla (sobre todo al rechazarla).
+  nota        String                          @default("")
+  atendidaPor String?                         @map("atendida_por") @db.Uuid
+  admin       User?                           @relation("SolicitudAtendidaPor", fields: [atendidaPor], references: [id], onDelete: SetNull)
+  atendidaEn  DateTime?                       @map("atendida_en")
+  createdAt   DateTime                        @default(now()) @map("created_at")
+
+  @@index([negocioId, createdAt])
+  @@index([estado, createdAt])
+  @@map("solicitudes_recorrido_360")
+}
+
+/// Reseña de un visitante sobre un lugar (negocio aprobado): estrellas de 1 a
+/// 5 y un comentario opcional. Cada visitante tiene a lo más una por lugar
+/// (la puede editar o borrar). El dueño del negocio puede dejar una
+/// respuesta pública; solo un admin puede borrar reseñas ajenas.
+model Resena {
+  id          String         @id @default(uuid()) @db.Uuid
+  userId      String         @map("user_id") @db.Uuid
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  negocioId   String         @map("negocio_id") @db.Uuid
+  negocio     NegocioProfile @relation(fields: [negocioId], references: [id], onDelete: Cascade)
+  estrellas   Int
+  comentario  String?
+  respuesta   String?
+  respuestaEn DateTime?      @map("respuesta_en")
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
+
+  @@unique([userId, negocioId])
+  @@index([negocioId, createdAt])
+  @@map("resenas")
+}
+
+/// Punto de interés de la RA por geolocalización de un lugar (la entrada de
+/// FIME, su explanada, un mural…). Funciona por capas según la distancia del
+/// visitante:
+///   - dentro de `radioVisible` (p. ej. 100 m): la cámara muestra un marcador
+///     flotante con `titulo` y `resumen` en la dirección del punto;
+///   - dentro de `radioCercano` (p. ej. 10 m): se abre la guía completa
+///     (`detalle`, imagen y audio).
+/// Si un lugar no tiene puntos, la app usa el pin del lugar como punto único.
+model PuntoRaGeo {
+  id           String         @id @default(uuid()) @db.Uuid
+  negocioId    String         @map("negocio_id") @db.Uuid
+  negocio      NegocioProfile @relation(fields: [negocioId], references: [id], onDelete: Cascade)
+  titulo       String
+  /// Una o dos líneas: lo que se lee en el marcador flotante desde lejos.
+  resumen      String         @default("")
+  /// La guía completa que se abre al llegar al punto.
+  detalle      String         @default("")
+  imagenUrl    String         @default("") @map("imagen_url")
+  audioUrl     String         @default("") @map("audio_url")
+  latitud      Float
+  longitud     Float
+  /// Metros. Siempre radioCercano < radioVisible (lo valida el backend).
+  radioVisible Float          @default(100) @map("radio_visible")
+  radioCercano Float          @default(10) @map("radio_cercano")
+  /// Orden en el panel y en la app (0 = el primero).
+  orden        Int            @default(0)
+  activo       Boolean        @default(true)
+  createdAt    DateTime       @default(now()) @map("created_at")
+  updatedAt    DateTime       @updatedAt @map("updated_at")
+
+  @@index([negocioId, orden])
+  @@map("ra_geo_puntos")
 }

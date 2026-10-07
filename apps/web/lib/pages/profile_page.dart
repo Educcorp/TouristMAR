@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../models/visitor_profile.dart';
 import '../theme/app_theme.dart';
@@ -7,7 +8,6 @@ import '../widgets/app_button.dart';
 import '../widgets/app_shell.dart';
 import '../widgets/themed_builder.dart';
 import '../widgets/user_avatar.dart';
-import 'edit_profile_page.dart';
 
 class ProfilePage extends StatefulWidget {
   final VisitorProfile profile;
@@ -19,10 +19,16 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
+  @override
+  void initState() {
+    super.initState();
+    widget.profile.cargarResenas().then((_) {
+      if (mounted) setState(() {});
+    });
+  }
+
   Future<void> _editProfile() async {
-    final changed = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(builder: (_) => EditProfilePage(profile: widget.profile)),
-    );
+    final changed = await context.push<bool>('/perfil/editar');
     if (changed == true && mounted) setState(() {});
   }
 
@@ -121,7 +127,7 @@ class _ProfilePageState extends State<ProfilePage> {
     final stats = [
       (Icons.place_outlined, '${profile.visited.length}', 'Lugares visitados'),
       (Icons.forum_outlined, '${profile.reviews.length}', 'Reseñas escritas'),
-      (Icons.star_outline, '4.7★', 'Valoración media'),
+      (Icons.star_outline, profile.promedioDadas == null ? '—' : '${profile.promedioDadas!.toStringAsFixed(1)}★', 'Valoración media'),
     ];
 
     return Container(
@@ -207,6 +213,22 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Widget _buildReviews(VisitorProfile profile) {
+    if (profile.reviews.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: AppColors.panelNavySoft,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.overlay(0.08)),
+        ),
+        child: Text(
+          'Aún no has escrito reseñas. Abre un lugar y cuéntanos tu experiencia.',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: AppColors.slate400, fontSize: 13),
+        ),
+      );
+    }
     return Column(
       children: profile.reviews.map((review) => _ReviewTile(review: review)).toList(),
     );
@@ -329,8 +351,31 @@ class _ReviewTile extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 8),
-          Text(review.text, style: TextStyle(color: AppColors.textSecondary, fontSize: 13, height: 1.4)),
+          if (review.text.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(review.text, style: TextStyle(color: AppColors.textSecondary, fontSize: 13, height: 1.4)),
+          ],
+          if (review.reply != null && review.reply!.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppColors.overlay(0.05),
+                borderRadius: BorderRadius.circular(8),
+                border: Border(left: BorderSide(color: AppColors.brandTeal, width: 3)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Respuesta del negocio',
+                      style: TextStyle(color: AppColors.brandTeal, fontSize: 11, fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 4),
+                  Text(review.reply!, style: TextStyle(color: AppColors.textSecondary, fontSize: 13, height: 1.4)),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );

@@ -1,31 +1,35 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../models/lugar.dart';
+import '../../navegacion/rutas.dart';
 import '../../services/auth_service.dart';
 import '../../services/lugares_service.dart';
 import '../../services/recorridos_service.dart';
 import '../../services/session_storage.dart';
 import '../../theme/app_theme.dart';
-import '../../theme/breakpoints.dart';
 import '../../widgets/admin/ds_badge.dart';
 import '../../widgets/admin/ds_button.dart';
 import '../../widgets/admin/ds_card.dart';
 import '../../widgets/admin/ds_states.dart';
-import '../../widgets/admin/ds_stat_card.dart';
-import '../../widgets/admin/ds_table.dart';
-import '../../widgets/lugar_preview_card.dart';
+import '../../widgets/admin/seccion_desplegable.dart';
 import '../../widgets/mapa/mapa_lugares.dart';
-import '../lugar_detalle_page.dart';
+import 'admin_lugar_page.dart';
+import 'admin_lugar_widgets.dart';
 
-/// Sección "Mapa y RA" del panel admin: el mapa público tal como lo ve el
-/// visitante, la cobertura de experiencias por negocio (con revisión de
-/// recursos) y, para el super admin, los parámetros globales.
+/// Sección "Mapa y RA" del panel admin (`/admin/mapa`): registrar lugares con
+/// sus coordenadas, verlos en el mapa y, al tocar "Revisar", abrir la página
+/// del lugar (`/admin/mapa/lugar/<id>`) con su RA por ubicación, su recorrido
+/// 360° y sus marcadores. Para el super admin, los parámetros globales.
 class AdminMapaPage extends StatefulWidget {
   final AuthUser admin;
   final AuthService authService;
   final LugaresService lugaresService;
   final RecorridosService recorridosService;
+
+  /// Lugar abierto (viene de la URL). null = la lista de lugares.
+  final String? lugarId;
 
   AdminMapaPage({
     super.key,
@@ -33,6 +37,7 @@ class AdminMapaPage extends StatefulWidget {
     AuthService? authService,
     RecorridosService? recorridosService,
     this.lugaresService = const LugaresService(),
+    this.lugarId,
   })  : authService = authService ?? AuthService(),
         recorridosService = recorridosService ?? RecorridosService();
 
@@ -42,25 +47,32 @@ class AdminMapaPage extends StatefulWidget {
 
 class _AdminMapaPageState extends State<AdminMapaPage> {
   final _mapController = MapController();
-  List<NegocioSummary> _negocios = [];
-  List<Lugar> _lugares = [];
-  /// Recorridos 360° visibles en la app por negocio (los da de alta un admin
-  /// en "Recorridos 360°"; ya no se usa la columna vieja `archivo360`).
-  Map<String, int> _recorridosPorNegocio = {};
+  final _registroAbierto = ValueNotifier(false);
+  List<NegocioSummary> _lugares = [];
+  List<Recorrido360> _recorridos = [];
   bool _loading = true;
   String? _error;
-  bool _soloIncompletos = false;
   String? _seleccionadoId;
+  String? _editandoId;
+  final Set<String> _busy = {};
 
   @override
   void initState() {
     super.initState();
-    _load();
+    if (widget.lugarId == null) _load();
+  }
+
+  @override
+  void didUpdateWidget(AdminMapaPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // De vuelta del detalle de un lugar: recargar por si cambió algo.
+    if (oldWidget.lugarId != null && widget.lugarId == null) _load();
   }
 
   @override
   void dispose() {
     _mapController.dispose();
+    _registroAbierto.dispose();
     super.dispose();
   }
 
@@ -72,20 +84,14 @@ class _AdminMapaPageState extends State<AdminMapaPage> {
       _error = null;
     });
     try {
-      final results = await Future.wait([
-        widget.authService.adminListNegocios(token),
-        widget.lugaresService.listarPublicos(),
-        widget.recorridosService.listRecorridos(token),
-      ]);
+      final lugares = await widget.authService.adminListNegocios(token);
+      // Si fallan los recorridos, los lugares se siguen mostrando.
+      final recorridos = await widget.recorridosService.listRecorridos(token).catchError((_) => <Recorrido360>[]);
       if (!mounted) return;
-      final porNegocio = <String, int>{};
-      for (final r in results[2] as List<Recorrido360>) {
-        if (r.publicado && r.negocioId != null) porNegocio.update(r.negocioId!, (n) => n + 1, ifAbsent: () => 1);
-      }
       setState(() {
-        _negocios = (results[0] as List<NegocioSummary>).where((n) => n.aprobado).toList();
-        _lugares = results[1] as List<Lugar>;
-        _recorridosPorNegocio = porNegocio;
+        _lugares = lugares.where((n) => n.aprobado).toList()
+          ..sort((a, b) => a.nombre.toLowerCase().compareTo(b.nombre.toLowerCase()));
+        _recorridos = recorridos;
       });
     } catch (err) {
       if (!mounted) return;
@@ -95,76 +101,156 @@ class _AdminMapaPageState extends State<AdminMapaPage> {
     }
   }
 
-  bool _completo(NegocioSummary n) => ExperienciaTipo.values.every((t) => _tiene(n, t));
+  void _revisar(NegocioSummary n) => context.go(rutaLugarAdmin(n.id));
+
+  void _snack(String texto) {
+    if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(texto)));
+  }
+
+  Future<void> _eliminar(NegocioSummary n) async {
+    final recorridos = _recorridos.where((r) => r.negocioId == n.id).length;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.panelNavySoft,
+        title: Text('Eliminar "${n.nombre}"', style: TextStyle(color: AppColors.textPrimary)),
+        content: Text(
+          'Se borrará el lugar'
+          '${recorridos > 0 ? ', sus $recorridos ${recorridos == 1 ? 'recorrido' : 'recorridos'} 360°' : ''}'
+          ' y sus marcadores.',
+          style: TextStyle(color: AppColors.textSecondary),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: Text('Cancelar', style: TextStyle(color: AppColors.slate400))),
+          TextButton(onPressed: () => Navigator.of(context).pop(true), child: Text('Eliminar', style: TextStyle(color: AppColors.errorRed))),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    final token = SessionStorage.token;
+    if (token == null) return;
+    setState(() => _busy.add(n.id));
+    try {
+      await widget.authService.adminEliminarLugar(token, n.id);
+      if (!mounted) return;
+      _snack('"${n.nombre}" se eliminó');
+      await _load();
+    } catch (err) {
+      _snack(err is AuthError ? err.message : 'No se pudo eliminar el lugar');
+    } finally {
+      if (mounted) setState(() => _busy.remove(n.id));
+    }
+  }
+
+  Future<void> _asignarRecorrido(Recorrido360 r, String lugarId) async {
+    final token = SessionStorage.token;
+    if (token == null) return;
+    setState(() => _busy.add(r.id));
+    try {
+      await widget.recorridosService.updateRecorrido(token, r.id, {'negocioId': lugarId});
+      await _load();
+    } catch (err) {
+      _snack(err is AuthError ? err.message : 'No se pudo asignar el recorrido');
+    } finally {
+      if (mounted) setState(() => _busy.remove(r.id));
+    }
+  }
+
+  Future<void> _eliminarRecorrido(Recorrido360 r) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.panelNavySoft,
+        title: Text('Eliminar recorrido', style: TextStyle(color: AppColors.textPrimary)),
+        content: Text('"${r.titulo}" y sus ${r.escenas.length} escenarios dejarán de estar en la app.',
+            style: TextStyle(color: AppColors.textSecondary)),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: Text('Cancelar', style: TextStyle(color: AppColors.slate400))),
+          TextButton(onPressed: () => Navigator.of(context).pop(true), child: Text('Eliminar', style: TextStyle(color: AppColors.errorRed))),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    final token = SessionStorage.token;
+    if (token == null) return;
+    setState(() => _busy.add(r.id));
+    try {
+      await widget.recorridosService.deleteRecorrido(token, r.id);
+      await _load();
+    } catch (err) {
+      _snack(err is AuthError ? err.message : 'No se pudo eliminar el recorrido');
+    } finally {
+      if (mounted) setState(() => _busy.remove(r.id));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final lugarId = widget.lugarId;
+    if (lugarId != null) {
+      return AdminLugarPage(key: ValueKey(lugarId), lugarId: lugarId, authService: widget.authService);
+    }
     return RefreshIndicator(
       onRefresh: _load,
       color: AppColors.adminViolet,
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(AppSpacing.xl),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Mapa y experiencias', style: AppTypography.h1),
-            const SizedBox(height: 4),
-            Text('Qué ve el visitante en el mapa y qué experiencias ofrece cada negocio.', style: AppTypography.body),
-            const SizedBox(height: AppSpacing.xl),
-            if (_loading)
-              DsLoadingState()
-            else if (_error != null)
-              DsErrorState(message: _error!, onRetry: _load)
-            else ...[
-              _buildStats(),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1100),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Mapa y RA', style: AppTypography.h1),
               const SizedBox(height: AppSpacing.xl),
-              _buildMapa(),
-              const SizedBox(height: AppSpacing.xl),
-              _buildCobertura(),
-              const SizedBox(height: AppSpacing.xl),
-              _ParametrosCard(
-                editable: widget.admin.isSuperAdmin,
-                service: widget.lugaresService,
+              SeccionDesplegable(
+                icon: Icons.add_location_alt_outlined,
+                titulo: 'Registrar lugar',
+                abierta: _registroAbierto,
+                child: LugarForm(
+                  authService: widget.authService,
+                  onGuardado: (n) {
+                    _registroAbierto.value = false;
+                    _snack('"${n.nombre}" registrado');
+                    _load();
+                  },
+                ),
               ),
+              const SizedBox(height: AppSpacing.xl),
+              if (_loading)
+                DsLoadingState(accent: AppColors.adminViolet)
+              else if (_error != null)
+                DsErrorState(message: _error!, onRetry: _load)
+              else ...[
+                _buildMapa(),
+                const SizedBox(height: AppSpacing.xl),
+                _buildLugares(),
+                if (_recorridos.any((r) => r.negocioId == null)) ...[
+                  const SizedBox(height: AppSpacing.xl),
+                  _buildSinLugar(),
+                ],
+                const SizedBox(height: AppSpacing.xl),
+                _ParametrosCard(editable: widget.admin.isSuperAdmin, service: widget.lugaresService),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildStats() {
-    int cuenta(bool Function(NegocioSummary) f) => _negocios.where(f).length;
-    final stats = [
-      (Icons.qr_code_scanner, cuenta((n) => n.arMarcador != null), 'Con RA de marcador', ExperienciaInfo.of(ExperienciaTipo.arMarcador).color),
-      (Icons.explore_outlined, cuenta((n) => n.arGeo != null), 'Con RA por ubicación', ExperienciaInfo.of(ExperienciaTipo.arGeo).color),
-      (Icons.threesixty, cuenta((n) => _tiene(n, ExperienciaTipo.recorrido360)), 'Con recorrido 360°', ExperienciaInfo.of(ExperienciaTipo.recorrido360).color),
-      (Icons.storefront_outlined, cuenta((n) => !_completo(n)), 'Con experiencias pendientes', AppColors.amber),
-    ];
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final columnas = Breakpoints.isCompact(constraints.maxWidth) ? 2 : 4;
-        return GridView.count(
-          crossAxisCount: columnas,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          mainAxisSpacing: AppSpacing.md,
-          crossAxisSpacing: AppSpacing.md,
-          childAspectRatio: columnas == 2 ? 1.5 : 1.7,
-          children: [
-            for (final (icon, value, label, color) in stats)
-              DsStatCard(icon: icon, value: value, label: label, accent: color),
-          ],
-        );
-      },
-    );
-  }
+  /// Lugares registrados con pin, como los verá el visitante.
+  List<Lugar> get _pines => [
+        for (final n in _lugares)
+          if (n.tieneUbicacion)
+            Lugar(id: n.id, nombre: n.nombre, categoriaTexto: n.categoria ?? '', portada: '', ubicacion: coordenadasDe(n)),
+      ];
 
   Widget _buildMapa() {
-    Lugar? seleccionado;
-    for (final l in _lugares) {
-      if (l.id == _seleccionadoId) seleccionado = l;
+    final pines = _pines;
+    NegocioSummary? seleccionado;
+    for (final n in _lugares) {
+      if (n.id == _seleccionadoId) seleccionado = n;
     }
 
     return DsCard(
@@ -178,9 +264,8 @@ class _AdminMapaPageState extends State<AdminMapaPage> {
               children: [
                 Icon(Icons.map_outlined, color: AppColors.adminViolet),
                 const SizedBox(width: AppSpacing.md),
-                Expanded(child: Text('Mapa público', style: AppTypography.h3)),
-                if (widget.lugaresService.usaDatosDemo)
-                  const DsBadge(text: 'Datos de ejemplo', tone: BadgeTone.warning, icon: Icons.science_outlined),
+                Expanded(child: Text('Mapa de lugares', style: AppTypography.h3)),
+                Text('${pines.length} de ${_lugares.length} con pin', style: AppTypography.bodySmall),
               ],
             ),
           ),
@@ -193,11 +278,7 @@ class _AdminMapaPageState extends State<AdminMapaPage> {
                     controller: _mapController,
                     onTap: (_) => setState(() => _seleccionadoId = null),
                     children: [
-                      capaLugares(
-                        _lugares,
-                        seleccionadoId: _seleccionadoId,
-                        onTap: (l) => setState(() => _seleccionadoId = l.id),
-                      ),
+                      capaLugares(pines, seleccionadoId: _seleccionadoId, onTap: (l) => setState(() => _seleccionadoId = l.id)),
                     ],
                   ),
                 ),
@@ -208,12 +289,36 @@ class _AdminMapaPageState extends State<AdminMapaPage> {
                     left: 12,
                     top: 12,
                     width: 300,
-                    child: LugarPreviewCard(
-                      lugar: seleccionado,
-                      compacta: true,
-                      onCerrar: () => setState(() => _seleccionadoId = null),
-                      onVerFicha: () => Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => LugarDetallePage(lugar: seleccionado!, vistaPrevia: true)),
+                    child: DsCard(
+                      background: AppColors.panelNavySoft,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(child: Text(seleccionado.nombre, style: AppTypography.h3)),
+                              InkWell(
+                                onTap: () => setState(() => _seleccionadoId = null),
+                                child: Icon(Icons.close, size: 18, color: AppColors.slate400),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            [seleccionado.categoria ?? 'Sin categoría', if (seleccionado.direccion?.isNotEmpty ?? false) seleccionado.direccion!]
+                                .join(' · '),
+                            style: AppTypography.bodySmall,
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+                          DsButton(
+                            label: 'Revisar',
+                            icon: Icons.arrow_forward,
+                            size: DsButtonSize.sm,
+                            variant: DsButtonVariant.primary,
+                            accent: AppColors.adminViolet,
+                            onPressed: () => _revisar(seleccionado!),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -225,135 +330,225 @@ class _AdminMapaPageState extends State<AdminMapaPage> {
     );
   }
 
-  Widget _buildCobertura() {
-    final filas = _soloIncompletos ? _negocios.where((n) => !_completo(n)).toList() : _negocios;
-    const flex = [4, 2, 2, 2, 2];
-
+  Widget _buildLugares() {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Row(
-          children: [
-            Expanded(child: Text('Experiencias por negocio', style: AppTypography.h2)),
-            FilterChip(
-              label: const Text('Solo incompletos'),
-              selected: _soloIncompletos,
-              onSelected: (v) => setState(() => _soloIncompletos = v),
-              showCheckmark: false,
-              selectedColor: AppColors.adminViolet.withValues(alpha: 0.16),
-              checkmarkColor: AppColors.adminViolet,
-              labelStyle: TextStyle(
-                color: _soloIncompletos ? AppColors.adminViolet : AppColors.slate300,
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-              ),
-              backgroundColor: AppColors.surface,
-              side: BorderSide(color: AppColors.borderSubtle),
-            ),
-          ],
-        ),
-        const SizedBox(height: 4),
-        Text('Negocios aprobados. Toca uno para revisar sus recursos.', style: AppTypography.bodySmall),
+        Text('Lugares', style: AppTypography.h2),
         const SizedBox(height: AppSpacing.md),
-        if (filas.isEmpty)
+        if (_lugares.isEmpty)
           const DsEmptyState(
-            icon: Icons.view_in_ar_outlined,
-            title: 'Nada que mostrar',
-            subtitle: 'No hay negocios aprobados con ese filtro.',
+            icon: Icons.place_outlined,
+            title: 'Sin lugares',
+            subtitle: '',
           )
         else
-          LayoutBuilder(
-            builder: (context, constraints) {
-              if (Breakpoints.isCompact(constraints.maxWidth)) {
-                return Column(
-                  children: [
-                    for (final n in filas)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                        child: DsCard(
-                          onTap: () => _revisar(n),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: Text(n.nombre,
-                                    style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 13)),
-                              ),
-                              for (final tipo in ExperienciaTipo.values) ...[
-                                const SizedBox(width: 6),
-                                _EstadoRecurso(tipo: tipo, activo: _tiene(n, tipo), compacto: true),
-                              ],
-                            ],
-                          ),
-                        ),
-                      ),
-                  ],
-                );
-              }
-              return DsTable(
-                headers: const ['NEGOCIO', 'RA MARCADOR', 'RA UBICACIÓN', 'RECORRIDO 360°', ''],
-                columnFlex: flex,
-                rows: [
-                  for (final n in filas)
-                    DsTableRow(
-                      columnFlex: flex,
-                      cells: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(n.nombre,
-                                style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 13)),
-                            Text(n.categoria ?? 'Sin categoría', style: AppTypography.bodySmall),
-                          ],
-                        ),
-                        for (final tipo in ExperienciaTipo.values) _EstadoRecurso(tipo: tipo, activo: _tiene(n, tipo)),
-                        DsButton(label: 'Revisar', size: DsButtonSize.sm, onPressed: () => _revisar(n)),
-                      ],
-                    ),
-                ],
-              );
-            },
-          ),
+          for (final n in _lugares)
+            Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+              child: _FilaLugar(
+                lugar: n,
+                recorridos: _recorridos.where((r) => r.negocioId == n.id).length,
+                busy: _busy.contains(n.id),
+                editando: _editandoId == n.id,
+                authService: widget.authService,
+                onRevisar: () => _revisar(n),
+                onEditar: () => setState(() => _editandoId = _editandoId == n.id ? null : n.id),
+                onGuardado: (_) {
+                  setState(() => _editandoId = null);
+                  _snack('Lugar guardado');
+                  _load();
+                },
+                onEliminar: () => _eliminar(n),
+              ),
+            ),
       ],
     );
   }
 
-  bool _tiene(NegocioSummary n, ExperienciaTipo tipo) => switch (tipo) {
-        ExperienciaTipo.arMarcador => n.arMarcador != null,
-        ExperienciaTipo.arGeo => n.arGeo != null,
-        ExperienciaTipo.recorrido360 => (_recorridosPorNegocio[n.id] ?? 0) > 0,
-      };
-
-  void _revisar(NegocioSummary negocio) {
-    showDialog<void>(
-      context: context,
-      builder: (_) => _RevisionDialog(
-        negocio: negocio,
-        tiene: (t) => _tiene(negocio, t),
-        recorridos360: _recorridosPorNegocio[negocio.id] ?? 0,
-      ),
+  Widget _buildSinLugar() {
+    final huerfanos = _recorridos.where((r) => r.negocioId == null).toList();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text('Recorridos sin lugar', style: AppTypography.h2),
+        const SizedBox(height: AppSpacing.md),
+        for (final r in huerfanos)
+          Padding(
+            padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+            child: DsCard(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              child: Row(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(6),
+                    child: SizedBox(
+                      width: 96,
+                      height: 48,
+                      child: r.escenas.isEmpty
+                          ? ColoredBox(color: AppColors.surface, child: Icon(Icons.threesixty, color: AppColors.slate500))
+                          : Image.network(r.escenas.first.miniaturaUrl, fit: BoxFit.cover),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(r.titulo, style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 13)),
+                        Text('${r.nombre} · ${r.escenas.length} escenarios', style: AppTypography.caption),
+                      ],
+                    ),
+                  ),
+                  if (_busy.contains(r.id))
+                    SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.adminViolet))
+                  else ...[
+                    PopupMenuButton<String>(
+                      tooltip: 'Asignar a un lugar',
+                      color: AppColors.panelNavySoft,
+                      enabled: _lugares.isNotEmpty,
+                      onSelected: (id) => _asignarRecorrido(r, id),
+                      itemBuilder: (_) => [
+                        for (final n in _lugares)
+                          PopupMenuItem(value: n.id, child: Text(n.nombre, style: TextStyle(color: AppColors.textPrimary))),
+                      ],
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.place_outlined, size: 16, color: AppColors.adminViolet),
+                            const SizedBox(width: 4),
+                            Text('Asignar a…', style: TextStyle(color: AppColors.adminViolet, fontSize: 13, fontWeight: FontWeight.w600)),
+                            Icon(Icons.arrow_drop_down, color: AppColors.adminViolet),
+                          ],
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'Eliminar',
+                      onPressed: () => _eliminarRecorrido(r),
+                      icon: Icon(Icons.delete_outline, size: 18, color: AppColors.errorRed),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+      ],
     );
   }
 }
 
-class _EstadoRecurso extends StatelessWidget {
-  final ExperienciaTipo tipo;
-  final bool activo;
-  final bool compacto;
+/// Un lugar de la lista: su nombre y datos, y "Revisar", editar (el
+/// formulario se despliega debajo) y eliminar.
+class _FilaLugar extends StatelessWidget {
+  final NegocioSummary lugar;
+  final int recorridos;
+  final bool busy;
+  final bool editando;
+  final AuthService authService;
+  final VoidCallback onRevisar;
+  final VoidCallback onEditar;
+  final ValueChanged<NegocioSummary> onGuardado;
+  final VoidCallback onEliminar;
 
-  const _EstadoRecurso({required this.tipo, required this.activo, this.compacto = false});
+  const _FilaLugar({
+    required this.lugar,
+    required this.recorridos,
+    required this.busy,
+    required this.editando,
+    required this.authService,
+    required this.onRevisar,
+    required this.onEditar,
+    required this.onGuardado,
+    required this.onEliminar,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final info = ExperienciaInfo.of(tipo);
-    if (compacto) {
-      return Tooltip(
-        message: '${info.tituloCorto}: ${activo ? 'subido' : 'falta'}',
-        child: Icon(info.icon, size: 18, color: activo ? info.color : AppColors.slate500.withValues(alpha: 0.5)),
-      );
-    }
-    return activo
-        ? const DsBadge(text: 'Subido', tone: BadgeTone.success, icon: Icons.check)
-        : const DsBadge(text: 'Falta', tone: BadgeTone.neutral);
+    final n = lugar;
+    final cat = CategoriaLugarDetector.detectar(n.categoria);
+    return DsCard(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(color: cat.color, shape: BoxShape.circle),
+                child: Icon(cat.icon, size: 18, color: Colors.white),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(n.nombre, style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
+                    const SizedBox(height: 2),
+                    Text(
+                      [n.categoria ?? 'Sin categoría', if (n.direccion?.isNotEmpty ?? false) n.direccion!].join(' · '),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.bodySmall,
+                    ),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: AppSpacing.xs,
+                      runSpacing: AppSpacing.xs,
+                      children: [
+                        n.tieneUbicacion
+                            ? const DsBadge(text: 'Con pin', tone: BadgeTone.success, icon: Icons.location_on)
+                            : const DsBadge(text: 'Sin coordenadas', tone: BadgeTone.warning, icon: Icons.location_off_outlined),
+                        if (recorridos > 0)
+                          DsBadge(text: '$recorridos 360°', tone: BadgeTone.info, icon: Icons.threesixty),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              if (busy)
+                Padding(
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.adminViolet)),
+                )
+              else ...[
+                DsButton(
+                  label: 'Revisar',
+                  size: DsButtonSize.sm,
+                  variant: DsButtonVariant.primary,
+                  accent: AppColors.adminViolet,
+                  onPressed: onRevisar,
+                ),
+                IconButton(
+                  tooltip: editando ? 'Cerrar edición' : 'Editar datos',
+                  onPressed: onEditar,
+                  icon: Icon(editando ? Icons.expand_less : Icons.edit_outlined, size: 18, color: AppColors.slate300),
+                ),
+                IconButton(
+                  tooltip: 'Eliminar',
+                  onPressed: onEliminar,
+                  icon: Icon(Icons.delete_outline, size: 18, color: AppColors.errorRed),
+                ),
+              ],
+            ],
+          ),
+          AnimatedSize(
+            duration: const Duration(milliseconds: 200),
+            alignment: Alignment.topCenter,
+            child: editando
+                ? Padding(
+                    padding: const EdgeInsets.only(top: AppSpacing.lg),
+                    child: LugarForm(lugar: n, authService: authService, onGuardado: onGuardado, onCancelar: onEditar),
+                  )
+                : const SizedBox(width: double.infinity),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -386,152 +581,6 @@ class _Leyenda extends StatelessWidget {
   }
 }
 
-/// Revisión de los recursos de un negocio: el admin aprueba o rechaza cada
-/// experiencia antes de que se publique.
-class _RevisionDialog extends StatelessWidget {
-  final NegocioSummary negocio;
-  final bool Function(ExperienciaTipo) tiene;
-  final int recorridos360;
-
-  const _RevisionDialog({required this.negocio, required this.tiene, required this.recorridos360});
-
-  void _pendiente(BuildContext context, String accion) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$accion todavía no está conectado con el servidor.')),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Dialog(
-      backgroundColor: AppColors.panelNavySoft,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.cardLg)),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 560),
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(AppSpacing.xl),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('REVISAR EXPERIENCIAS', style: AppTypography.caption.copyWith(color: AppColors.adminViolet)),
-                        const SizedBox(height: 4),
-                        Text(negocio.nombre, style: AppTypography.h2),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: Icon(Icons.close, color: AppColors.slate400),
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.lg),
-              for (final tipo in ExperienciaTipo.values) ...[
-                Builder(builder: (context) {
-                  final info = ExperienciaInfo.of(tipo);
-                  final activo = tiene(tipo);
-                  // Los marcadores no los sube el negocio: los da de alta un
-                  // admin en la sección "Realidad aumentada" (no hay nada que
-                  // aprobar o rechazar aquí).
-                  if (tipo == ExperienciaTipo.recorrido360) {
-                    return DsCard(
-                      child: Row(
-                        children: [
-                          Icon(info.icon, color: activo ? info.color : AppColors.slate500),
-                          const SizedBox(width: AppSpacing.md),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(info.tituloCorto, style: AppTypography.h3.copyWith(fontSize: 14)),
-                                Text('Se gestionan en la sección "Recorridos 360°" del panel.',
-                                    style: AppTypography.bodySmall),
-                              ],
-                            ),
-                          ),
-                          activo
-                              ? DsBadge(
-                                  text: '$recorridos360 ${recorridos360 == 1 ? 'recorrido' : 'recorridos'}',
-                                  tone: BadgeTone.success,
-                                  icon: Icons.check,
-                                )
-                              : const DsBadge(text: 'Sin recorrido', tone: BadgeTone.neutral),
-                        ],
-                      ),
-                    );
-                  }
-                  if (tipo == ExperienciaTipo.arMarcador) {
-                    return DsCard(
-                      child: Row(
-                        children: [
-                          Icon(info.icon, color: info.color),
-                          const SizedBox(width: AppSpacing.md),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(info.tituloCorto, style: AppTypography.h3.copyWith(fontSize: 14)),
-                                Text('Se gestionan en la sección "Realidad aumentada" del panel.',
-                                    style: AppTypography.bodySmall),
-                              ],
-                            ),
-                          ),
-                          const DsBadge(text: 'Solo admin', tone: BadgeTone.info, icon: Icons.shield_outlined),
-                        ],
-                      ),
-                    );
-                  }
-                  return DsCard(
-                    child: Row(
-                      children: [
-                        Icon(info.icon, color: activo ? info.color : AppColors.slate500),
-                        const SizedBox(width: AppSpacing.md),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(info.tituloCorto, style: AppTypography.h3.copyWith(fontSize: 14)),
-                              Text(activo ? 'Archivo subido por el negocio' : 'El negocio no ha subido este recurso',
-                                  style: AppTypography.bodySmall),
-                            ],
-                          ),
-                        ),
-                        if (activo) ...[
-                          DsButton(
-                            label: 'Aprobar',
-                            size: DsButtonSize.sm,
-                            accent: AppColors.emerald,
-                            onPressed: () => _pendiente(context, 'Aprobar el recurso'),
-                          ),
-                          const SizedBox(width: 6),
-                          DsButton(
-                            label: 'Rechazar',
-                            size: DsButtonSize.sm,
-                            variant: DsButtonVariant.danger,
-                            onPressed: () => _pendiente(context, 'Rechazar el recurso'),
-                          ),
-                        ] else
-                          const DsBadge(text: 'Falta', tone: BadgeTone.neutral),
-                      ],
-                    ),
-                  );
-                }),
-                const SizedBox(height: AppSpacing.sm),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 /// Parámetros globales de las experiencias. Todos los admins los ven; solo
 /// el super admin los edita.

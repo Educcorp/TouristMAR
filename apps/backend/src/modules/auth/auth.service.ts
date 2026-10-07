@@ -204,6 +204,9 @@ export interface NegocioProfileInput {
   sitioWeb?: string
   horario?: string
   portada?: string
+  /// Pin del lugar en el mapa público (null = quitarlo).
+  latitud?: number | null
+  longitud?: number | null
 }
 
 /// Confirma que `negocioId` existe y le pertenece a `userId`. Todas las
@@ -496,31 +499,6 @@ export async function getNegocioAdmin(negocioId: string) {
     if (!negocio) throw new NegocioNotFoundError('No se encontró ese negocio')
     return negocio
   })
-}
-
-/// Como [NegocioProfileInput] pero el admin puede mandar `null` para
-/// limpiar un dato que la empresa llenó mal.
-export interface AdminNegocioInput {
-  nombre?: string
-  categoria?: string | null
-  descripcion?: string | null
-  direccion?: string | null
-  telefono?: string | null
-  sitioWeb?: string | null
-  horario?: string | null
-  latitud?: number | null
-  longitud?: number | null
-}
-
-/// El admin puede corregir los datos de cualquier negocio (pendiente o no)
-/// antes de aprobarlo — no pasa por [assertOwnedNegocio].
-export async function updateNegocioAdmin(negocioId: string, data: AdminNegocioInput) {
-  await withDbGuard(async () => {
-    const existe = await prisma.negocioProfile.findUnique({ where: { id: negocioId }, select: { id: true } })
-    if (!existe) throw new NegocioNotFoundError('No se encontró ese negocio')
-    await prisma.negocioProfile.update({ where: { id: negocioId }, data })
-  })
-  return getNegocioAdmin(negocioId)
 }
 
 export async function adminUploadNegocioPortada(negocioId: string, file: { buffer: Buffer; mimetype: string }) {

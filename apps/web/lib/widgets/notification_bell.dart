@@ -261,6 +261,12 @@ class _NotificationTile extends StatelessWidget {
         return Icons.add_business_outlined;
       case 'usuario_nuevo':
         return Icons.person_add_alt_outlined;
+      case 'recorrido_solicitado':
+        return Icons.threesixty;
+      case 'recorrido_listo':
+        return Icons.check_circle_outline;
+      case 'recorrido_rechazado':
+        return Icons.cancel_outlined;
       default:
         return Icons.apartment_outlined;
     }
@@ -269,8 +275,10 @@ class _NotificationTile extends StatelessWidget {
   Color get _color {
     switch (notification.tipo) {
       case 'negocio_aprobado':
+      case 'recorrido_listo':
         return AppColors.brandTeal;
       case 'negocio_rechazado':
+      case 'recorrido_rechazado':
         return AppColors.errorRed;
       default:
         return accentColor;

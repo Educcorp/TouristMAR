@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 
 import '../../models/lugar.dart';
 import '../../services/experiencias_launcher.dart';
+import '../../services/ra_geo_service.dart' show radioCercanoDefault, radioVisibleDefault;
 import '../../services/ra_ubicacion.dart';
 import '../../services/recorridos_service.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/breakpoints.dart';
 import '../../theme/theme_controller.dart';
 import '../mapa/mapa_lugares.dart';
+import '../recorrido360/visor_360.dart';
 import 'experiencia_viewport.dart';
 
 /// Estado calculado de una experiencia para un visitante concreto.
@@ -26,8 +28,9 @@ class ExperienciaSituacion {
   static ExperienciaSituacion calcular(Lugar lugar, ExperienciaTipo tipo, Coordenadas? yo, {bool? tieneRecorrido360}) {
     final tiene = switch (tipo) {
       ExperienciaTipo.recorrido360 => tieneRecorrido360 ?? lugar.tiene(tipo),
-      // La RA por ubicación solo existe para las playas que conoce Unity.
-      ExperienciaTipo.arGeo => playaParaLugar(lugar.nombre) != null,
+      // Las playas que conoce Unity, o cualquier lugar con pin en el mapa
+      // (RA por ubicación de Flutter, ver RaUbicacionPage).
+      ExperienciaTipo.arGeo => playaParaLugar(lugar.nombre) != null || lugar.ubicacion != null,
       ExperienciaTipo.arMarcador => lugar.tiene(tipo),
     };
     if (!tiene) return ExperienciaSituacion(tipo, ExperienciaEstado.noDisponible);
@@ -103,7 +106,7 @@ class _ExperienciasLugarSectionState extends State<ExperienciasLugarSection> {
     setState(() => _yo = yo);
     if (yo == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('La ubicación estará disponible en la app móvil.')),
+        const SnackBar(content: Text('No se pudo obtener tu ubicación. Activa la ubicación y permite el acceso.')),
       );
     }
   }
@@ -220,7 +223,7 @@ class ExperienciaCard extends StatelessWidget {
           apagada
               ? switch (situacion.tipo) {
                   ExperienciaTipo.recorrido360 => 'Este lugar todavía no cuenta con un recorrido 360°.',
-                  ExperienciaTipo.arGeo => 'Por el momento este lugar no cuenta con RA por ubicación.',
+                  ExperienciaTipo.arGeo => 'Por el momento este lugar no cuenta con RA por geolocalización.',
                   ExperienciaTipo.arMarcador => 'Este lugar aún no ofrece esta experiencia.',
                 }
               : info.descripcion,
@@ -492,8 +495,8 @@ class _DetalleExperienciaState extends State<_DetalleExperiencia> {
           ExperienciasLauncher.current.mideDistancia(ExperienciaTipo.arGeo)
               ? const _Pasos(pasos: [
                   ('Abre la cámara', 'Toca "Iniciar RA en el lugar" y permite la cámara y tu ubicación.'),
-                  ('Mira el resumen', 'Desde donde estés verás información del lugar y a qué distancia estás.'),
-                  ('Llega al lugar', 'A menos de 100 m se desbloquea la información completa.'),
+                  ('Acércate', 'A unos ${radioVisibleDefault ~/ 1} m verás flotando en la cámara los puntos de interés y su resumen.'),
+                  ('Llega al punto', 'A menos de ${radioCercanoDefault ~/ 1} m se abre la guía completa: información, fotos y audio.'),
                 ])
               : const _Pasos(pasos: [
                   ('Visita el lugar', 'Esta experiencia solo existe en el sitio físico.'),
@@ -503,14 +506,7 @@ class _DetalleExperienciaState extends State<_DetalleExperiencia> {
         ];
       case ExperienciaTipo.recorrido360:
         return [
-          const ExperienciaViewport(
-            tipo: ExperienciaTipo.recorrido360,
-            mensaje: 'Aquí se cargará el recorrido 360° del lugar.\nArrastra para mirar alrededor.',
-            controles: [
-              ViewportControl(icon: Icons.threed_rotation, tooltip: 'Reiniciar vista', onPressed: null),
-              ViewportControl(icon: Icons.fullscreen, tooltip: 'Pantalla completa', onPressed: null),
-            ],
-          ),
+          _VistaPrevia360(lugar: widget.lugar),
           const SizedBox(height: AppSpacing.lg),
           const _Pasos(pasos: [
             ('Desde cualquier lugar', 'No necesitas estar en el sitio para hacer el recorrido.'),
@@ -546,6 +542,60 @@ class _DetalleExperienciaState extends State<_DetalleExperiencia> {
             ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
             : Icon(icon, size: 18),
         label: Text(label, style: const TextStyle(fontWeight: FontWeight.w700)),
+      ),
+    );
+  }
+}
+
+/// La primera vista del recorrido ya en 360° (se puede girar) antes de
+/// abrirlo completo. Si todavía carga o no hay conexión, el marco vacío.
+class _VistaPrevia360 extends StatefulWidget {
+  final Lugar lugar;
+
+  const _VistaPrevia360({required this.lugar});
+
+  @override
+  State<_VistaPrevia360> createState() => _VistaPrevia360State();
+}
+
+class _VistaPrevia360State extends State<_VistaPrevia360> {
+  RecorridoPublico? _recorrido;
+  bool _cargando = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _cargar();
+  }
+
+  Future<void> _cargar() async {
+    try {
+      final lista = await RecorridosService().listPublicos();
+      final propio = recorridoDeLugar(lista, lugarId: widget.lugar.id, lugarNombre: widget.lugar.nombre);
+      if (mounted) setState(() => _recorrido = propio);
+    } catch (_) {
+      // Sin conexión: se queda el marco vacío.
+    } finally {
+      if (mounted) setState(() => _cargando = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final r = _recorrido;
+    if (r == null || r.escenas.isEmpty) {
+      return ExperienciaViewport(
+        tipo: ExperienciaTipo.recorrido360,
+        mensaje: _cargando ? 'Cargando el recorrido 360°…' : 'Este lugar todavía no tiene recorrido 360°.',
+      );
+    }
+    return ExperienciaViewport(
+      tipo: ExperienciaTipo.recorrido360,
+      child: Visor360(
+        escenas: [for (final e in r.escenas) EscenaVisor.publica(e)],
+        escenaInicialId: r.escenaInicial,
+        titulo: r.titulo,
+        mostrarTira: false,
       ),
     );
   }

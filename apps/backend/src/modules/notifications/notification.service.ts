@@ -1,7 +1,15 @@
 import { prisma } from '../../config/prisma'
 import { withDbGuard } from '../../config/db-guard'
 
-export type NotificationTipo = 'negocio_pendiente' | 'negocio_sugerido' | 'negocio_aprobado' | 'negocio_rechazado' | 'usuario_nuevo'
+export type NotificationTipo =
+  | 'negocio_pendiente'
+  | 'negocio_sugerido'
+  | 'negocio_aprobado'
+  | 'negocio_rechazado'
+  | 'usuario_nuevo'
+  | 'recorrido_solicitado'
+  | 'recorrido_listo'
+  | 'recorrido_rechazado'
 
 /// Crea la misma notificación para todos los admins/super_admins vigentes —
 /// son pocas cuentas, así que un fan-out simple al crear es más sencillo que

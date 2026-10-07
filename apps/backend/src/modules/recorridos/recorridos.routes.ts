@@ -8,8 +8,11 @@ import {
   updateRecorridoAdmin,
   deleteRecorridoAdmin,
   setEscenaAdmin,
+  updateEscenaAdmin,
+  setEnlacesAdmin,
   deleteEscenaAdmin,
 } from './recorridos.controller'
+import { listSolicitudesAdmin, atenderSolicitudAdmin } from './solicitudes.controller'
 import { requireAuth, requireRole } from '../auth/auth.middleware'
 
 /// Endpoints públicos que consume el módulo de Unity (se monta en
@@ -44,10 +47,18 @@ export const recorridosAdminRouter = Router()
 
 recorridosAdminRouter.use(requireAuth, requireRole('admin', 'super_admin'))
 
+// Solicitudes de recorrido que mandan los negocios (antes que `/:id`).
+recorridosAdminRouter.get('/solicitudes', listSolicitudesAdmin)
+recorridosAdminRouter.patch('/solicitudes/:id', atenderSolicitudAdmin)
 recorridosAdminRouter.get('/', listRecorridosAdmin)
 recorridosAdminRouter.post('/', createRecorridoAdmin)
 recorridosAdminRouter.patch('/:id', updateRecorridoAdmin)
 recorridosAdminRouter.delete('/:id', deleteRecorridoAdmin)
-// :posicion = 1, 2 o 3 ("Foto 1"…). PUT sube o reemplaza la foto de esa casilla.
+// :posicion = 1…32 ("Escenario 1"… el 1 es el de entrada).
+// PUT sube o reemplaza la foto de esa casilla; PATCH cambia título,
+// descripción o vista inicial sin volver a subir la foto.
 recorridosAdminRouter.put('/:id/escenas/:posicion', subirEscena, setEscenaAdmin)
+recorridosAdminRouter.patch('/:id/escenas/:posicion', updateEscenaAdmin)
 recorridosAdminRouter.delete('/:id/escenas/:posicion', deleteEscenaAdmin)
+// Reemplaza todas las flechas del escenario: { enlaces: [{ destino, yaw, pitch?, etiqueta? }] }.
+recorridosAdminRouter.put('/:id/escenas/:posicion/enlaces', setEnlacesAdmin)

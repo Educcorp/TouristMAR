@@ -8,7 +8,7 @@ import '../services/session_storage.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_button.dart';
 import '../widgets/app_text_field.dart';
-import '../widgets/mapa/selector_ubicacion.dart';
+import '../widgets/mapa/ubicacion_lugar.dart';
 import '../widgets/themed_builder.dart';
 
 /// Formulario para que una cuenta de negocio ya aprobada sugiera un negocio
@@ -38,6 +38,7 @@ class _BusinessSuggestPageState extends State<BusinessSuggestPage> {
   final _scheduleController = TextEditingController();
   late final AuthService _authService = widget.authService ?? AuthService();
   PickedImage? _portada;
+  /// Pin en el mapa (opcional al sugerir).
   Coordenadas? _ubicacion;
   bool _isSaving = false;
   String? _error;
@@ -168,19 +169,19 @@ class _BusinessSuggestPageState extends State<BusinessSuggestPage> {
                       validator: (v) => (v == null || v.trim().isEmpty) ? 'Ingresa una categoría' : null,
                     ),
                     const SizedBox(height: 20),
-                    UbicacionField(
-                      value: _ubicacion,
-                      accent: AppColors.businessOrange,
-                      enabled: !_isSaving,
-                      onChanged: (v) => setState(() => _ubicacion = v),
-                    ),
-                    const SizedBox(height: 20),
                     AppTextField(
                       label: 'Dirección',
                       icon: Icons.place_outlined,
                       controller: _addressController,
                       hintText: 'Calle, número, colonia…',
                       accentColor: AppColors.businessOrange,
+                    ),
+                    const SizedBox(height: 20),
+                    CampoCoordenadas(
+                      lugar: _nameController.text.trim().isEmpty ? 'el negocio' : _nameController.text.trim(),
+                      acento: AppColors.businessOrange,
+                      habilitado: !_isSaving,
+                      onChanged: (c) => _ubicacion = c,
                     ),
                     const SizedBox(height: 20),
                     AppTextField(

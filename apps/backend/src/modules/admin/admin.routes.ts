@@ -6,13 +6,16 @@ import {
   listNegocios,
   approveNegocio,
   rejectNegocio,
+  updateNegocioUbicacion,
+  createLugar,
+  updateLugar,
+  deleteLugar,
   listUsers,
   updateUserActive,
   listAdminAccounts,
   createAdminAccount,
   deleteAdminAccount,
   getNegocio,
-  updateNegocio,
   uploadNegocioPortadaAdmin,
 } from './admin.controller'
 import { requireAuth, requireRole } from '../auth/auth.middleware'
@@ -36,11 +39,16 @@ adminRouter.get('/negocios', listNegocios)
 adminRouter.get('/negocios/pendientes', listPendingNegocios)
 adminRouter.post('/negocios/:negocioId/aprobar', approveNegocio)
 adminRouter.post('/negocios/:negocioId/rechazar', rejectNegocio)
-// Detalle / edición de una solicitud (o de cualquier negocio). Van después de
-// `/negocios/pendientes` para que esa ruta no se tome como un :negocioId.
+adminRouter.put('/negocios/:negocioId/ubicacion', updateNegocioUbicacion)
+// Detalle de una solicitud (o de cualquier negocio) y cambio de su portada.
+// Van después de `/negocios/pendientes` para que esa ruta no se tome como un
+// :negocioId. La edición de datos es el PATCH de abajo (updateLugar).
 adminRouter.get('/negocios/:negocioId', getNegocio)
-adminRouter.patch('/negocios/:negocioId', updateNegocio)
 adminRouter.post('/negocios/:negocioId/portada', upload.single('file'), uploadNegocioPortadaAdmin)
+adminRouter.patch('/negocios/:negocioId', updateLugar)
+adminRouter.delete('/negocios/:negocioId', deleteLugar)
+// Lugar sin dueño (lo registra el admin; queda a nombre del super admin).
+adminRouter.post('/lugares', createLugar)
 
 adminRouter.get('/users', listUsers)
 adminRouter.patch('/users/:userId/activo', updateUserActive)

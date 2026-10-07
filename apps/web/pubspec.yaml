@@ -9,6 +9,9 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  # Rutas con URL limpia en la web (`/admin/mapa` en vez de `/#/admin/mapa`).
+  flutter_web_plugins:
+    sdk: flutter
   http: ^1.2.2
   google_fonts: ^6.2.1
   flutter_svg: ^2.0.10+1
@@ -19,6 +22,18 @@ dependencies:
   latlong2: ^0.10.1
   # APIs del navegador para la build web (reemplaza a dart:html, obsoleto).
   web: ^1.1.0
+  panorama_viewer: ^2.0.7
+  go_router: ^18.0.2
+  # Ubicación del visitante (navegador y teléfono): ruta en nuestro mapa y
+  # desbloqueo de la RA por ubicación.
+  geolocator: ^14.0.2
+  # RA por ubicación hecha en Flutter (sin Unity): cámara de fondo y brújula
+  # para apuntar al pin del lugar. En el navegador la brújula se lee del
+  # evento deviceorientationabsolute (ver services/brujula_web.dart).
+  camera: ^0.12.1
+  flutter_compass: ^0.8.1
+  # Guía de audio de los puntos de RA por geolocalización.
+  audioplayers: ^6.8.1
 
 dev_dependencies:
   flutter_test:

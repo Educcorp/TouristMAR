@@ -33,5 +33,7 @@ COPY --from=backend-build /app/dist ./dist
 COPY --from=backend-build /app/prisma ./prisma
 COPY --from=web-build /web/build/web ./public
 
-EXPOSE 4000
+# Un solo puerto: la web y la API (ver apps/backend/src/config/env.ts).
+ENV PORT=5173
+EXPOSE 5173
 CMD ["npm", "run", "start"]

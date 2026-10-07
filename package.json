@@ -2,7 +2,7 @@
   "name": "touristmar",
   "private": true,
   "scripts": {
-    "dev": "concurrently -n backend,web -c blue,green \"npm run dev --prefix apps/backend\" \"cd apps/web && flutter run -d web-server --web-port=5173 --dart-define=API_URL=http://localhost:4000/api\"",
+    "dev": "concurrently -n backend,web -c blue,green \"npm run dev --prefix apps/backend\" \"cd apps/web && flutter run -d web-server\"",
     "dev:mobile": "node scripts/mobile-dev.js",
     "build": "npm ci --prefix apps/backend && npm run build --prefix apps/backend",
     "start": "npm run start --prefix apps/backend",

@@ -46,6 +46,10 @@ if (hasFrontendBuild) {
   })
 }
 
-app.listen(Number(env.PORT), () => {
-  console.log(`Backend escuchando en http://localhost:${env.PORT}`)
+app.listen(Number(env.PORT), env.HOST, () => {
+  console.log(
+    env.NODE_ENV === 'production'
+      ? `TouristMAR en http://localhost:${env.PORT}`
+      : `API lista detrás de http://localhost:5173/api (interno: ${env.HOST}:${env.PORT})`,
+  )
 })

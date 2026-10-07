@@ -54,6 +54,11 @@ const negocioProfileSchema = z.object({
   telefono: z.string().optional(),
   sitioWeb: z.string().optional(),
   horario: z.string().optional(),
+  // Pin del mapa: los dos juntos o ninguno (null quita el pin).
+  latitud: z.number().min(-90).max(90).nullable().optional(),
+  longitud: z.number().min(-180).max(180).nullable().optional(),
+}).refine((d) => (d.latitud === undefined) === (d.longitud === undefined), {
+  message: 'latitud y longitud van juntas',
 })
 
 const suggestNegocioSchema = z.object({
@@ -64,10 +69,12 @@ const suggestNegocioSchema = z.object({
   telefono: z.string().max(40).optional(),
   sitioWeb: z.string().max(200).optional(),
   horario: z.string().max(200).optional(),
-  // Ubicación elegida en el mapa por la empresa (opcional; el admin la
-  // puede corregir después desde el detalle de la solicitud).
+  // Pin del mapa (opcional): los dos juntos o ninguno. El admin lo puede
+  // corregir después desde el detalle de la solicitud.
   latitud: z.number().min(-90).max(90).optional(),
   longitud: z.number().min(-180).max(180).optional(),
+}).refine((d) => (d.latitud === undefined) === (d.longitud === undefined), {
+  message: 'latitud y longitud van juntas',
 })
 
 type UserWithNegocios = User & { negocios: NegocioProfile[] }
@@ -88,6 +95,9 @@ export function toPublicUser(user: UserWithNegocios) {
       categoria: n.categoria,
       descripcion: n.descripcion,
       direccion: n.direccion,
+      // Pin en el mapa: el dueño lo ve (y lo edita) junto a la dirección.
+      latitud: n.latitud,
+      longitud: n.longitud,
       telefono: n.telefono,
       sitioWeb: n.sitioWeb,
       horario: n.horario,
@@ -96,8 +106,6 @@ export function toPublicUser(user: UserWithNegocios) {
       archivo360: n.archivo360,
       arMarcador: n.arMarcador,
       arGeo: n.arGeo,
-      latitud: n.latitud,
-      longitud: n.longitud,
       estado: n.estado,
       createdAt: n.createdAt,
     })),

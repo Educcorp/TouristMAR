@@ -15,14 +15,14 @@ la sesión y login con Google. Todo lo de pantallas vive en `apps/web/lib`.
    npm run dev:mobile -- -d <device>   # elegir dispositivo (flutter devices)
    ```
 
-   El script pasa `--dart-define=API_URL=http://<IP-de-tu-PC>:4000/api`. Sin
-   eso la app usa `http://localhost:4000/api`, que en el celular es el propio
-   teléfono y **nada funciona** (ni el login ni la RA).
+   El script pasa `--dart-define=API_URL=http://<IP-de-tu-PC>:5173/api` (el
+   mismo 5173 del sitio: `npm run dev` tiene que estar corriendo). Sin eso la
+   app no sabe dónde está la API y **nada funciona** (ni el login ni la RA).
 
 Para comprobar la conexión, abre en el navegador del celular la URL que
-imprime el script (`http://<IP>:4000/api/marcadores`). Si no carga:
+imprime el script (`http://<IP>:5173/api/marcadores`). Si no carga:
 
-- Firewall de la PC: `sudo ufw allow 4000/tcp` (Linux con ufw).
+- Firewall de la PC: `sudo ufw allow 5173/tcp` (Linux con ufw).
 - Que no estés en una red de invitados / con aislamiento de clientes.
 
 Contra producción: `API_URL=https://<tu-dominio>/api npm run dev:mobile`.

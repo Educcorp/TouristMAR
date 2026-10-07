@@ -10,6 +10,8 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:touristmar_web/navegacion/rutas.dart';
+import 'package:touristmar_web/navegacion/sesion.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:touristmar_web/models/business_profile.dart';
@@ -22,6 +24,7 @@ import 'package:touristmar_web/services/auth_service.dart';
 import 'package:touristmar_web/services/image_picker_service.dart';
 import 'package:touristmar_web/services/session_storage.dart';
 import 'package:touristmar_web/theme/theme_controller.dart';
+import 'package:touristmar_web/widgets/favorito_button.dart' show colorFavorito;
 import 'package:touristmar_web/widgets/login_form.dart';
 import 'package:touristmar_web/widgets/notification_bell.dart';
 import 'package:touristmar_web/widgets/place_card.dart';
@@ -142,13 +145,29 @@ bool _buscadorTieneFoco(WidgetTester tester) {
   return tester.widget<EditableText>(find.byType(EditableText).first).focusNode.hasFocus;
 }
 
+/// "Editar negocio" siempre muestra el mapa para marcar el pin. Con la
+/// fuente de pruebas (Ahem) la franja de créditos de OpenStreetMap no cabe;
+/// con la real sí. Solo se ignora ese aviso.
+void _ignorarCreditosDelMapa() {
+  final onError = FlutterError.onError;
+  FlutterError.onError = (d) {
+    if (!(d.toString().contains('flutter_map') && d.toString().contains('overflowed'))) onError?.call(d);
+  };
+  addTearDown(() => FlutterError.onError = onError);
+}
+
 void main() {
   setUp(SessionStorage.clearToken);
 
   group('Error 1 — "¿Te gustaría registrar un lugar nuevo?"', () {
     testWidgets('el banner lleva al registro de negocio', (tester) async {
       _pantallaCelular(tester);
-      await tester.pumpWidget(const MaterialApp(home: HomePage(user: _turista)));
+      // La app con sus rutas: cerrar sesión lleva a /login?registro=negocio.
+      Sesion.iniciar(_turista);
+      addTearDown(reiniciarSesionParaPruebas);
+      final router = crearRouter(inicial: '/inicio');
+      addTearDown(router.dispose);
+      await tester.pumpWidget(MaterialApp.router(routerConfig: router));
       await tester.pump();
       // La sesión se guarda después de montar la pantalla para que la campana
       // no intente consultar notificaciones a un servidor real.
@@ -165,6 +184,7 @@ void main() {
       expect(find.byType(LoginForm), findsOneWidget);
       expect(find.byKey(const ValueKey('category-field')), findsOneWidget);
       expect(find.text('Solicitar registro'), findsOneWidget);
+      expect(router.routerDelegate.currentConfiguration.uri.toString(), '/login?registro=negocio');
       await _desmontar(tester);
     });
 
@@ -284,6 +304,7 @@ void main() {
   group('Error 5.3 — portada del negocio (modo empresario)', () {
     testWidgets('una portada elegida y cancelada no se sube ni se aplica', (tester) async {
       _pantallaCelular(tester);
+      _ignorarCreditosDelMapa();
       _simularFotoElegida();
       final peticiones = <String>[];
       final negocio = _negocio();
@@ -301,6 +322,7 @@ void main() {
 
     testWidgets('al guardar se sube la portada junto con los datos', (tester) async {
       _pantallaCelular(tester);
+      _ignorarCreditosDelMapa();
       _simularFotoElegida();
       SessionStorage.saveToken('jwt');
       final peticiones = <String>[];
@@ -365,7 +387,7 @@ void main() {
     });
   });
 
-  testWidgets('Punto a verificar — el corazón de favoritos se ve azul claro en modo claro', (tester) async {
+  testWidgets('Punto a verificar — el corazón de favoritos se ve rojo al estar guardado', (tester) async {
     final temaOriginal = ThemeController.mode.value;
     ThemeController.set(ThemeMode.light);
     addTearDown(() => ThemeController.set(temaOriginal));
@@ -388,6 +410,6 @@ void main() {
     );
 
     final corazon = tester.widget<Icon>(find.byIcon(Icons.favorite));
-    expect(corazon.color, const Color(0xFF22D3EE));
+    expect(corazon.color, colorFavorito);
   });
 }

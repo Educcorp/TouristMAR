@@ -6,14 +6,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:touristmar_web/main.dart' show TouristMarApp;
+import 'package:touristmar_web/navegacion/sesion.dart';
 import 'package:touristmar_web/pages/admin/admin_dashboard_page.dart';
 import 'package:touristmar_web/pages/business_home_page.dart';
 import 'package:touristmar_web/pages/home_page.dart';
 import 'package:touristmar_web/services/auth_service.dart';
 import 'package:touristmar_web/services/session_storage.dart';
 import 'package:touristmar_web/widgets/login_form.dart';
-
-Widget _wrap(Widget child) => MaterialApp(home: Scaffold(body: child));
 
 Map<String, dynamic> _negocio({String estado = 'pendiente', String nombre = 'Café del Puerto'}) => {
       'id': 'n-1',
@@ -58,7 +58,9 @@ Future<void> _pumpLoginForm(WidgetTester tester, AuthService authService) async 
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
 
-  await tester.pumpWidget(_wrap(LoginForm(authService: authService)));
+  // La app completa con sus rutas: así se prueba también a dónde lleva
+  // cada rol después de entrar.
+  await tester.pumpWidget(TouristMarApp(authService: authService, rutaInicial: '/login'));
   await tester.pumpAndSettle();
 }
 
@@ -90,7 +92,10 @@ Future<void> _disposeTree(WidgetTester tester) async {
 }
 
 void main() {
-  setUp(SessionStorage.clearToken);
+  setUp(() {
+    SessionStorage.clearToken();
+    reiniciarSesionParaPruebas();
+  });
 
   testWidgets('un turista inicia sesión, se guarda el token y entra al inicio de visitante', (tester) async {
     await _pumpLoginForm(tester, AuthService(client: _authClient(_user())));
@@ -201,14 +206,58 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byKey(const ValueKey('name-field')), 'Café del Puerto');
-    await tester.enterText(find.byKey(const ValueKey('category-field')), 'Restaurantes');
+    // El tipo se elige de una lista: no es texto libre.
+    expect(find.byKey(const ValueKey('category-other-field')), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('category-field')));
+    await tester.pumpAndSettle();
+    expect(find.text('Club de playa'), findsWidgets);
+    expect(find.text('Club nocturno'), findsWidgets);
+    await tester.tap(find.text('Restaurante').last);
+    await tester.pumpAndSettle();
     await tester.enterText(find.byKey(const ValueKey('email-field')), 'cafe@correo.com');
     await tester.enterText(find.byKey(const ValueKey('password-field')), 'password123');
     await _tapText(tester, 'Solicitar registro');
     await tester.pumpAndSettle();
 
     expect(bodies.single, containsPair('rol', 'negocio'));
-    expect(bodies.single, containsPair('categoria', 'Restaurantes'));
+    expect(bodies.single, containsPair('categoria', 'Restaurante'));
     expect(find.text('Tu negocio está en revisión'), findsOneWidget);
+  });
+
+  testWidgets('registro de empresa: el tipo es obligatorio y con "Otro" se escribe de qué es', (tester) async {
+    final bodies = <Map<String, dynamic>>[];
+    final user = _user(role: 'negocio', name: 'Kayaks Manzanillo', negocios: [_negocio()]);
+    await _pumpLoginForm(tester, AuthService(client: _authClient(user, bodies: bodies)));
+
+    await _tapText(tester, 'Empresa');
+    await tester.pumpAndSettle();
+    await _tapText(tester, 'Registra tu negocio');
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byKey(const ValueKey('name-field')), 'Kayaks Manzanillo');
+    await tester.enterText(find.byKey(const ValueKey('email-field')), 'kayaks@correo.com');
+    await tester.enterText(find.byKey(const ValueKey('password-field')), 'password123');
+
+    // Sin elegir tipo no se manda.
+    await _tapText(tester, 'Solicitar registro');
+    await tester.pumpAndSettle();
+    expect(find.text('Selecciona el tipo de negocio'), findsOneWidget);
+    expect(bodies, isEmpty);
+
+    // "Otro" pide escribir de qué es, y eso es lo que se guarda.
+    await tester.tap(find.byKey(const ValueKey('category-field')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Otro').last);
+    await tester.pumpAndSettle();
+    await _tapText(tester, 'Solicitar registro');
+    await tester.pumpAndSettle();
+    expect(find.text('Escribe de qué es tu negocio'), findsOneWidget);
+    expect(bodies, isEmpty);
+
+    await tester.enterText(find.byKey(const ValueKey('category-other-field')), 'Renta de kayaks');
+    await _tapText(tester, 'Solicitar registro');
+    await tester.pumpAndSettle();
+
+    expect(bodies.single, containsPair('categoria', 'Renta de kayaks'));
   });
 }

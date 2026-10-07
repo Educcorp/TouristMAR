@@ -3,15 +3,20 @@ import 'package:flutter_map/flutter_map.dart';
 
 import '../models/lugar.dart';
 import '../models/visitor_profile.dart';
+import '../navegacion/rutas.dart';
+import '../services/experiencias_launcher.dart';
+import '../services/favoritos_service.dart';
 import '../services/lugares_service.dart';
+import '../services/recorridos_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/keyboard.dart';
 import '../widgets/app_shell.dart';
+import '../widgets/favorito_button.dart';
 import '../widgets/lugar_preview_card.dart';
 import '../widgets/mapa/mapa_lugares.dart';
 import '../widgets/themed_builder.dart';
 import '../widgets/user_avatar.dart';
-import 'lugar_detalle_page.dart';
+import 'ruta_lugar_page.dart';
 
 /// "Explorar mapa" del visitante: todos los lugares aprobados como pines por
 /// categoría, con búsqueda, filtros y una tarjeta de resumen al tocar uno.
@@ -29,6 +34,8 @@ class _ExplorarMapaPageState extends State<ExplorarMapaPage> {
   final _mapController = MapController();
   final _busqueda = TextEditingController();
   List<Lugar> _lugares = [];
+  /// Recorridos 360° publicados (para el acceso "Ver en 360°" de la tarjeta).
+  List<RecorridoPublico> _recorridos = const [];
   bool _cargando = true;
   final Set<CategoriaLugar> _categorias = {};
   bool _soloConRa = false;
@@ -39,6 +46,8 @@ class _ExplorarMapaPageState extends State<ExplorarMapaPage> {
     super.initState();
     _busqueda.addListener(() => setState(() {}));
     _cargar();
+    // Para que los corazones salgan bien aunque se entre directo a /mapa.
+    FavoritosService.instance.cargarIds();
   }
 
   @override
@@ -55,6 +64,42 @@ class _ExplorarMapaPageState extends State<ExplorarMapaPage> {
       _lugares = lugares;
       _cargando = false;
     });
+    try {
+      final recorridos = await RecorridosService().listPublicos();
+      if (!mounted) return;
+      setState(() {
+        _recorridos = recorridos;
+        // Recorridos con pin propio que no son de un lugar del mapa (FIME…).
+        _lugares = [..._lugares, ...lugaresDeRecorridos(recorridos, _lugares)];
+      });
+    } catch (_) {
+      // Sin recorridos: la tarjeta simplemente no muestra el acceso 360°.
+    }
+  }
+
+  RecorridoPublico? _recorridoDe(Lugar lugar) {
+    final r = recorridoDeLugar(_recorridos, lugarId: lugar.id, lugarNombre: lugar.nombre);
+    return r == null || r.escenas.isEmpty ? null : r;
+  }
+
+  /// Como en Google Maps: del pin directo al recorrido. En el teléfono con
+  /// Unity lo abre Unity; en la web, el visor de Flutter.
+  Future<void> _ver360(Lugar lugar) async {
+    try {
+      await ExperienciasLauncher.current.abrir(context, lugar, ExperienciaTipo.recorrido360);
+    } on ExperienciaError catch (e) {
+      _aviso(e.mensaje);
+    } on ExperienciaNoConfigurada {
+      _aviso('El recorrido 360° estará disponible muy pronto.');
+    }
+  }
+
+  /// La ruta se ve en nuestro propio mapa (no se sale a Google Maps).
+  Future<void> _comoLlegar(Lugar lugar) => abrirRutaEnMapa(context, lugar);
+
+  void _aviso(String texto) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(texto)));
   }
 
   List<Lugar> get _filtrados {
@@ -84,7 +129,7 @@ class _ExplorarMapaPageState extends State<ExplorarMapaPage> {
   }
 
   void _abrirFicha(Lugar lugar) {
-    Navigator.of(context).push(MaterialPageRoute(builder: (_) => LugarDetallePage(lugar: lugar)));
+    abrirLugar(context, lugar);
   }
 
   @override
@@ -155,13 +200,13 @@ class _ExplorarMapaPageState extends State<ExplorarMapaPage> {
         // a 24 px del borde y tapaban el texto del copyright.
         Positioned(
           right: 12,
-          bottom: compacto && seleccionado != null ? 190 : _margenInferior,
+          bottom: compacto && seleccionado != null ? 200 : _margenInferior,
           child: ControlesMapa(controller: _mapController),
         ),
         if (widget.service.usaDatosDemo)
           Positioned(
             left: 12,
-            bottom: compacto && seleccionado != null ? 190 : _margenInferior,
+            bottom: compacto && seleccionado != null ? 200 : _margenInferior,
             child: const _AvisoDemo(),
           ),
         if (_cargando) const Center(child: CircularProgressIndicator()),
@@ -177,6 +222,9 @@ class _ExplorarMapaPageState extends State<ExplorarMapaPage> {
               compacta: compacto,
               onCerrar: () => setState(() => _seleccionadoId = null),
               onVerFicha: () => _abrirFicha(seleccionado),
+              recorrido360: _recorridoDe(seleccionado),
+              onVer360: () => _ver360(seleccionado),
+              onComoLlegar: seleccionado.ubicacion == null ? null : () => _comoLlegar(seleccionado),
             ),
           ),
       ],
@@ -264,6 +312,8 @@ class _ExplorarMapaPageState extends State<ExplorarMapaPage> {
                           const SizedBox(width: 2),
                           Text(l.rating.toStringAsFixed(1),
                               style: const TextStyle(color: Colors.amber, fontSize: 12, fontWeight: FontWeight.w600)),
+                          const SizedBox(width: 4),
+                          FavoritoButton(lugar: l, sobreFoto: false, size: 18),
                         ],
                       ),
                     ),

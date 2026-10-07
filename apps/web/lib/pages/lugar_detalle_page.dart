@@ -1,23 +1,48 @@
 import 'package:flutter/material.dart';
 
 import '../models/lugar.dart';
+import '../navegacion/sesion.dart';
 import '../theme/app_theme.dart';
 import '../theme/breakpoints.dart';
+import 'ruta_lugar_page.dart';
 import '../widgets/cover_image.dart';
 import '../widgets/experiencias/experiencias_lugar.dart';
+import '../widgets/favorito_button.dart';
+import '../services/resenas_service.dart';
 import '../widgets/mapa/mapa_lugares.dart';
+import '../widgets/resenas/resenas_lugar_section.dart';
 import '../widgets/themed_builder.dart';
 
 /// Ficha pública de un lugar (lo que ve el visitante al tocar un pin del
 /// mapa o una tarjeta): portada, datos, las tres experiencias inmersivas y
 /// su ubicación.
-class LugarDetallePage extends StatelessWidget {
+class LugarDetallePage extends StatefulWidget {
   final Lugar lugar;
 
   /// El negocio o un admin viendo la ficha como la verá un visitante.
   final bool vistaPrevia;
 
   const LugarDetallePage({super.key, required this.lugar, this.vistaPrevia = false});
+
+  @override
+  State<LugarDetallePage> createState() => _LugarDetallePageState();
+}
+
+class _LugarDetallePageState extends State<LugarDetallePage> {
+  Lugar get lugar => widget.lugar;
+  bool get vistaPrevia => widget.vistaPrevia;
+
+  /// Calificación real vigente (la que traen las reseñas al abrir la ficha o
+  /// al publicar/editar/borrar una); mientras no cargue, la del lugar.
+  ResumenResenas? _resumen;
+
+  /// Publicar o borrar una reseña cambia "Mis reseñas" del visitante (y los
+  /// contadores del menú lateral): se vuelven a traer.
+  void _resenasCambiaron() {
+    final user = Sesion.usuario.value;
+    if (user == null || user.isAdmin || user.isNegocio) return;
+    Sesion.perfilVisitante.cargarResenas();
+  }
 
   @override
   Widget build(BuildContext context) => ThemedBuilder(builder: _build);
@@ -27,7 +52,7 @@ class LugarDetallePage extends StatelessWidget {
       backgroundColor: AppColors.panelNavy,
       body: CustomScrollView(
         slivers: [
-          SliverToBoxAdapter(child: _Hero(lugar: lugar, vistaPrevia: vistaPrevia)),
+          SliverToBoxAdapter(child: _Hero(lugar: lugar, vistaPrevia: vistaPrevia, resumen: _resumen)),
           SliverToBoxAdapter(
             child: Center(
               child: ConstrainedBox(
@@ -37,7 +62,12 @@ class LugarDetallePage extends StatelessWidget {
                   child: LayoutBuilder(
                     builder: (context, constraints) {
                       final ancho = Breakpoints.isExpanded(constraints.maxWidth + 48);
-                      final principal = _Principal(lugar: lugar, vistaPrevia: vistaPrevia);
+                      final principal = _Principal(
+                        lugar: lugar,
+                        vistaPrevia: vistaPrevia,
+                        onResumen: (r) => setState(() => _resumen = r),
+                        onCambio: _resenasCambiaron,
+                      );
                       final lateral = _Lateral(lugar: lugar);
                       if (!ancho) {
                         return Column(
@@ -68,12 +98,15 @@ class LugarDetallePage extends StatelessWidget {
 class _Hero extends StatelessWidget {
   final Lugar lugar;
   final bool vistaPrevia;
+  final ResumenResenas? resumen;
 
-  const _Hero({required this.lugar, required this.vistaPrevia});
+  const _Hero({required this.lugar, required this.vistaPrevia, this.resumen});
 
   @override
   Widget build(BuildContext context) {
     final cat = lugar.categoria;
+    final rating = resumen?.promedio ?? lugar.rating;
+    final totalResenas = resumen?.total ?? lugar.totalResenas;
     return SizedBox(
       height: 300,
       child: Stack(
@@ -116,16 +149,7 @@ class _Hero extends StatelessWidget {
                           style: TextStyle(color: AppColors.scrimDark, fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 1)),
                     )
                   else
-                    Material(
-                      color: Colors.black.withValues(alpha: 0.4),
-                      shape: const CircleBorder(),
-                      child: IconButton(
-                        tooltip: 'Agregar a favoritos',
-                        onPressed: () => ScaffoldMessenger.of(context)
-                            .showSnackBar(const SnackBar(content: Text('Próximamente'))),
-                        icon: const Icon(Icons.favorite_border, color: Colors.white),
-                      ),
-                    ),
+                    FavoritoButton(lugar: lugar, size: 24),
                 ],
               ),
             ),
@@ -162,14 +186,14 @@ class _Hero extends StatelessWidget {
                         children: [
                           ...List.generate(
                             5,
-                            (i) => Icon(i < lugar.rating.round() ? Icons.star : Icons.star_border,
+                            (i) => Icon(i < rating.round() ? Icons.star : Icons.star_border,
                                 size: 16, color: Colors.amber),
                           ),
                           const SizedBox(width: 6),
                           Text(
-                            lugar.totalResenas == 0
+                            totalResenas == 0
                                 ? 'Sin reseñas aún'
-                                : '${lugar.rating.toStringAsFixed(1)} · ${lugar.totalResenas} reseñas',
+                                : '${rating.toStringAsFixed(1)} · $totalResenas ${totalResenas == 1 ? 'reseña' : 'reseñas'}',
                             style: const TextStyle(color: Colors.white70, fontSize: 13),
                           ),
                         ],
@@ -189,8 +213,10 @@ class _Hero extends StatelessWidget {
 class _Principal extends StatelessWidget {
   final Lugar lugar;
   final bool vistaPrevia;
+  final ValueChanged<ResumenResenas> onResumen;
+  final VoidCallback onCambio;
 
-  const _Principal({required this.lugar, required this.vistaPrevia});
+  const _Principal({required this.lugar, required this.vistaPrevia, required this.onResumen, required this.onCambio});
 
   @override
   Widget build(BuildContext context) {
@@ -205,24 +231,7 @@ class _Principal extends StatelessWidget {
         ],
         ExperienciasLugarSection(lugar: lugar, vistaPrevia: vistaPrevia),
         const SizedBox(height: AppSpacing.xxl),
-        Text('Valoraciones y comentarios', style: AppTypography.h3),
-        const SizedBox(height: AppSpacing.md),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(AppSpacing.xl),
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(AppRadius.card),
-            border: Border.all(color: AppColors.borderSubtle),
-          ),
-          child: Column(
-            children: [
-              Icon(Icons.forum_outlined, color: AppColors.slate400, size: 28),
-              const SizedBox(height: AppSpacing.sm),
-              Text('Las reseñas de visitantes aparecerán aquí.', style: AppTypography.body),
-            ],
-          ),
-        ),
+        ResenasLugarSection(lugar: lugar, vistaPrevia: vistaPrevia, onResumen: onResumen, onCambio: onCambio),
       ],
     );
   }
@@ -314,6 +323,20 @@ class _Lateral extends StatelessWidget {
                           ),
                         ],
                       ),
+                    if (lugar.ubicacion != null) ...[
+                      const SizedBox(height: AppSpacing.sm),
+                      OutlinedButton.icon(
+                        onPressed: () => abrirRutaEnMapa(context, lugar),
+                        icon: const Icon(Icons.directions, size: 18),
+                        label: const Text('Cómo llegar', style: TextStyle(fontWeight: FontWeight.w700)),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.brandTeal,
+                          side: BorderSide(color: AppColors.brandTeal),
+                          minimumSize: const Size.fromHeight(44),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.button)),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),

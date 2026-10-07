@@ -26,12 +26,11 @@ namespace TouristMAR
         [SerializeField] private MarcadorDinamico marcadores;
 
         [Header("Solo para probar en el Editor / build suelto")]
-        // Siempre la API del backend (:4000/api), NUNCA el :5173: ese es el
-        // servidor de desarrollo de Flutter y no tiene /api. Con http:// (sin
+        // La API está en el 5173, igual que el sitio (/api). Con http:// (sin
         // "s") hay que permitirlo en Player → Other Settings → "Allow downloads
         // over HTTP", o Unity rechaza la conexión.
-        [Tooltip("API del backend (:4000/api, no :5173). En un celular 'localhost' es el propio celular: usa la IP de tu PC o la URL de producción.")]
-        [SerializeField] private string apiBaseUrlPorDefecto = "http://localhost:4000/api";
+        [Tooltip("API en el 5173 (http://<IP-de-la-PC>:5173/api). En un celular 'localhost' es el propio celular: usa la IP de tu PC o la URL de producción.")]
+        [SerializeField] private string apiBaseUrlPorDefecto = "http://localhost:5173/api";
 
         private bool configurado;
 

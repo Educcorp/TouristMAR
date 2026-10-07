@@ -1,18 +1,41 @@
 import 'package:flutter/material.dart';
 
 import '../models/lugar.dart';
+import '../services/recorridos_service.dart';
 import '../theme/app_theme.dart';
 import 'cover_image.dart';
+import 'favorito_button.dart';
 
 /// Resumen de un lugar al seleccionarlo en el mapa (o en la lista de
-/// resultados): portada, categoría, calificación y qué experiencias tiene.
+/// resultados), al estilo de la ficha de Google Maps: portada con acceso al
+/// recorrido 360°, categoría, calificación, experiencias y los botones
+/// "Cómo llegar" / "Ver ficha".
 class LugarPreviewCard extends StatelessWidget {
   final Lugar lugar;
   final VoidCallback? onVerFicha;
   final VoidCallback? onCerrar;
   final bool compacta;
 
-  const LugarPreviewCard({super.key, required this.lugar, this.onVerFicha, this.onCerrar, this.compacta = false});
+  /// Recorrido 360° del lugar (null = no tiene). Con [onVer360] se muestra
+  /// el acceso sobre la portada, como la miniatura de Street View.
+  final RecorridoPublico? recorrido360;
+  final VoidCallback? onVer360;
+
+  /// Ruta en Google Maps; solo se ofrece si el lugar tiene pin.
+  final VoidCallback? onComoLlegar;
+
+  const LugarPreviewCard({
+    super.key,
+    required this.lugar,
+    this.onVerFicha,
+    this.onCerrar,
+    this.compacta = false,
+    this.recorrido360,
+    this.onVer360,
+    this.onComoLlegar,
+  });
+
+  bool get _con360 => recorrido360 != null && onVer360 != null;
 
   @override
   Widget build(BuildContext context) {
@@ -22,7 +45,18 @@ class LugarPreviewCard extends StatelessWidget {
       child: SizedBox(
         width: compacta ? 84 : double.infinity,
         height: compacta ? 84 : 150,
-        child: CoverImage(source: lugar.portada),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            CoverImage(source: lugar.portada),
+            if (_con360)
+              Positioned(
+                left: compacta ? 4 : 8,
+                bottom: compacta ? 4 : 8,
+                child: _Acceso360(recorrido: recorrido360!, compacto: compacta, onTap: onVer360!),
+              ),
+          ],
+        ),
       ),
     );
 
@@ -82,6 +116,7 @@ class LugarPreviewCard extends StatelessWidget {
                 imagen,
                 const SizedBox(width: AppSpacing.md),
                 Expanded(child: datos),
+                FavoritoButton(lugar: lugar, sobreFoto: false, size: 20),
                 if (onCerrar != null)
                   InkWell(
                     onTap: onCerrar,
@@ -97,6 +132,11 @@ class LugarPreviewCard extends StatelessWidget {
             Stack(
               children: [
                 imagen,
+                Positioned(
+                  right: onCerrar != null ? 44 : 8,
+                  top: 8,
+                  child: FavoritoButton(lugar: lugar, size: 16),
+                ),
                 if (onCerrar != null)
                   Positioned(
                     right: 8,
@@ -119,19 +159,94 @@ class LugarPreviewCard extends StatelessWidget {
             const SizedBox(height: AppSpacing.md),
             datos,
           ],
-          if (onVerFicha != null) ...[
+          if (onVerFicha != null || onComoLlegar != null) ...[
             const SizedBox(height: AppSpacing.md),
-            FilledButton(
-              onPressed: onVerFicha,
-              style: FilledButton.styleFrom(
-                backgroundColor: AppColors.brandTeal,
-                foregroundColor: AppColors.panelNavy,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.button)),
-              ),
-              child: const Text('Ver ficha del lugar', style: TextStyle(fontWeight: FontWeight.w700)),
+            Row(
+              children: [
+                if (onComoLlegar != null)
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: onComoLlegar,
+                      icon: const Icon(Icons.directions, size: 18),
+                      label: const Text('Cómo llegar', style: TextStyle(fontWeight: FontWeight.w700)),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.brandTeal,
+                        side: BorderSide(color: AppColors.brandTeal),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.button)),
+                      ),
+                    ),
+                  ),
+                if (onComoLlegar != null && onVerFicha != null) const SizedBox(width: AppSpacing.sm),
+                if (onVerFicha != null)
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: onVerFicha,
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppColors.brandTeal,
+                        foregroundColor: AppColors.panelNavy,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.button)),
+                      ),
+                      child: Text(onComoLlegar != null ? 'Ver ficha' : 'Ver ficha del lugar',
+                          style: const TextStyle(fontWeight: FontWeight.w700)),
+                    ),
+                  ),
+              ],
             ),
           ],
         ],
+      ),
+    );
+  }
+}
+
+/// Acceso al recorrido 360° sobre la portada: miniatura redonda del primer
+/// escenario y "360°", como el acceso a Street View en Google Maps.
+class _Acceso360 extends StatelessWidget {
+  final RecorridoPublico recorrido;
+  final bool compacto;
+  final VoidCallback onTap;
+
+  const _Acceso360({required this.recorrido, required this.compacto, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final miniatura = Container(
+      width: compacto ? 26 : 34,
+      height: compacto ? 26 : 34,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.white, width: 2),
+        color: AppColors.oceanBlue,
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: recorrido.urlPortada.isEmpty
+          ? const Icon(Icons.threesixty, size: 16, color: Colors.white)
+          : Image.network(recorrido.urlPortada, fit: BoxFit.cover),
+    );
+    return Tooltip(
+      message: 'Recorrer en 360°',
+      child: Material(
+        color: Colors.black.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(999),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(999),
+          onTap: onTap,
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(3, 3, compacto ? 3 : 12, 3),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                miniatura,
+                if (!compacto) ...[
+                  const SizedBox(width: 8),
+                  const Icon(Icons.threesixty, size: 16, color: Colors.white),
+                  const SizedBox(width: 4),
+                  const Text('Ver en 360°', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700)),
+                ],
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

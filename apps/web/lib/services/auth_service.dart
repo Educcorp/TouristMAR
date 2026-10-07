@@ -3,10 +3,11 @@ import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 
-const String apiUrl = String.fromEnvironment(
-  'API_URL',
-  defaultValue: 'http://localhost:4000/api',
-);
+/// Dirección de la API. En la web es `/api` en el mismo sitio donde se abrió
+/// (http://localhost:5173 en desarrollo, el dominio en producción), así no
+/// depende de ningún puerto. La app móvil la recibe completa con
+/// `--dart-define=API_URL=http://<IP-de-la-PC>:5173/api` (scripts/mobile-dev.js).
+const String apiUrl = String.fromEnvironment('API_URL', defaultValue: '/api');
 
 class NegocioInfo {
   final String id;
@@ -141,6 +142,8 @@ class NegocioSummary {
   final String? ownerId;
   final String nombre;
   final String? categoria;
+  final String? descripcion;
+  final String? direccion;
   final String estado;
   final String email;
   final String contacto;
@@ -150,7 +153,7 @@ class NegocioSummary {
   final String? arGeo;
   final bool esAdicional;
   final String? portada;
-  final String? direccion;
+  /// Pin del lugar en el mapa público (null = no aparece en el mapa).
   final double? latitud;
   final double? longitud;
 
@@ -159,6 +162,8 @@ class NegocioSummary {
     this.ownerId,
     required this.nombre,
     this.categoria,
+    this.descripcion,
+    this.direccion,
     required this.estado,
     required this.email,
     required this.contacto,
@@ -168,10 +173,11 @@ class NegocioSummary {
     this.arGeo,
     this.esAdicional = false,
     this.portada,
-    this.direccion,
     this.latitud,
     this.longitud,
   });
+
+  bool get tieneUbicacion => latitud != null && longitud != null;
 
   bool get pendiente => estado == 'pendiente';
   bool get aprobado => estado == 'aprobado';
@@ -182,6 +188,8 @@ class NegocioSummary {
         ownerId: json['ownerId'] as String?,
         nombre: json['nombre'] as String,
         categoria: json['categoria'] as String?,
+        descripcion: json['descripcion'] as String?,
+        direccion: json['direccion'] as String?,
         estado: json['estado'] as String? ?? 'pendiente',
         email: json['email'] as String,
         contacto: json['contacto'] as String,
@@ -191,7 +199,6 @@ class NegocioSummary {
         arGeo: json['arGeo'] as String?,
         esAdicional: json['esAdicional'] as bool? ?? false,
         portada: json['portada'] as String?,
-        direccion: json['direccion'] as String?,
         latitud: (json['latitud'] as num?)?.toDouble(),
         longitud: (json['longitud'] as num?)?.toDouble(),
       );
@@ -267,7 +274,6 @@ class NegocioDetalle {
         nombre: json['nombre'] as String,
         categoria: json['categoria'] as String?,
         descripcion: json['descripcion'] as String?,
-        direccion: json['direccion'] as String?,
         telefono: json['telefono'] as String?,
         sitioWeb: json['sitioWeb'] as String?,
         horario: json['horario'] as String?,
@@ -521,7 +527,9 @@ class AuthService {
     return AuthUser.fromJson(data['user'] as Map<String, dynamic>);
   }
 
-  Future<AuthUser> updateNegocio(String token, String negocioId, Map<String, String> fields) async {
+  /// `fields`: textos del negocio y, opcionales, `latitud`/`longitud` (números,
+  /// juntos; null los quita).
+  Future<AuthUser> updateNegocio(String token, String negocioId, Map<String, Object?> fields) async {
     final res = await _client.patch(
       Uri.parse('$apiUrl/auth/profile/negocios/$negocioId'),
       headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
@@ -604,10 +612,12 @@ class AuthService {
     return NegocioDetalle.fromJson(data['negocio'] as Map<String, dynamic>);
   }
 
+  /// Guarda lo que el admin corrigió de una solicitud (el mismo PATCH que
+  /// [adminActualizarLugar]) y devuelve el detalle completo ya actualizado.
   /// [fields] admite `null` en los textos opcionales para borrarlos.
   Future<NegocioDetalle> adminUpdateNegocio(String token, String negocioId, Map<String, dynamic> fields) async {
-    final data = await _patch('/admin/negocios/$negocioId', token, fields);
-    return NegocioDetalle.fromJson(data['negocio'] as Map<String, dynamic>);
+    await _patch('/admin/negocios/$negocioId', token, fields);
+    return adminGetNegocio(token, negocioId);
   }
 
   Future<NegocioDetalle> adminUploadNegocioPortada(String token, String negocioId, Uint8List bytes, String filename) async {
@@ -632,6 +642,32 @@ class AuthService {
     }
 
     return NegocioDetalle.fromJson(data['negocio'] as Map<String, dynamic>);
+  }
+
+  /// Registra un lugar sin dueño desde "Mapa y RA" (una facultad, un
+  /// mirador…): queda aprobado y a nombre del super admin. `datos`: nombre,
+  /// categoria, descripcion, direccion, latitud, longitud.
+  Future<NegocioSummary> adminCrearLugar(String token, Map<String, dynamic> datos) async {
+    final data = await _postJson('/admin/lugares', token, datos);
+    return NegocioSummary.fromJson(data['negocio'] as Map<String, dynamic>);
+  }
+
+  /// Corrige los datos de cualquier lugar (los mismos campos que [adminCrearLugar]).
+  Future<NegocioSummary> adminActualizarLugar(String token, String negocioId, Map<String, dynamic> datos) async {
+    final data = await _patch('/admin/negocios/$negocioId', token, datos);
+    return NegocioSummary.fromJson(data['negocio'] as Map<String, dynamic>);
+  }
+
+  /// Borra un lugar con sus recorridos 360° y marcadores.
+  Future<void> adminEliminarLugar(String token, String negocioId) async {
+    final res = await _client.delete(
+      Uri.parse('$apiUrl/admin/negocios/$negocioId'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      final data = _decode(res.body);
+      throw AuthError((data['error'] as String?) ?? 'No se pudo eliminar el lugar');
+    }
   }
 
   Future<void> adminApproveNegocio(String token, String negocioId) {

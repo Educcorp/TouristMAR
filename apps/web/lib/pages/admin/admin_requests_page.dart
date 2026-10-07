@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../navegacion/rutas.dart';
 import '../../services/auth_service.dart';
+import '../../services/recorridos_service.dart';
 import '../../services/session_storage.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/breakpoints.dart';
@@ -14,15 +17,16 @@ import 'admin_negocio_detalle_page.dart';
 
 /// Contenido de la sección "Solicitudes" embebido en [AdminShell] — sin
 /// Scaffold/AppBar propio, ya que el sidebar/topbar los provee el shell.
+///
+/// Dos tipos de solicitud: registro de negocios (aprobar/rechazar) y
+/// recorridos 360° que piden los negocios desde "Editar negocio".
 class AdminRequestsPage extends StatefulWidget {
   final AuthService authService;
+  final RecorridosService recorridosService;
 
-  /// El admin pidió, desde el detalle de una solicitud, añadir contenido de
-  /// RA para ese negocio — el panel cambia a la sección correspondiente.
-  final void Function(ContenidoNegocio contenido, String negocioId)? onAbrirContenido;
-
-  AdminRequestsPage({super.key, AuthService? authService, this.onAbrirContenido})
-      : authService = authService ?? AuthService();
+  AdminRequestsPage({super.key, AuthService? authService, RecorridosService? recorridosService})
+      : authService = authService ?? AuthService(),
+        recorridosService = recorridosService ?? RecorridosService();
 
   @override
   State<AdminRequestsPage> createState() => _AdminRequestsPageState();
@@ -33,6 +37,9 @@ class _AdminRequestsPageState extends State<AdminRequestsPage> {
   bool _loading = true;
   String? _error;
   final Set<String> _deciding = {};
+
+  List<SolicitudRecorrido360> _recorridos = [];
+  String? _errorRecorridos;
 
   @override
   void initState() {
@@ -47,15 +54,57 @@ class _AdminRequestsPageState extends State<AdminRequestsPage> {
       _loading = true;
       _error = null;
     });
+    _errorRecorridos = null;
+    // Cada lista falla por separado: si una no carga, la otra se sigue viendo.
+    await Future.wait([
+      () async {
+        try {
+          final requests = await widget.authService.adminListNegociosPendientes(token);
+          if (mounted) setState(() => _requests = requests);
+        } catch (err) {
+          if (mounted) setState(() => _error = err is AuthError ? err.message : 'No se pudo conectar con el servidor');
+        }
+      }(),
+      () async {
+        try {
+          final lista = await widget.recorridosService.listSolicitudes(token, estado: EstadoSolicitudRecorrido.pendiente);
+          if (mounted) setState(() => _recorridos = lista);
+        } catch (err) {
+          if (mounted) {
+            setState(() => _errorRecorridos = err is AuthError ? err.message : 'No se pudo conectar con el servidor');
+          }
+        }
+      }(),
+    ]);
+    if (mounted) setState(() => _loading = false);
+  }
+
+  Future<void> _atenderRecorrido(SolicitudRecorrido360 solicitud, EstadoSolicitudRecorrido decision) async {
+    final token = SessionStorage.token;
+    if (token == null) return;
+    var nota = '';
+    if (decision == EstadoSolicitudRecorrido.rechazada) {
+      final escrita = await _pedirNota(context, solicitud.negocio?.nombre ?? 'el negocio');
+      if (escrita == null) return;
+      nota = escrita;
+    }
+    setState(() => _deciding.add(solicitud.id));
     try {
-      final requests = await widget.authService.adminListNegociosPendientes(token);
+      await widget.recorridosService.atenderSolicitud(token, solicitud.id, decision, nota: nota);
       if (!mounted) return;
-      setState(() => _requests = requests);
+      setState(() => _recorridos.removeWhere((s) => s.id == solicitud.id));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(decision == EstadoSolicitudRecorrido.completada
+            ? 'Solicitud marcada como atendida. Se le avisó al negocio.'
+            : 'Solicitud rechazada. Se le avisó al negocio.'),
+      ));
     } catch (err) {
       if (!mounted) return;
-      setState(() => _error = err is AuthError ? err.message : 'No se pudo conectar con el servidor');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(err is AuthError ? err.message : 'No se pudo procesar la solicitud')),
+      );
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted) setState(() => _deciding.remove(solicitud.id));
     }
   }
 
@@ -84,9 +133,17 @@ class _AdminRequestsPageState extends State<AdminRequestsPage> {
     }
   }
 
+  /// Detalle de la solicitud: lo que mandó la empresa (imagen, nombre,
+  /// ubicación…), editable por el admin, con aprobar/rechazar.
   Future<void> _abrirDetalle(NegocioSummary negocio) async {
     final resultado = await abrirDetalleNegocio(context, negocioId: negocio.id, authService: widget.authService);
     if (!mounted || resultado == null) return;
+    if (resultado.abrirContenido != null) {
+      // El recorrido 360° y los marcadores de RA se agregan en la ficha del
+      // lugar dentro de "Mapa y RA".
+      context.go(rutaLugarAdmin(negocio.id));
+      return;
+    }
     if (resultado.aprobado != null) {
       setState(() => _requests.removeWhere((r) => r.id == negocio.id));
       ScaffoldMessenger.of(context).showSnackBar(
@@ -99,8 +156,6 @@ class _AdminRequestsPageState extends State<AdminRequestsPage> {
     } else if (resultado.editado) {
       _load();
     }
-    final contenido = resultado.abrirContenido;
-    if (contenido != null) widget.onAbrirContenido?.call(contenido, negocio.id);
   }
 
   @override
@@ -117,24 +172,63 @@ class _AdminRequestsPageState extends State<AdminRequestsPage> {
             Row(
               children: [
                 Text('Solicitudes', style: AppTypography.h1),
-                if (_requests.isNotEmpty) ...[
+                if (_requests.length + _recorridos.length > 0) ...[
                   const SizedBox(width: AppSpacing.sm),
-                  DsBadge(text: '${_requests.length}', tone: BadgeTone.warning),
+                  DsBadge(text: '${_requests.length + _recorridos.length}', tone: BadgeTone.warning),
                 ],
               ],
             ),
             const SizedBox(height: 4),
             Text('Gestiona y da seguimiento a las solicitudes del sistema.', style: AppTypography.body),
             const SizedBox(height: AppSpacing.xl),
-            _buildContent(),
+            if (_loading)
+              DsLoadingState()
+            else ...[
+              _Encabezado(titulo: 'Registro de negocios', total: _requests.length),
+              const SizedBox(height: AppSpacing.md),
+              _buildContent(),
+              const SizedBox(height: AppSpacing.xl),
+              _Encabezado(titulo: 'Recorridos 360°', total: _recorridos.length),
+              const SizedBox(height: 4),
+              Text(
+                'Negocios que pidieron su recorrido. Al crearle un recorrido desde su ficha, la solicitud se marca como atendida sola.',
+                style: AppTypography.bodySmall,
+              ),
+              const SizedBox(height: AppSpacing.md),
+              _buildRecorridos(),
+            ],
           ],
         ),
       ),
     );
   }
 
+  Widget _buildRecorridos() {
+    if (_errorRecorridos != null) return DsErrorState(message: _errorRecorridos!, onRetry: _load);
+    if (_recorridos.isEmpty) {
+      return const DsEmptyState(
+        icon: Icons.threesixty,
+        title: 'No hay solicitudes de recorrido',
+        subtitle: 'Cuando un negocio pida su recorrido 360°, aparecerá aquí.',
+      );
+    }
+    return Column(
+      children: _recorridos
+          .map((s) => Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                child: _SolicitudRecorridoRow(
+                  solicitud: s,
+                  isDeciding: _deciding.contains(s.id),
+                  onCrear: () => context.go(rutaLugarAdmin(s.negocioId)),
+                  onAtendida: () => _atenderRecorrido(s, EstadoSolicitudRecorrido.completada),
+                  onRechazar: () => _atenderRecorrido(s, EstadoSolicitudRecorrido.rechazada),
+                ),
+              ))
+          .toList(),
+    );
+  }
+
   Widget _buildContent() {
-    if (_loading) return DsLoadingState();
     if (_error != null) return DsErrorState(message: _error!, onRetry: _load);
     if (_requests.isEmpty) {
       return const DsEmptyState(
@@ -235,8 +329,8 @@ class _RequestRow extends StatelessWidget {
                 _InfoChip(icon: Icons.mail_outline, text: negocio.email),
                 _InfoChip(icon: Icons.event_outlined, text: date),
                 _InfoChip(
-                  icon: negocio.latitud != null ? Icons.location_on_outlined : Icons.location_off_outlined,
-                  text: negocio.latitud != null ? 'Con ubicación' : 'Sin ubicación',
+                  icon: negocio.tieneUbicacion ? Icons.location_on_outlined : Icons.location_off_outlined,
+                  text: negocio.tieneUbicacion ? 'Con ubicación' : 'Sin ubicación',
                 ),
               ],
             ),
@@ -295,6 +389,171 @@ class _InfoChip extends StatelessWidget {
         const SizedBox(width: 6),
         Flexible(child: Text(text, style: AppTypography.bodySmall, overflow: TextOverflow.ellipsis)),
       ],
+    );
+  }
+}
+
+class _Encabezado extends StatelessWidget {
+  final String titulo;
+  final int total;
+
+  const _Encabezado({required this.titulo, required this.total});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Text(titulo, style: AppTypography.h3),
+        if (total > 0) ...[
+          const SizedBox(width: AppSpacing.sm),
+          DsBadge(text: '$total', tone: BadgeTone.warning),
+        ],
+      ],
+    );
+  }
+}
+
+/// Motivo del rechazo, que le llega al negocio en su notificación. null =
+/// canceló.
+Future<String?> _pedirNota(BuildContext context, String negocio) {
+  final controller = TextEditingController();
+  return showDialog<String>(
+    context: context,
+    builder: (context) => AlertDialog(
+      backgroundColor: AppColors.panelNavySoft,
+      title: Text('Rechazar recorrido de $negocio', style: AppTypography.h3),
+      content: SizedBox(
+        width: 380,
+        child: TextField(
+          controller: controller,
+          maxLength: 500,
+          maxLines: 3,
+          autofocus: true,
+          style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
+          decoration: InputDecoration(
+            hintText: 'Motivo (opcional), p. ej. "Por ahora solo cubrimos la zona centro"',
+            hintStyle: TextStyle(color: AppColors.slate500, fontSize: 13),
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancelar')),
+        DsButton(
+          label: 'Rechazar',
+          variant: DsButtonVariant.danger,
+          size: DsButtonSize.sm,
+          onPressed: () => Navigator.of(context).pop(controller.text.trim()),
+        ),
+      ],
+    ),
+  ).whenComplete(controller.dispose);
+}
+
+class _SolicitudRecorridoRow extends StatelessWidget {
+  final SolicitudRecorrido360 solicitud;
+  final bool isDeciding;
+  final VoidCallback onCrear;
+  final VoidCallback onAtendida;
+  final VoidCallback onRechazar;
+
+  const _SolicitudRecorridoRow({
+    required this.solicitud,
+    required this.isDeciding,
+    required this.onCrear,
+    required this.onAtendida,
+    required this.onRechazar,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final n = solicitud.negocio;
+    final pin = n?.ubicacion;
+
+    return DsCard(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = Breakpoints.isCompact(constraints.maxWidth);
+          final sangria = EdgeInsets.only(top: AppSpacing.md, left: compact ? 0 : 56);
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  DsIconBadgeCircle(icon: Icons.threesixty, color: AppColors.businessOrange),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(n?.nombre ?? 'Negocio',
+                            style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700, fontSize: 14)),
+                        const SizedBox(height: 2),
+                        Text(
+                          (n?.categoria.isNotEmpty ?? false) ? n!.categoria : 'Sin categoría',
+                          style: AppTypography.bodySmall,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const DsBadge(text: 'Recorrido 360°', tone: BadgeTone.info),
+                ],
+              ),
+              Padding(
+                padding: sangria,
+                child: Wrap(
+                  spacing: AppSpacing.lg,
+                  runSpacing: 6,
+                  children: [
+                    if (n != null && n.contacto.isNotEmpty) _InfoChip(icon: Icons.person_outline, text: n.contacto),
+                    if (n != null && n.email.isNotEmpty) _InfoChip(icon: Icons.mail_outline, text: n.email),
+                    if (n != null && n.telefono.isNotEmpty) _InfoChip(icon: Icons.phone_outlined, text: n.telefono),
+                    _InfoChip(icon: Icons.event_outlined, text: formatDateEs(solicitud.creadaEn)),
+                    if (n != null && n.direccion.isNotEmpty) _InfoChip(icon: Icons.place_outlined, text: n.direccion),
+                    if (pin != null)
+                      _InfoChip(icon: Icons.my_location, text: '${pin.lat.toStringAsFixed(6)}, ${pin.lng.toStringAsFixed(6)}'),
+                  ],
+                ),
+              ),
+              if (solicitud.mensaje.isNotEmpty)
+                Padding(
+                  padding: sangria,
+                  child: Text('"${solicitud.mensaje}"', style: AppTypography.bodySmall.copyWith(fontStyle: FontStyle.italic)),
+                ),
+              Padding(
+                padding: sangria,
+                child: isDeciding
+                    ? SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.slate400),
+                      )
+                    : Wrap(
+                        spacing: AppSpacing.sm,
+                        runSpacing: AppSpacing.sm,
+                        children: [
+                          DsButton(label: 'Rechazar', variant: DsButtonVariant.danger, size: DsButtonSize.sm, onPressed: onRechazar),
+                          DsButton(
+                            label: 'Marcar como atendida',
+                            variant: DsButtonVariant.ghost,
+                            size: DsButtonSize.sm,
+                            onPressed: onAtendida,
+                          ),
+                          DsButton(
+                            label: 'Crear recorrido',
+                            icon: Icons.add,
+                            variant: DsButtonVariant.secondary,
+                            accent: AppColors.emerald,
+                            size: DsButtonSize.sm,
+                            onPressed: onCrear,
+                          ),
+                        ],
+                      ),
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 }
