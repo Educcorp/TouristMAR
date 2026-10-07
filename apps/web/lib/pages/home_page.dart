@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/visitor_profile.dart';
 import '../models/lugar.dart';
 import '../navegacion/rutas.dart';
+import '../navegacion/sesion.dart';
 import '../services/auth_service.dart';
 import '../services/favoritos_service.dart';
 import '../services/lugares_service.dart';
@@ -44,7 +45,15 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  late final VisitorProfile _profile = VisitorProfile.fromAuthUser(widget.user);
+  /// El mismo perfil que usan "Mi perfil" y "Editar perfil"
+  /// ([Sesion.perfilVisitante]). Antes el inicio armaba su propia copia desde
+  /// `widget.user` (lo que regresó el servidor al iniciar sesión), así que
+  /// después de cambiar la foto seguía mostrando la anterior hasta recargar
+  /// la página. Si el inicio se abre sin sesión registrada (p. ej. en
+  /// pruebas), se arma desde `widget.user` como antes.
+  late final VisitorProfile _profile = Sesion.usuario.value?.id == widget.user.id
+      ? Sesion.perfilVisitante
+      : VisitorProfile.fromAuthUser(widget.user);
 
   @override
   void initState() {
@@ -142,7 +151,8 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) => ThemedBuilder(builder: _buildShell);
 
   Widget _buildShell(BuildContext context) {
-    final firstName = widget.user.name.trim().isEmpty ? widget.user.name : widget.user.name.split(' ').first;
+    // También del perfil compartido: si cambió el nombre, el saludo ya sale nuevo.
+    final firstName = _profile.name.trim().isEmpty ? _profile.name : _profile.name.trim().split(' ').first;
 
     return AppShell(
       accentColor: AppColors.brandTeal,

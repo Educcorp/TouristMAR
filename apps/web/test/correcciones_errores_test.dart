@@ -301,6 +301,31 @@ void main() {
     });
   });
 
+  testWidgets('Foto de perfil nueva — al volver al inicio ya se ve, sin recargar la página', (tester) async {
+    _pantallaCelular(tester);
+    // La foto es una URL de prueba que no existe; solo importa cuál se pide.
+    final onError = FlutterError.onError;
+    FlutterError.onError = (d) {
+      if (d.library != 'image resource service') onError?.call(d);
+    };
+    addTearDown(() => FlutterError.onError = onError);
+    Sesion.iniciar(_turista);
+    addTearDown(reiniciarSesionParaPruebas);
+
+    // Lo que hace "Editar perfil" al guardar: actualiza el perfil de la sesión.
+    Sesion.perfilVisitante.avatarUrl = 'https://cdn.test/nueva.png';
+    Sesion.perfilVisitante.name = 'Lucía Pérez';
+
+    // El usuario regresa al inicio (la pantalla se vuelve a crear con el
+    // usuario que trajo el login, que todavía tiene la foto vieja).
+    await tester.pumpWidget(const MaterialApp(home: HomePage(user: _turista)));
+    await tester.pump();
+
+    expect(tester.widget<UserAvatar>(find.byType(UserAvatar).first).imageUrl, 'https://cdn.test/nueva.png');
+    expect(find.textContaining('Lucía'), findsWidgets);
+    await _desmontar(tester);
+  });
+
   group('Error 5.3 — portada del negocio (modo empresario)', () {
     testWidgets('una portada elegida y cancelada no se sube ni se aplica', (tester) async {
       _pantallaCelular(tester);
