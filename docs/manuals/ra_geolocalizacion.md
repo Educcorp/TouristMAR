@@ -56,6 +56,8 @@ La API está en el **5173**, junto con el sitio:
 | Celular en la misma red Wi-Fi | `http://<IP-de-la-PC>:5173/api` |
 | Producción | `https://touristmar-production.up.railway.app/api` |
 
+`{API}` es solo la **base**: los endpoints van después (`{API}/ra/lugares/{lugarId}`). Abrir la base sola (`https://touristmar-production.up.railway.app/api`) responde un JSON con `"estado": "ok"` y la lista de rutas públicas; sirve para comprobar que la API está arriba. Una ruta que no existe responde `404` con `{"error": "No existe GET /api/…"}`, siempre en JSON.
+
 ### `GET {API}/ra/lugares/{lugarId}`
 
 ```json
