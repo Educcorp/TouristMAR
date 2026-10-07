@@ -3,10 +3,11 @@ import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 
-const String apiUrl = String.fromEnvironment(
-  'API_URL',
-  defaultValue: 'http://localhost:4000/api',
-);
+/// Dirección de la API. En la web es `/api` en el mismo sitio donde se abrió
+/// (http://localhost:5173 en desarrollo, el dominio en producción), así no
+/// depende de ningún puerto. La app móvil la recibe completa con
+/// `--dart-define=API_URL=http://<IP-de-la-PC>:5173/api` (scripts/mobile-dev.js).
+const String apiUrl = String.fromEnvironment('API_URL', defaultValue: '/api');
 
 class NegocioInfo {
   final String id;

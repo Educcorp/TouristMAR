@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../models/lugar.dart';
 import '../../services/experiencias_launcher.dart';
+import '../../services/ra_geo_service.dart' show radioCercanoDefault, radioVisibleDefault;
 import '../../services/ra_ubicacion.dart';
 import '../../services/recorridos_service.dart';
 import '../../theme/app_theme.dart';
@@ -222,7 +223,7 @@ class ExperienciaCard extends StatelessWidget {
           apagada
               ? switch (situacion.tipo) {
                   ExperienciaTipo.recorrido360 => 'Este lugar todavía no cuenta con un recorrido 360°.',
-                  ExperienciaTipo.arGeo => 'Por el momento este lugar no cuenta con RA por ubicación.',
+                  ExperienciaTipo.arGeo => 'Por el momento este lugar no cuenta con RA por geolocalización.',
                   ExperienciaTipo.arMarcador => 'Este lugar aún no ofrece esta experiencia.',
                 }
               : info.descripcion,
@@ -492,11 +493,10 @@ class _DetalleExperienciaState extends State<_DetalleExperiencia> {
           ),
           const SizedBox(height: AppSpacing.lg),
           ExperienciasLauncher.current.mideDistancia(ExperienciaTipo.arGeo)
-              ? _Pasos(pasos: [
+              ? const _Pasos(pasos: [
                   ('Abre la cámara', 'Toca "Iniciar RA en el lugar" y permite la cámara y tu ubicación.'),
-                  ('Apunta al lugar', 'Desde donde estés verás flotando el lugar, a qué distancia está y hacia dónde girar.'),
-                  ('Llega al lugar',
-                      'A menos de ${widget.lugar.radioDesbloqueo.round()} m se desbloquea la información completa.'),
+                  ('Acércate', 'A unos ${radioVisibleDefault ~/ 1} m verás flotando en la cámara los puntos de interés y su resumen.'),
+                  ('Llega al punto', 'A menos de ${radioCercanoDefault ~/ 1} m se abre la guía completa: información, fotos y audio.'),
                 ])
               : const _Pasos(pasos: [
                   ('Visita el lugar', 'Esta experiencia solo existe en el sitio físico.'),

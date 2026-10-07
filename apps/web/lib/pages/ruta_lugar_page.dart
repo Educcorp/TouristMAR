@@ -143,7 +143,7 @@ class _RutaLugarPageState extends State<RutaLugarPage> {
       messenger.showSnackBar(SnackBar(content: Text(e.mensaje)));
     } on ExperienciaNoConfigurada {
       messenger.showSnackBar(
-        const SnackBar(content: Text('La realidad aumentada por ubicación se abre desde la app móvil.')),
+        const SnackBar(content: Text('La RA por geolocalización necesita la cámara de tu teléfono.')),
       );
     }
   }

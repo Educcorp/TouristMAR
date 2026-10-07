@@ -50,9 +50,9 @@ class ExperienciaInfo {
           ),
         ExperienciaTipo.arGeo => const ExperienciaInfo._(
             ExperienciaTipo.arGeo,
-            'Realidad aumentada por ubicación',
-            'RA ubicación',
-            'Se desbloquea solo cuando estás físicamente en el lugar.',
+            'RA por geolocalización',
+            'RA geo',
+            'Acércate al lugar: verás su información flotando en la cámara y, al llegar, la guía completa.',
             Icons.explore_outlined,
           ),
         ExperienciaTipo.recorrido360 => const ExperienciaInfo._(
@@ -159,7 +159,9 @@ class Lugar {
   final String? arMarcador;
   final String? arGeo;
 
-  /// Radio (metros) dentro del cual se desbloquea la RA por ubicación.
+  /// Radio visible (metros) de la RA por geolocalización: dentro de él la
+  /// cámara ya muestra el marcador flotante. Cada punto de interés trae el
+  /// suyo (ver [PuntoRaGeo]); este es el del pin del lugar.
   final double radioDesbloqueo;
 
   const Lugar({
@@ -178,7 +180,7 @@ class Lugar {
     this.archivo360,
     this.arMarcador,
     this.arGeo,
-    this.radioDesbloqueo = 50,
+    this.radioDesbloqueo = 100,
   });
 
   static final _uuid = RegExp(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$', caseSensitive: false);

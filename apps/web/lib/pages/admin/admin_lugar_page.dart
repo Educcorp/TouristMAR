@@ -11,6 +11,7 @@ import '../../widgets/admin/ds_button.dart';
 import '../../widgets/admin/ds_states.dart';
 import '../../widgets/admin/seccion_desplegable.dart';
 import 'admin_lugar_widgets.dart';
+import 'admin_ra_geo_widgets.dart';
 import 'admin_recorridos_page.dart';
 
 /// Un lugar dentro de "Mapa y RA" (`/admin/mapa/lugar/<id>`): sus datos y
@@ -172,11 +173,22 @@ class _AdminLugarPageState extends State<AdminLugarPage> {
         color: geo.color,
         titulo: geo.titulo,
         subtitulo: pin == null ? null : 'Pin: $pin',
-        child: UbicacionLugarSection(
-          key: ValueKey('geo-${n.latitud}-${n.longitud}'),
-          lugar: n,
-          authService: widget.authService,
-          onGuardado: (g) => setState(() => _lugar = g),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            UbicacionLugarSection(
+              key: ValueKey('geo-${n.latitud}-${n.longitud}'),
+              lugar: n,
+              authService: widget.authService,
+              onGuardado: (g) => setState(() => _lugar = g),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+              child: Divider(color: AppColors.borderSubtle, height: 1),
+            ),
+            // Se vuelve a crear al mover el pin del lugar (el mapa se centra ahí).
+            PuntosRaGeoSection(key: ValueKey('puntos-${n.latitud}-${n.longitud}'), lugar: n),
+          ],
         ),
       ),
       const SizedBox(height: AppSpacing.md),

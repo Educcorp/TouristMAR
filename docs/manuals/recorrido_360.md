@@ -86,7 +86,7 @@ Scripts nuevos: `Assets/Scripts/Recorrido/VisorRecorrido360.cs` y `FlechaRecorri
 3. Un GameObject **VisorRecorrido** con `VisorRecorrido360`:
    - *Camara* = Main Camera; *Material Panoramico* = `Recorrido360.mat`; *Prefab Flecha* = el de abajo.
    - *Ajuste Yaw*: 0 (ver calibración).
-   - *Recorrido Por Defecto*: el nombre de un recorrido real, para probar en el Editor. *Api Base Url Por Defecto*: `http://localhost:4000/api`.
+   - *Recorrido Por Defecto*: el nombre de un recorrido real, para probar en el Editor. *Api Base Url Por Defecto*: `http://localhost:5173/api`.
 4. **Canvas** (Screen Space – Overlay), con el mismo diseño que la app:
    - Arriba a la izquierda, una tarjeta negra al 55 % con esquinas redondeadas:
      - Botón ← que llama a `Salir()`.

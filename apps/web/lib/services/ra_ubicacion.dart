@@ -37,4 +37,4 @@ String? playaParaLugar(String nombreLugar) {
 
 /// Aviso para un lugar que todavía no tiene RA por ubicación.
 String sinRaUbicacion(String lugarNombre) =>
-    '$lugarNombre por el momento no cuenta con realidad aumentada por ubicación.';
+    '$lugarNombre por el momento no cuenta con RA por geolocalización.';

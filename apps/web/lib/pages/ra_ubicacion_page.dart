@@ -1,21 +1,26 @@
 import 'dart:async';
 
+import 'package:audioplayers/audioplayers.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 
 import '../models/lugar.dart';
 import '../services/brujula.dart';
 import '../services/experiencias_launcher.dart';
+import '../services/ra_geo_service.dart';
 import '../services/ubicacion_dispositivo.dart';
 import '../theme/app_theme.dart';
 import '../widgets/cover_image.dart';
 
-/// RA por ubicación hecha en Flutter, sin Unity: con la cámara de fondo,
-/// el GPS y la brújula muestra flotando dónde está el pin del lugar (su
-/// nombre y a cuántos metros), o una flecha para girar hacia él. Funciona
-/// con el pin que el negocio o el admin marcaron en el mapa: no hay que dar
-/// nada de alta en Unity. Al entrar al radio del lugar la tarjeta cambia a
-/// "¡Llegaste!".
+/// RA por geolocalización (Location-based AR) hecha en Flutter, sin Unity:
+/// cámara de fondo + GPS + brújula sobre los puntos de interés del lugar
+/// (los da de alta el admin en "Mapa y RA"; sin puntos, el pin del lugar).
+/// Funciona por capas según la distancia a cada punto:
+///   - lejos (fuera de `radioVisible`): guía de distancia y dirección;
+///   - dentro de `radioVisible` (p. ej. 100 m): marcador flotante con título
+///     y resumen, en la dirección real del punto;
+///   - dentro de `radioCercano` (p. ej. 10 m): se abre la guía completa
+///     (información, imagen y audio).
 Future<void> abrirRaUbicacion(BuildContext context, Lugar lugar) {
   return Navigator.of(context).push(MaterialPageRoute(builder: (_) => RaUbicacionPage(lugar: lugar)));
 }
@@ -23,15 +28,35 @@ Future<void> abrirRaUbicacion(BuildContext context, Lugar lugar) {
 /// Ancho que ve la cámara trasera de un teléfono, en grados (aprox.).
 const _campoVision = 60.0;
 
+/// Para salir de la capa cercana hay que alejarse estos metros de más: el
+/// GPS tiembla y, sin esto, la guía se abriría y cerraría sola en el borde.
+const _histeresis = 5.0;
+
+/// Cuántos marcadores flotantes como máximo (los más cercanos).
+const _maxMarcadores = 5;
+
+/// Capa de un punto según la distancia del visitante.
+enum CapaRa { lejos, visible, cerca }
+
 class RaUbicacionPage extends StatefulWidget {
   final Lugar lugar;
 
-  /// Solo para pruebas: posiciones y rumbos falsos, sin cámara.
+  /// Solo para pruebas: posiciones, rumbos y puntos falsos, sin cámara.
   final Stream<Coordenadas>? ubicaciones;
   final Stream<double>? rumbos;
+  final List<PuntoRaGeo>? puntos;
+  final RaGeoService? service;
   final bool usarCamara;
 
-  const RaUbicacionPage({super.key, required this.lugar, this.ubicaciones, this.rumbos, this.usarCamara = true});
+  const RaUbicacionPage({
+    super.key,
+    required this.lugar,
+    this.ubicaciones,
+    this.rumbos,
+    this.puntos,
+    this.service,
+    this.usarCamara = true,
+  });
 
   @override
   State<RaUbicacionPage> createState() => _RaUbicacionPageState();
@@ -43,22 +68,40 @@ class _RaUbicacionPageState extends State<RaUbicacionPage> {
   StreamSubscription<Coordenadas>? _subGps;
   StreamSubscription<double>? _subBrujula;
 
+  List<PuntoRaGeo> _puntos = const [];
   Coordenadas? _yo;
   bool _buscandoUbicacion = true;
   /// Rumbo suavizado (la brújula tiembla mucho); null = sin brújula.
   double? _rumbo;
 
-  Coordenadas get _destino => widget.lugar.ubicacion!;
+  /// Punto cuya guía completa está abierta (capa cercana), y los que el
+  /// visitante cerró a mano (no se vuelven a abrir hasta que se aleje).
+  PuntoRaGeo? _cerca;
+  final Set<PuntoRaGeo> _guiasCerradas = {};
 
   @override
   void initState() {
     super.initState();
+    _puntos = widget.puntos ?? [if (widget.lugar.ubicacion != null) PuntoRaGeo.delLugar(widget.lugar)];
+    if (widget.puntos == null) _cargarPuntos();
     if (widget.usarCamara) {
       _iniciarCamara();
     } else {
       _sinCamara = true;
     }
     _iniciarSensores();
+  }
+
+  /// Los puntos que dio de alta el admin. Mientras cargan (o si falla, p. ej.
+  /// un lugar de ejemplo) se usa el pin del lugar.
+  Future<void> _cargarPuntos() async {
+    try {
+      final puntos = await (widget.service ?? RaGeoService()).puntosPublicos(widget.lugar.id);
+      if (mounted && puntos.isNotEmpty) {
+        setState(() => _puntos = puntos);
+        _actualizarCapas();
+      }
+    } catch (_) {}
   }
 
   Future<void> _iniciarCamara() async {
@@ -87,12 +130,12 @@ class _RaUbicacionPageState extends State<RaUbicacionPage> {
     setState(() => _buscandoUbicacion = true);
     _subGps = (widget.ubicaciones ?? UbicacionDispositivo.seguir()).listen(
       (yo) {
-        if (mounted) {
-          setState(() {
-            _yo = yo;
-            _buscandoUbicacion = false;
-          });
-        }
+        if (!mounted) return;
+        setState(() {
+          _yo = yo;
+          _buscandoUbicacion = false;
+        });
+        _actualizarCapas();
       },
       onDone: () {
         if (mounted) setState(() => _buscandoUbicacion = false);
@@ -117,6 +160,37 @@ class _RaUbicacionPageState extends State<RaUbicacionPage> {
     _iniciarSensores();
   }
 
+  double _distancia(PuntoRaGeo p) => distanciaMetros(_yo!, p.ubicacion);
+
+  CapaRa _capa(PuntoRaGeo p) {
+    final d = _distancia(p);
+    final radioCerca = p.radioCercano + (identical(p, _cerca) ? _histeresis : 0);
+    if (d <= radioCerca) return CapaRa.cerca;
+    if (d <= p.radioVisible) return CapaRa.visible;
+    return CapaRa.lejos;
+  }
+
+  /// Abre la guía del punto más cercano en cuya capa cercana esté el visitante
+  /// y "olvida" las guías cerradas de los puntos de los que ya se alejó.
+  void _actualizarCapas() {
+    if (_yo == null) return;
+    _guiasCerradas.removeWhere((p) => _capa(p) != CapaRa.cerca);
+    final cercanos = _puntos.where((p) => _capa(p) == CapaRa.cerca).toList()
+      ..sort((a, b) => _distancia(a).compareTo(_distancia(b)));
+    final nuevo = cercanos.isEmpty ? null : cercanos.first;
+    if (!identical(nuevo, _cerca)) setState(() => _cerca = nuevo);
+  }
+
+  void _cerrarGuia() {
+    if (_cerca != null) setState(() => _guiasCerradas.add(_cerca!));
+  }
+
+  void _abrirGuia() {
+    if (_cerca != null) setState(() => _guiasCerradas.remove(_cerca));
+  }
+
+  bool get _guiaAbierta => _cerca != null && !_guiasCerradas.contains(_cerca);
+
   @override
   void dispose() {
     _subGps?.cancel();
@@ -124,13 +198,6 @@ class _RaUbicacionPageState extends State<RaUbicacionPage> {
     _camara?.dispose();
     super.dispose();
   }
-
-  double? get _distancia => _yo == null ? null : distanciaMetros(_yo!, _destino);
-
-  bool get _enZona => _distancia != null && _distancia! <= widget.lugar.radioDesbloqueo;
-
-  /// Ángulo del lugar respecto a donde apunta el teléfono (-180…180).
-  double? get _angulo => _yo == null || _rumbo == null ? null : diferenciaAngulo(rumboHacia(_yo!, _destino), _rumbo!);
 
   @override
   Widget build(BuildContext context) {
@@ -140,7 +207,7 @@ class _RaUbicacionPageState extends State<RaUbicacionPage> {
         builder: (context, c) => Stack(
           children: [
             Positioned.fill(child: _fondo()),
-            if (_yo != null) ..._capaRa(c.biggest),
+            if (_yo != null && !_guiaAbierta) ..._capaRa(c.biggest),
             SafeArea(
               child: Padding(
                 padding: const EdgeInsets.all(12),
@@ -151,7 +218,7 @@ class _RaUbicacionPageState extends State<RaUbicacionPage> {
                     Flexible(
                       child: _Pildora(
                         child: Text(
-                          'RA por ubicación · ${widget.lugar.nombre}',
+                          'RA por geolocalización · ${widget.lugar.nombre}',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13),
@@ -162,7 +229,22 @@ class _RaUbicacionPageState extends State<RaUbicacionPage> {
                 ),
               ),
             ),
-            Positioned(left: 12, right: 12, bottom: 12, child: SafeArea(top: false, child: _panel())),
+            Positioned(
+              left: 12,
+              right: 12,
+              bottom: 12,
+              child: SafeArea(
+                top: false,
+                child: _guiaAbierta
+                    ? ConstrainedBox(
+                        // Crece con el contenido hasta 3/4 de la pantalla; lo
+                        // demás se desplaza dentro de la guía.
+                        constraints: BoxConstraints(maxHeight: c.biggest.height * 0.75),
+                        child: _GuiaCompleta(punto: _cerca!, onCerrar: _cerrarGuia),
+                      )
+                    : _panel(),
+              ),
+            ),
           ],
         ),
       ),
@@ -197,7 +279,7 @@ class _RaUbicacionPageState extends State<RaUbicacionPage> {
           ? const Padding(
               padding: EdgeInsets.all(32),
               child: Text(
-                'No se pudo abrir la cámara. Puedes seguir la dirección del lugar igualmente.',
+                'No se pudo abrir la cámara. Puedes seguir la dirección de los puntos igualmente.',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: Colors.white70, fontSize: 13),
               ),
@@ -206,51 +288,62 @@ class _RaUbicacionPageState extends State<RaUbicacionPage> {
     );
   }
 
-  /// La tarjeta flotante sobre el lugar o la flecha para girar hacia él.
+  /// Capa "visible": un marcador flotante por punto en su dirección real.
+  /// Sin brújula (computadora) se apilan al centro.
   List<Widget> _capaRa(Size pantalla) {
-    final angulo = _angulo;
-    final tarjeta = _TarjetaLugar(lugar: widget.lugar, distancia: _distancia!, enZona: _enZona);
-
-    // Sin brújula (computadora) o dentro de la zona: la tarjeta al centro.
-    if (angulo == null || _enZona) {
-      return [
-        Positioned(
-          left: 0,
-          right: 0,
-          top: pantalla.height * 0.22,
-          child: Center(child: tarjeta),
-        ),
-      ];
-    }
-    if (angulo.abs() <= _campoVision / 2) {
-      // Más cerca = más grande, como un letrero real.
-      final escala = (1.25 - (_distancia! / 2000)).clamp(0.8, 1.2);
-      final x = pantalla.width * (0.5 + angulo / _campoVision);
-      const ancho = 240.0;
-      return [
-        Positioned(
+    final visibles = _puntos.where((p) => _capa(p) != CapaRa.lejos).toList()
+      ..sort((a, b) => _distancia(a).compareTo(_distancia(b)));
+    final widgets = <Widget>[];
+    final fuera = <(PuntoRaGeo, double)>[];
+    for (final (i, p) in visibles.take(_maxMarcadores).indexed) {
+      final d = _distancia(p);
+      final marcador = _MarcadorFlotante(punto: p, distancia: d);
+      // El más cercano abajo y más grande; los demás escalonados hacia arriba.
+      final top = pantalla.height * (0.36 - i * 0.07);
+      final escala = (1.15 - d / p.radioVisible * 0.35).clamp(0.75, 1.15).toDouble();
+      final angulo = _rumbo == null ? null : diferenciaAngulo(rumboHacia(_yo!, p.ubicacion), _rumbo!);
+      if (angulo == null) {
+        widgets.add(Positioned(left: 0, right: 0, top: top, child: Center(child: Transform.scale(scale: escala, child: marcador))));
+      } else if (angulo.abs() <= _campoVision / 2) {
+        const ancho = _MarcadorFlotante.ancho;
+        final x = pantalla.width * (0.5 + angulo / _campoVision);
+        widgets.add(Positioned(
           left: (x - ancho / 2).clamp(8, pantalla.width - ancho - 8),
-          top: pantalla.height * 0.22,
+          top: top,
           width: ancho,
-          child: Transform.scale(scale: escala.toDouble(), child: tarjeta),
-        ),
-      ];
+          child: Transform.scale(scale: escala, child: marcador),
+        ));
+      } else {
+        fuera.add((p, angulo));
+      }
     }
+    // Puntos visibles que quedan fuera de la cámara: flecha hacia el más cercano.
+    if (fuera.isNotEmpty && widgets.isEmpty) {
+      final (p, angulo) = fuera.first;
+      widgets.add(_flechaGiro(pantalla, angulo, p.titulo));
+    }
+    return widgets;
+  }
+
+  Widget _flechaGiro(Size pantalla, double angulo, String titulo) {
     final derecha = angulo > 0;
-    return [
-      Positioned(
-        top: pantalla.height * 0.4,
-        left: derecha ? null : 12,
-        right: derecha ? 12 : null,
+    return Positioned(
+      top: pantalla.height * 0.4,
+      left: derecha ? null : 12,
+      right: derecha ? 12 : null,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: pantalla.width - 24),
         child: _Pildora(
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               if (!derecha) const Icon(Icons.arrow_back, color: Colors.white, size: 20),
               const SizedBox(width: 6),
-              Text(
-                'Gira a la ${derecha ? 'derecha' : 'izquierda'} ${angulo.abs().round()}°',
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+              Flexible(
+                child: Text(
+                  'Gira a la ${derecha ? 'derecha' : 'izquierda'} ${angulo.abs().round()}° · $titulo',
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+                ),
               ),
               const SizedBox(width: 6),
               if (derecha) const Icon(Icons.arrow_forward, color: Colors.white, size: 20),
@@ -258,26 +351,49 @@ class _RaUbicacionPageState extends State<RaUbicacionPage> {
           ),
         ),
       ),
-    ];
+    );
   }
 
   Widget _panel() {
     final color = ExperienciaInfo.of(ExperienciaTipo.arGeo).color;
-    final d = _distancia;
     final String texto;
-    if (d == null) {
+    Widget? accion;
+    IconData icono = Icons.radar;
+
+    if (_puntos.isEmpty) {
+      texto = 'Este lugar todavía no tiene puntos de RA.';
+    } else if (_yo == null) {
       texto = _buscandoUbicacion
           ? 'Buscando tu ubicación…'
-          : 'Activa tu ubicación y permite el acceso para ver dónde está el lugar.';
-    } else if (_enZona) {
-      texto = '¡Estás en ${widget.lugar.nombre}!';
-    } else if (_rumbo == null) {
-      texto = 'A ${formatoDistancia(d)}, hacia el ${_puntoCardinal(rumboHacia(_yo!, _destino))}. '
-          'Tu dispositivo no reporta brújula: camina en esa dirección.';
+          : 'Activa tu ubicación y permite el acceso para ver los puntos de interés.';
+      if (!_buscandoUbicacion) {
+        accion = _BotonPanel(icon: Icons.location_searching, label: 'Usar mi ubicación', onTap: _iniciarSensores);
+      }
+    } else if (_cerca != null) {
+      // Cerró la guía a mano: puede volver a abrirla.
+      icono = Icons.check_circle;
+      texto = 'Estás en ${_cerca!.titulo}.';
+      accion = _BotonPanel(icon: Icons.menu_book_outlined, label: 'Ver guía', onTap: _abrirGuia);
     } else {
-      texto = 'A ${formatoDistancia(d)}. Apunta la cámara hacia el lugar; '
-          'la zona de RA empieza a ${widget.lugar.radioDesbloqueo.round()} m.';
+      final ordenados = [..._puntos]..sort((a, b) => _distancia(a).compareTo(_distancia(b)));
+      final masCercano = ordenados.first;
+      final visibles = ordenados.where((p) => _capa(p) == CapaRa.visible).length;
+      final d = _distancia(masCercano);
+      if (visibles > 0) {
+        texto = visibles == 1
+            ? 'Hay un punto de interés cerca. Apunta la cámara y acércate a menos de '
+                '${masCercano.radioCercano.round()} m para abrir su guía.'
+            : 'Hay $visibles puntos de interés cerca. Apunta la cámara para verlos.';
+      } else {
+        texto = 'El punto más cercano, ${masCercano.titulo}, está a ${formatoDistancia(d)} hacia el '
+            '${_puntoCardinal(rumboHacia(_yo!, masCercano.ubicacion))}. Su marcador aparece a '
+            '${masCercano.radioVisible.round()} m.';
+      }
+      if (_rumbo == null) {
+        accion = _BotonPanel(icon: Icons.explore_outlined, label: 'Activar brújula', onTap: _activarBrujula);
+      }
     }
+
     return _Pildora(
       radio: AppRadius.card,
       padding: const EdgeInsets.all(AppSpacing.md),
@@ -287,28 +403,12 @@ class _RaUbicacionPageState extends State<RaUbicacionPage> {
         children: [
           Row(
             children: [
-              Icon(_enZona ? Icons.check_circle : Icons.radar, color: _enZona ? AppColors.emerald : color, size: 18),
+              Icon(icono, color: _cerca != null ? AppColors.emerald : color, size: 18),
               const SizedBox(width: 8),
               Expanded(child: Text(texto, style: const TextStyle(color: Colors.white, fontSize: 13))),
             ],
           ),
-          if (d == null && !_buscandoUbicacion) ...[
-            const SizedBox(height: AppSpacing.sm),
-            OutlinedButton.icon(
-              onPressed: _iniciarSensores,
-              icon: const Icon(Icons.location_searching, size: 16),
-              label: const Text('Usar mi ubicación'),
-              style: OutlinedButton.styleFrom(foregroundColor: Colors.white, side: const BorderSide(color: Colors.white54)),
-            ),
-          ] else if (d != null && _rumbo == null && !_enZona) ...[
-            const SizedBox(height: AppSpacing.sm),
-            OutlinedButton.icon(
-              onPressed: _activarBrujula,
-              icon: const Icon(Icons.explore_outlined, size: 16),
-              label: const Text('Activar brújula'),
-              style: OutlinedButton.styleFrom(foregroundColor: Colors.white, side: const BorderSide(color: Colors.white54)),
-            ),
-          ],
+          if (accion != null) ...[const SizedBox(height: AppSpacing.sm), accion],
         ],
       ),
     );
@@ -320,68 +420,197 @@ class _RaUbicacionPageState extends State<RaUbicacionPage> {
   }
 }
 
-/// Letrero flotante del lugar con su pin debajo, apuntando al punto real.
-class _TarjetaLugar extends StatelessWidget {
-  final Lugar lugar;
-  final double distancia;
-  final bool enZona;
+/// Capa "visible": letrero flotante del punto con su pin debajo, apuntando
+/// al lugar real.
+class _MarcadorFlotante extends StatelessWidget {
+  static const ancho = 220.0;
 
-  const _TarjetaLugar({required this.lugar, required this.distancia, required this.enZona});
+  final PuntoRaGeo punto;
+  final double distancia;
+
+  const _MarcadorFlotante({required this.punto, required this.distancia});
 
   @override
   Widget build(BuildContext context) {
-    final color = enZona ? AppColors.emerald : ExperienciaInfo.of(ExperienciaTipo.arGeo).color;
+    final color = ExperienciaInfo.of(ExperienciaTipo.arGeo).color;
     return SizedBox(
-      width: 240,
+      width: ancho,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
+            padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
               color: Colors.black.withValues(alpha: 0.6),
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(14),
               border: Border.all(color: color, width: 2),
-              boxShadow: [BoxShadow(color: color.withValues(alpha: 0.45), blurRadius: 18)],
+              boxShadow: [BoxShadow(color: color.withValues(alpha: 0.45), blurRadius: 16)],
             ),
-            clipBehavior: Clip.antiAlias,
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+              crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                SizedBox(height: 90, child: CoverImage(source: lugar.portada)),
-                Padding(
-                  padding: const EdgeInsets.all(10),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        enZona ? '¡Llegaste!' : formatoDistancia(distancia),
-                        style: TextStyle(color: color, fontWeight: FontWeight.w800, fontSize: 13),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(lugar.nombre,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 15)),
-                      if (lugar.categoriaTexto.isNotEmpty)
-                        Text(lugar.categoriaTexto, style: const TextStyle(color: Colors.white70, fontSize: 12)),
-                      if (enZona && lugar.descripcion.isNotEmpty) ...[
-                        const SizedBox(height: 6),
-                        Text(lugar.descripcion,
-                            maxLines: 4,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(color: Colors.white, fontSize: 12)),
-                      ],
-                    ],
-                  ),
-                ),
+                Text(formatoDistancia(distancia), style: TextStyle(color: color, fontWeight: FontWeight.w800, fontSize: 12)),
+                const SizedBox(height: 2),
+                Text(punto.titulo,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14)),
+                if (punto.resumen.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(punto.resumen,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                ],
               ],
             ),
           ),
-          Container(width: 3, height: 36, color: color),
-          Icon(Icons.location_on, color: color, size: 34),
+          Container(width: 3, height: 28, color: color),
+          Icon(Icons.location_on, color: color, size: 30),
         ],
       ),
+    );
+  }
+}
+
+/// Capa "cercana": la guía completa del punto (información, imagen y audio).
+class _GuiaCompleta extends StatefulWidget {
+  final PuntoRaGeo punto;
+  final VoidCallback onCerrar;
+
+  const _GuiaCompleta({required this.punto, required this.onCerrar});
+
+  @override
+  State<_GuiaCompleta> createState() => _GuiaCompletaState();
+}
+
+class _GuiaCompletaState extends State<_GuiaCompleta> {
+  AudioPlayer? _audio;
+  bool _reproduciendo = false;
+  StreamSubscription<PlayerState>? _sub;
+
+  @override
+  void didUpdateWidget(_GuiaCompleta oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!identical(oldWidget.punto, widget.punto)) _pararAudio();
+  }
+
+  Future<void> _alternarAudio() async {
+    final audio = _audio ??= AudioPlayer();
+    _sub ??= audio.onPlayerStateChanged.listen((s) {
+      if (mounted) setState(() => _reproduciendo = s == PlayerState.playing);
+    });
+    try {
+      if (_reproduciendo) {
+        await audio.pause();
+      } else {
+        await audio.play(UrlSource(widget.punto.audioUrl));
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No se pudo reproducir la guía de audio.')));
+      }
+    }
+  }
+
+  void _pararAudio() {
+    _audio?.stop();
+    if (mounted) setState(() => _reproduciendo = false);
+  }
+
+  @override
+  void dispose() {
+    _sub?.cancel();
+    _audio?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final p = widget.punto;
+    final color = AppColors.emerald;
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xF20B1A2E),
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        border: Border.all(color: color, width: 2),
+        boxShadow: [BoxShadow(color: color.withValues(alpha: 0.35), blurRadius: 24)],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (p.imagenUrl.isNotEmpty) SizedBox(height: 160, child: CoverImage(source: p.imagenUrl)),
+          Flexible(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.check_circle, color: color, size: 18),
+                      const SizedBox(width: 6),
+                      Text('¡Llegaste!', style: TextStyle(color: color, fontWeight: FontWeight.w800)),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(p.titulo, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800)),
+                  if (p.resumen.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(p.resumen, style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                  ],
+                  if (p.audioUrl.isNotEmpty) ...[
+                    const SizedBox(height: AppSpacing.md),
+                    FilledButton.icon(
+                      onPressed: _alternarAudio,
+                      icon: Icon(_reproduciendo ? Icons.pause : Icons.headphones, size: 18),
+                      label: Text(_reproduciendo ? 'Pausar guía de audio' : 'Escuchar guía de audio'),
+                      style: FilledButton.styleFrom(backgroundColor: color, foregroundColor: Colors.white),
+                    ),
+                  ],
+                  if (p.detalle.isNotEmpty) ...[
+                    const SizedBox(height: AppSpacing.md),
+                    Text(p.detalle, style: const TextStyle(color: Colors.white, fontSize: 14, height: 1.45)),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(AppSpacing.md, 0, AppSpacing.md, AppSpacing.md),
+            child: OutlinedButton.icon(
+              onPressed: () {
+                _pararAudio();
+                widget.onCerrar();
+              },
+              icon: const Icon(Icons.photo_camera_outlined, size: 16),
+              label: const Text('Volver a la cámara'),
+              style: OutlinedButton.styleFrom(foregroundColor: Colors.white, side: const BorderSide(color: Colors.white54)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BotonPanel extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  const _BotonPanel({required this.icon, required this.label, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return OutlinedButton.icon(
+      onPressed: onTap,
+      icon: Icon(icon, size: 16),
+      label: Text(label),
+      style: OutlinedButton.styleFrom(foregroundColor: Colors.white, side: const BorderSide(color: Colors.white54)),
     );
   }
 }

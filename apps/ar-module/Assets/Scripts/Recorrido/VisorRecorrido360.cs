@@ -33,8 +33,8 @@ namespace TouristMAR.Recorrido
     public class VisorRecorrido360 : MonoBehaviour
     {
         [Header("Datos (solo Editor / build suelto: en el teléfono vienen de la app)")]
-        [Tooltip("API del backend (:4000/api). En el teléfono la manda la app en el extra 'apiBaseUrl'.")]
-        [SerializeField] private string apiBaseUrlPorDefecto = "http://localhost:4000/api";
+        [Tooltip("API en el 5173 (http://<IP-de-la-PC>:5173/api). En el teléfono la manda la app en el extra 'apiBaseUrl'.")]
+        [SerializeField] private string apiBaseUrlPorDefecto = "http://localhost:5173/api";
         [Tooltip("Nombre del recorrido a cargar en el Editor (ej. fime_explanada_360).")]
         [SerializeField] private string recorridoPorDefecto = "";
 

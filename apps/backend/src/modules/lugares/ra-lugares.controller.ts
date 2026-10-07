@@ -1,24 +1,74 @@
 import { Request, Response } from 'express'
-import type { NegocioProfile } from '@prisma/client'
-import { listLugaresPublicos } from './lugares.service'
-import { DatabaseNotReadyError } from '../../config/db-guard'
+import type { NegocioProfile, PuntoRaGeo } from '@prisma/client'
+import { prisma } from '../../config/prisma'
+import { withDbGuard, DatabaseNotReadyError } from '../../config/db-guard'
+import { RADIO_CERCANO_DEFAULT, RADIO_VISIBLE_DEFAULT } from '../ra-geo/ra-geo.service'
 
-/// Radio (en metros) alrededor del pin dentro del cual se activa la RA por
-/// ubicación. Mismo valor por defecto que `Lugar.radioDesbloqueo` en la app.
-export const RADIO_RA_METROS = 50
+type LugarConPuntos = NegocioProfile & { puntosRaGeo: PuntoRaGeo[] }
 
 /// Sin acentos ni mayúsculas, para buscar "electromecánica" o "FIME" igual.
 function normalizar(texto: string) {
-  return texto.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim()
+  return texto.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
 }
 
-/// Contrato con el equipo de Unity para la RA por ubicación (GET
+/// Lugares aprobados con pin, cada uno con sus puntos de RA activos.
+function lugaresConPin() {
+  return withDbGuard(() =>
+    prisma.negocioProfile.findMany({
+      where: { estado: 'aprobado', latitud: { not: null }, longitud: { not: null } },
+      orderBy: { createdAt: 'asc' },
+      include: { puntosRaGeo: { where: { activo: true }, orderBy: [{ orden: 'asc' }, { createdAt: 'asc' }] } },
+    }),
+  )
+}
+
+function recortar(texto: string, max: number) {
+  return texto.length <= max ? texto : `${texto.slice(0, max - 1).trimEnd()}…`
+}
+
+/// Un punto de interés tal como lo consumen la app y Unity.
+function toUnityPunto(p: PuntoRaGeo) {
+  return {
+    id: p.id,
+    titulo: p.titulo,
+    resumen: p.resumen,
+    detalle: p.detalle,
+    urlImagen: p.imagenUrl,
+    urlAudio: p.audioUrl,
+    latitud: p.latitud,
+    longitud: p.longitud,
+    radioVisible: p.radioVisible,
+    radioCercano: p.radioCercano,
+  }
+}
+
+/// Lugar sin puntos dados de alta: su propio pin hace de punto único, con
+/// los radios por defecto (así cualquier lugar con pin ya tiene RA).
+function puntoDelPin(n: NegocioProfile) {
+  const descripcion = n.descripcion ?? ''
+  return {
+    id: n.id,
+    titulo: n.nombre,
+    resumen: recortar(descripcion, 140),
+    detalle: descripcion,
+    urlImagen: n.portada ?? '',
+    urlAudio: '',
+    latitud: n.latitud!,
+    longitud: n.longitud!,
+    radioVisible: RADIO_VISIBLE_DEFAULT,
+    radioCercano: RADIO_CERCANO_DEFAULT,
+  }
+}
+
+/// Contrato con el equipo de Unity para la RA por geolocalización (GET
 /// /api/ra/lugares). Mismo estilo que marcadores y recorridos: nada de
 /// `null` (JsonUtility no los maneja), lo que falta va como "", y
 /// `textoParaMostrar` = nombre + "\n" + descripción. Coordenadas en grados
-/// decimales (WGS84), las mismas del pin que se ve en el mapa de la app.
-/// Si cambia, avisarles.
-function toUnityLugar(n: NegocioProfile) {
+/// decimales (WGS84). `puntos` nunca viene vacío (ver [puntoDelPin]); cada
+/// punto funciona por capas: marcador flotante dentro de `radioVisible` y
+/// guía completa dentro de `radioCercano` (metros).
+/// Si cambia, avisarles y actualizar ModelosLugarRA.cs en apps/ar-module.
+function toUnityLugar(n: LugarConPuntos) {
   return {
     id: n.id,
     nombre: n.nombre,
@@ -28,7 +78,7 @@ function toUnityLugar(n: NegocioProfile) {
     urlPortada: n.portada ?? '',
     latitud: n.latitud!,
     longitud: n.longitud!,
-    radioMetros: RADIO_RA_METROS,
+    puntos: n.puntosRaGeo.length > 0 ? n.puntosRaGeo.map(toUnityPunto) : [puntoDelPin(n)],
   }
 }
 
@@ -43,7 +93,7 @@ function fail(res: Response, err: unknown) {
 export async function listRaLugares(req: Request, res: Response) {
   try {
     const buscar = typeof req.query.buscar === 'string' ? normalizar(req.query.buscar) : ''
-    const lugares = (await listLugaresPublicos()).filter((n) => !buscar || normalizar(n.nombre).includes(buscar))
+    const lugares = (await lugaresConPin()).filter((n) => !buscar || normalizar(n.nombre).includes(buscar))
     res.set('Cache-Control', 'no-cache')
     return res.json({ lugares: lugares.map(toUnityLugar) })
   } catch (err) {
@@ -55,7 +105,7 @@ export async function listRaLugares(req: Request, res: Response) {
 /// aprobado o no tiene pin).
 export async function getRaLugar(req: Request, res: Response) {
   try {
-    const lugar = (await listLugaresPublicos()).find((n) => n.id === req.params.id)
+    const lugar = (await lugaresConPin()).find((n) => n.id === req.params.id)
     if (!lugar) return res.status(404).json({ error: 'No se encontró ese lugar o todavía no tiene ubicación' })
     res.set('Cache-Control', 'no-cache')
     return res.json({ lugar: toUnityLugar(lugar) })

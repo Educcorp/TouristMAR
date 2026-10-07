@@ -34,10 +34,11 @@ let apiUrl = process.env.API_URL
 if (!apiUrl) {
   const local = ipLocal()
   if (!local) {
-    console.error('No se encontró una IP de red local. Conéctate al Wi-Fi o pasa API_URL=http://<IP>:4000/api')
+    console.error('No se encontró una IP de red local. Conéctate al Wi-Fi o pasa API_URL=http://<IP>:5173/api')
     process.exit(1)
   }
-  apiUrl = `http://${local.ip}:4000/api`
+  // Todo se abre en el 5173 (el servidor de Flutter reenvía /api al backend).
+  apiUrl = `http://${local.ip}:5173/api`
   console.log(`Usando la IP de ${local.nombre}: ${local.ip}`)
 }
 console.log(`API_URL=${apiUrl}`)

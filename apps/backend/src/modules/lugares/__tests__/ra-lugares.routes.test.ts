@@ -21,6 +21,7 @@ const fila = (data: Record<string, unknown>) => ({
   latitud: 19,
   longitud: -104,
   estado: 'aprobado',
+  puntosRaGeo: [],
   ...data,
 })
 
@@ -42,6 +43,7 @@ describe('GET /api/ra/lugares (contrato con Unity)', () => {
     await request(buildApp()).get('/api/ra/lugares')
     expect(vi.mocked(prisma.negocioProfile.findMany).mock.calls[0][0]).toMatchObject({
       where: { estado: 'aprobado', latitud: { not: null }, longitud: { not: null } },
+      include: { puntosRaGeo: { where: { activo: true } } },
     })
   })
 
@@ -59,7 +61,61 @@ describe('GET /api/ra/lugares (contrato con Unity)', () => {
         urlPortada: '',
         latitud: 19.12397051892223,
         longitud: -104.4000125955125,
-        radioMetros: 50,
+        // Sin puntos dados de alta: el pin del lugar hace de punto único.
+        puntos: [
+          {
+            id: FIME_ID,
+            titulo: 'Facultad de ingenieria electromecanica',
+            resumen: '',
+            detalle: '',
+            urlImagen: '',
+            urlAudio: '',
+            latitud: 19.12397051892223,
+            longitud: -104.4000125955125,
+            radioVisible: 100,
+            radioCercano: 10,
+          },
+        ],
+      },
+    ])
+  })
+
+  it('con puntos dados de alta manda esos, con sus dos radios', async () => {
+    vi.mocked(prisma.negocioProfile.findMany).mockResolvedValue([
+      fila({
+        id: FIME_ID,
+        nombre: 'FIME',
+        puntosRaGeo: [
+          {
+            id: 'p-1',
+            titulo: 'Entrada principal',
+            resumen: 'Acceso por la carretera',
+            detalle: 'Historia de la facultad…',
+            imagenUrl: 'https://cdn.test/entrada.jpg',
+            audioUrl: '',
+            latitud: 19.1239,
+            longitud: -104.4001,
+            radioVisible: 80,
+            radioCercano: 8,
+          },
+        ],
+      }),
+    ] as any)
+
+    const res = await request(buildApp()).get(`/api/ra/lugares/${FIME_ID}`)
+
+    expect(res.body.lugar.puntos).toEqual([
+      {
+        id: 'p-1',
+        titulo: 'Entrada principal',
+        resumen: 'Acceso por la carretera',
+        detalle: 'Historia de la facultad…',
+        urlImagen: 'https://cdn.test/entrada.jpg',
+        urlAudio: '',
+        latitud: 19.1239,
+        longitud: -104.4001,
+        radioVisible: 80,
+        radioCercano: 8,
       },
     ])
   })

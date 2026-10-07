@@ -113,8 +113,9 @@ model NegocioProfile {
   arMarcadores         ArMarcador[]
   recorridos360        Recorrido360[]
   favoritos            Favorito[]
-  resenas       Resena[]
+  resenas              Resena[]
   solicitudesRecorrido SolicitudRecorrido360[]
+  puntosRaGeo          PuntoRaGeo[]
 
   @@index([userId])
   @@map("negocio_profiles")
@@ -346,4 +347,38 @@ model Resena {
   @@unique([userId, negocioId])
   @@index([negocioId, createdAt])
   @@map("resenas")
+}
+
+/// Punto de interés de la RA por geolocalización de un lugar (la entrada de
+/// FIME, su explanada, un mural…). Funciona por capas según la distancia del
+/// visitante:
+///   - dentro de `radioVisible` (p. ej. 100 m): la cámara muestra un marcador
+///     flotante con `titulo` y `resumen` en la dirección del punto;
+///   - dentro de `radioCercano` (p. ej. 10 m): se abre la guía completa
+///     (`detalle`, imagen y audio).
+/// Si un lugar no tiene puntos, la app usa el pin del lugar como punto único.
+model PuntoRaGeo {
+  id           String         @id @default(uuid()) @db.Uuid
+  negocioId    String         @map("negocio_id") @db.Uuid
+  negocio      NegocioProfile @relation(fields: [negocioId], references: [id], onDelete: Cascade)
+  titulo       String
+  /// Una o dos líneas: lo que se lee en el marcador flotante desde lejos.
+  resumen      String         @default("")
+  /// La guía completa que se abre al llegar al punto.
+  detalle      String         @default("")
+  imagenUrl    String         @default("") @map("imagen_url")
+  audioUrl     String         @default("") @map("audio_url")
+  latitud      Float
+  longitud     Float
+  /// Metros. Siempre radioCercano < radioVisible (lo valida el backend).
+  radioVisible Float          @default(100) @map("radio_visible")
+  radioCercano Float          @default(10) @map("radio_cercano")
+  /// Orden en el panel y en la app (0 = el primero).
+  orden        Int            @default(0)
+  activo       Boolean        @default(true)
+  createdAt    DateTime       @default(now()) @map("created_at")
+  updatedAt    DateTime       @updatedAt @map("updated_at")
+
+  @@index([negocioId, orden])
+  @@map("ra_geo_puntos")
 }

@@ -7,6 +7,7 @@ import { recorridosRouter, recorridosAdminRouter } from '../modules/recorridos/r
 import { favoritosRouter } from '../modules/favoritos/favoritos.routes'
 import { resenasRouter, resenasAdminRouter } from '../modules/resenas/resenas.routes'
 import { lugaresRouter, raLugaresRouter } from '../modules/lugares/lugares.routes'
+import { raGeoAdminRouter } from '../modules/ra-geo/ra-geo.routes'
 
 export const apiRouter = Router()
 
@@ -16,6 +17,7 @@ apiRouter.use('/auth', authRouter)
 // admin/super_admin).
 apiRouter.use('/admin/ar', arAdminRouter)
 apiRouter.use('/admin/recorridos', recorridosAdminRouter)
+apiRouter.use('/admin/ra-geo', raGeoAdminRouter)
 apiRouter.use('/admin/resenas', resenasAdminRouter)
 apiRouter.use('/admin', adminRouter)
 // Contratos con Unity: GET /api/marcadores (ver ar.controller.ts) y

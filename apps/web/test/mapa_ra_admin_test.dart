@@ -114,12 +114,12 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(router.routerDelegate.currentConfiguration.uri.toString(), '/admin/mapa/lugar/n-fime');
-    expect(find.text('Realidad aumentada por ubicación'), findsOneWidget);
+    expect(find.text('RA por geolocalización'), findsOneWidget);
     expect(find.text('Recorrido 3D / 360°'), findsOneWidget);
     expect(find.text('Realidad aumentada con marcador'), findsOneWidget);
 
     // RA por ubicación: se despliega con la flecha y trae las coordenadas del lugar.
-    await tester.tap(find.text('Realidad aumentada por ubicación'));
+    await tester.tap(find.text('RA por geolocalización'));
     await tester.pumpAndSettle();
     expect(
       find.byWidgetPredicate((w) => w is TextField && w.controller?.text == '19.12492145230218, -104.40020700589847'),

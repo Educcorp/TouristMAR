@@ -32,6 +32,8 @@ dependencies:
   # evento deviceorientationabsolute (ver services/brujula_web.dart).
   camera: ^0.12.1
   flutter_compass: ^0.8.1
+  # Guía de audio de los puntos de RA por geolocalización.
+  audioplayers: ^6.8.1
 
 dev_dependencies:
   flutter_test:

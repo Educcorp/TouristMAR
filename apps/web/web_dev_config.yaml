@@ -1,0 +1,15 @@
+# Servidor de desarrollo de Flutter (`npm run dev` desde la raíz).
+#
+# Todo se abre en el 5173: el sitio y la API. Lo que empieza con /api/ se
+# reenvía al backend, que en desarrollo solo escucha dentro de la PC
+# (127.0.0.1:5174, ver apps/backend/src/config/env.ts) y nadie lo abre
+# directo. Así el navegador, la app móvil y Unity usan una sola dirección:
+#   http://localhost:5173        (en la PC)
+#   http://<IP-de-la-PC>:5173    (celular en la misma red Wi-Fi)
+server:
+  # 0.0.0.0 = también accesible desde otros dispositivos de la red.
+  host: "0.0.0.0"
+  port: 5173
+  proxy:
+    - prefix: "/api/"
+      target: "http://127.0.0.1:5174/"
