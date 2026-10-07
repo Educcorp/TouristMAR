@@ -335,7 +335,12 @@ class _LoginFormState extends State<LoginForm> {
     final accentColor = _isBusiness ? AppColors.businessOrange : AppColors.brandTeal;
     final isRegister = _mode == _Mode.register;
 
-    return Center(
+    // Alineado arriba (no Center): entre "Visitante" y "Empresa" cambia el
+    // alto del contenido (la tarjeta "Registra un lugar" solo sale en uno),
+    // y centrado verticalmente eso hacía que todo el bloque saltara de
+    // posición al cambiar de pestaña.
+    return Align(
+      alignment: Alignment.topCenter,
       child: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 48),
         child: ConstrainedBox(
