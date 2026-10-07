@@ -4,7 +4,7 @@ import { prisma } from '../../config/prisma'
 import { withDbGuard, DatabaseNotReadyError } from '../../config/db-guard'
 import { RADIO_CERCANO_DEFAULT, RADIO_VISIBLE_DEFAULT } from '../ra-geo/ra-geo.service'
 
-type LugarConPuntos = NegocioProfile & { puntosRaGeo: PuntoRaGeo[] }
+type LugarConPuntos = NegocioProfile & { puntosRaGeo: PuntoRaGeo[]; _count: { arMarcadores: number } }
 
 /// Sin acentos ni mayúsculas, para buscar "electromecánica" o "FIME" igual.
 function normalizar(texto: string) {
@@ -17,7 +17,11 @@ function lugaresConPin() {
     prisma.negocioProfile.findMany({
       where: { estado: 'aprobado', latitud: { not: null }, longitud: { not: null } },
       orderBy: { createdAt: 'asc' },
-      include: { puntosRaGeo: { where: { activo: true }, orderBy: [{ orden: 'asc' }, { createdAt: 'asc' }] } },
+      include: {
+        puntosRaGeo: { where: { activo: true }, orderBy: [{ orden: 'asc' }, { createdAt: 'asc' }] },
+        // Para el paso de la geolocalización a los marcadores de imagen del lugar.
+        _count: { select: { arMarcadores: { where: { activo: true } } } },
+      },
     }),
   )
 }
@@ -66,7 +70,8 @@ function puntoDelPin(n: NegocioProfile) {
 /// `textoParaMostrar` = nombre + "\n" + descripción. Coordenadas en grados
 /// decimales (WGS84). `puntos` nunca viene vacío (ver [puntoDelPin]); cada
 /// punto funciona por capas: marcador flotante dentro de `radioVisible` y
-/// guía completa dentro de `radioCercano` (metros).
+/// guía completa (o el paso a los marcadores de imagen del lugar, si
+/// `tieneMarcadores`) dentro de `radioCercano` (metros).
 /// Si cambia, avisarles y actualizar ModelosLugarRA.cs en apps/ar-module.
 function toUnityLugar(n: LugarConPuntos) {
   return {
@@ -79,6 +84,9 @@ function toUnityLugar(n: LugarConPuntos) {
     latitud: n.latitud!,
     longitud: n.longitud!,
     puntos: n.puntosRaGeo.length > 0 ? n.puntosRaGeo.map(toUnityPunto) : [puntoDelPin(n)],
+    /// Si el lugar tiene marcadores de imagen activos (GET /api/marcadores):
+    /// al entrar al `radioCercano` de un punto la app ofrece pasar a ellos.
+    tieneMarcadores: n._count.arMarcadores > 0,
   }
 }
 

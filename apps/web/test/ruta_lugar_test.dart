@@ -107,4 +107,14 @@ void main() {
     expect(find.text('Activa tu ubicación para ver la ruta.'), findsOneWidget);
     expect(find.text('Usar mi ubicación'), findsOneWidget);
   });
+
+  testWidgets('el panel con la distancia queda abajo de la pantalla (1400 px de alto)', (tester) async {
+    final gps = await _montar(tester, _osrm());
+    gps.add(const Coordenadas(19.0950, -104.3300));
+    await tester.pumpAndSettle();
+
+    final resumen = tester.getRect(find.text('1.2 km a pie · 15 min'));
+    expect(resumen.top, greaterThan(1000));
+    expect(resumen.bottom, lessThanOrEqualTo(1400));
+  });
 }

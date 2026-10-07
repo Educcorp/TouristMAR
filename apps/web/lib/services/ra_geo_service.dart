@@ -83,6 +83,15 @@ class PuntoRaGeo {
       };
 }
 
+/// Lo que necesita la pantalla de RA de un lugar: sus puntos y si tiene
+/// marcadores de imagen (para pasar a la RA con marcadores al llegar).
+class RaGeoLugar {
+  final List<PuntoRaGeo> puntos;
+  final bool tieneMarcadores;
+
+  const RaGeoLugar({required this.puntos, this.tieneMarcadores = false});
+}
+
 /// Puntos de interés de la RA por geolocalización: lectura pública para la
 /// app (`GET /api/ra/lugares/:id`) y gestión del admin (`/api/admin/ra-geo`).
 class RaGeoService {
@@ -90,13 +99,17 @@ class RaGeoService {
 
   RaGeoService({http.Client? client}) : _client = client ?? http.Client();
 
-  /// Público: los puntos activos de un lugar. Nunca vacío si el lugar tiene
-  /// pin (el backend manda el pin como punto único).
-  Future<List<PuntoRaGeo>> puntosPublicos(String lugarId) async {
+  /// Público: los puntos activos de un lugar (nunca vacío si el lugar tiene
+  /// pin: el backend manda el pin como punto único) y si tiene marcadores.
+  Future<RaGeoLugar> lugarPublico(String lugarId) async {
     final res = await _client.get(Uri.parse('$apiUrl/ra/lugares/${Uri.encodeComponent(lugarId)}'));
     final data = _check(res, 'No se pudieron cargar los puntos de RA');
-    final puntos = ((data['lugar'] as Map<String, dynamic>)['puntos'] as List?) ?? const [];
-    return puntos.map((p) => PuntoRaGeo.fromJson(p as Map<String, dynamic>)).toList();
+    final lugar = data['lugar'] as Map<String, dynamic>;
+    final puntos = (lugar['puntos'] as List?) ?? const [];
+    return RaGeoLugar(
+      puntos: puntos.map((p) => PuntoRaGeo.fromJson(p as Map<String, dynamic>)).toList(),
+      tieneMarcadores: lugar['tieneMarcadores'] as bool? ?? false,
+    );
   }
 
   Future<List<PuntoRaGeo>> listar(String token, String lugarId) async {

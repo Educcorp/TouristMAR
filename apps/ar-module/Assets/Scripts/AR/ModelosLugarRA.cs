@@ -59,6 +59,11 @@ namespace TouristMAR.AR
         /// con el pin del lugar y los radios por defecto (100 m / 10 m).
         /// </summary>
         public DatosPuntoRA[] puntos;
+        /// <summary>
+        /// Si el lugar tiene marcadores de imagen activos (GET /api/marcadores).
+        /// La app ofrece "Abrir RA con marcadores" al entrar al radioCercano.
+        /// </summary>
+        public bool tieneMarcadores;
     }
 
     /// <summary>Raíz de GET /api/ra/lugares: { "lugares": [ ... ] }.</summary>

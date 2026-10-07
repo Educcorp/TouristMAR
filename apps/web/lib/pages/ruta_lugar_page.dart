@@ -39,6 +39,7 @@ class _RutaLugarPageState extends State<RutaLugarPage> {
 
   Coordenadas? _yo;
   RutaCalculada? _ruta;
+
   /// Desde dónde se calculó [_ruta]: si el visitante se aleja de ahí, se recalcula.
   Coordenadas? _origenRuta;
   bool _calculando = false;
@@ -175,7 +176,8 @@ class _RutaLugarPageState extends State<RutaLugarPage> {
                         borderStrokeWidth: 2,
                         borderColor: Colors.white.withValues(alpha: 0.8),
                         // Sin ruta por calles: solo la dirección, punteada.
-                        pattern: lineaRecta ? StrokePattern.dashed(segments: const [10, 8]) : const StrokePattern.solid(),
+                        pattern:
+                            lineaRecta ? StrokePattern.dashed(segments: const [10, 8]) : const StrokePattern.solid(),
                       ),
                     ],
                   ),
@@ -187,30 +189,37 @@ class _RutaLugarPageState extends State<RutaLugarPage> {
               ],
             ),
           ),
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Row(
-                children: [
-                  _BotonRedondo(
-                    icon: Icons.arrow_back,
-                    tooltip: 'Volver',
-                    onTap: () => Navigator.of(context).maybePop(),
-                  ),
-                  const SizedBox(width: 8),
-                  Flexible(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                      decoration: _decoracionFlotante(),
-                      child: Text(
-                        'Cómo llegar a ${widget.lugar.nombre}',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700, fontSize: 14),
+          // Arriba con Positioned: si quedara sin posición, el Stack tomaría
+          // solo la altura de esta barra y lo de abajo saldría de la pantalla.
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  children: [
+                    _BotonRedondo(
+                      icon: Icons.arrow_back,
+                      tooltip: 'Volver',
+                      onTap: () => Navigator.of(context).maybePop(),
+                    ),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        decoration: _decoracionFlotante(),
+                        child: Text(
+                          'Cómo llegar a ${widget.lugar.nombre}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700, fontSize: 14),
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),

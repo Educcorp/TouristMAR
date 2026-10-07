@@ -42,7 +42,21 @@ class _Sensores {
   final brujula = StreamController<double>();
 }
 
-Future<_Sensores> _montar(WidgetTester tester, {List<PuntoRaGeo>? puntos}) async {
+/// Como la app móvil con Unity: anota qué experiencia se pidió abrir.
+class _LauncherConUnity implements ExperienciasLauncher {
+  final abiertas = <ExperienciaTipo>[];
+
+  @override
+  bool soporta(ExperienciaTipo tipo) => true;
+
+  @override
+  bool mideDistancia(ExperienciaTipo tipo) => tipo == ExperienciaTipo.arGeo;
+
+  @override
+  Future<void> abrir(BuildContext context, Lugar lugar, ExperienciaTipo tipo) async => abiertas.add(tipo);
+}
+
+Future<_Sensores> _montar(WidgetTester tester, {List<PuntoRaGeo>? puntos, bool tieneMarcadores = false}) async {
   tester.view.physicalSize = const Size(400, 800);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
@@ -56,6 +70,7 @@ Future<_Sensores> _montar(WidgetTester tester, {List<PuntoRaGeo>? puntos}) async
     home: RaUbicacionPage(
       lugar: _fime,
       puntos: puntos ?? const [_entrada],
+      tieneMarcadores: tieneMarcadores,
       ubicaciones: s.gps.stream,
       rumbos: s.brujula.stream,
       usarCamara: false,
@@ -159,5 +174,71 @@ void main() {
     await _dibujar(tester);
 
     expect(find.text('Activar brújula'), findsOneWidget);
+  });
+
+  group('paso a los marcadores de Unity al llegar', () {
+    testWidgets('sin marcadores en el lugar no ofrece el botón', (tester) async {
+      final s = await _montar(tester);
+      s.gps.add(_alSur(4));
+      await _dibujar(tester);
+
+      expect(find.text('¡Llegaste!'), findsOneWidget);
+      expect(find.text('Abrir RA con marcadores'), findsNothing);
+    });
+
+    testWidgets('con marcadores abre la escena de marcadores de Unity', (tester) async {
+      final original = ExperienciasLauncher.current;
+      final launcher = _LauncherConUnity();
+      ExperienciasLauncher.current = launcher;
+      addTearDown(() => ExperienciasLauncher.current = original);
+
+      final s = await _montar(tester, tieneMarcadores: true);
+      s.gps.add(_alSur(4));
+      await _dibujar(tester);
+
+      await tester.ensureVisible(find.text('Abrir RA con marcadores'));
+      await tester.tap(find.text('Abrir RA con marcadores'));
+      await _dibujar(tester);
+
+      expect(launcher.abiertas, [ExperienciaTipo.arMarcador]);
+    });
+
+    testWidgets('lejos del punto no aparece (solo en la capa cercana)', (tester) async {
+      final s = await _montar(tester, tieneMarcadores: true);
+      s.gps.add(_alSur(60));
+      s.brujula.add(0);
+      await _dibujar(tester);
+
+      expect(find.text('Abrir RA con marcadores'), findsNothing);
+    });
+
+    testWidgets('en la web (sin Unity) avisa que se abre desde la app móvil', (tester) async {
+      final s = await _montar(tester, tieneMarcadores: true);
+      s.gps.add(_alSur(4));
+      await _dibujar(tester);
+
+      await tester.ensureVisible(find.text('Abrir RA con marcadores'));
+      await tester.tap(find.text('Abrir RA con marcadores'));
+      await _dibujar(tester);
+
+      expect(find.text('La RA con marcadores se abre desde la app móvil.'), findsOneWidget);
+    });
+  });
+
+  testWidgets('el panel y la guía quedan abajo, dentro de la pantalla (800 px de alto)', (tester) async {
+    final s = await _montar(tester, tieneMarcadores: true);
+    s.gps.add(_alSur(500));
+    await _dibujar(tester);
+    final panel = tester.getRect(find.textContaining('El punto más cercano'));
+    expect(panel.bottom, greaterThan(650));
+    expect(panel.bottom, lessThanOrEqualTo(800));
+
+    s.gps.add(_alSur(4));
+    await _dibujar(tester);
+    final volver = tester.getRect(find.text('Volver a la cámara'));
+    final llegaste = tester.getRect(find.text('¡Llegaste!'));
+    expect(volver.bottom, lessThanOrEqualTo(800));
+    expect(volver.top, greaterThan(llegaste.bottom), reason: 'el botón va debajo del título, no encima');
+    expect(llegaste.top, greaterThanOrEqualTo(0));
   });
 }

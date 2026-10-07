@@ -22,6 +22,7 @@ const fila = (data: Record<string, unknown>) => ({
   longitud: -104,
   estado: 'aprobado',
   puntosRaGeo: [],
+  _count: { arMarcadores: 0 },
   ...data,
 })
 
@@ -43,7 +44,7 @@ describe('GET /api/ra/lugares (contrato con Unity)', () => {
     await request(buildApp()).get('/api/ra/lugares')
     expect(vi.mocked(prisma.negocioProfile.findMany).mock.calls[0][0]).toMatchObject({
       where: { estado: 'aprobado', latitud: { not: null }, longitud: { not: null } },
-      include: { puntosRaGeo: { where: { activo: true } } },
+      include: { puntosRaGeo: { where: { activo: true } }, _count: { select: { arMarcadores: { where: { activo: true } } } } },
     })
   })
 
@@ -76,8 +77,15 @@ describe('GET /api/ra/lugares (contrato con Unity)', () => {
             radioCercano: 10,
           },
         ],
+        tieneMarcadores: false,
       },
     ])
+  })
+
+  it('avisa si el lugar tiene marcadores de imagen activos', async () => {
+    vi.mocked(prisma.negocioProfile.findMany).mockResolvedValue([fila({ id: FIME_ID, _count: { arMarcadores: 2 } })] as any)
+    const res = await request(buildApp()).get(`/api/ra/lugares/${FIME_ID}`)
+    expect(res.body.lugar.tieneMarcadores).toBe(true)
   })
 
   it('con puntos dados de alta manda esos, con sus dos radios', async () => {
