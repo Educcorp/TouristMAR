@@ -16,6 +16,7 @@ import 'admin_recorridos_page.dart';
 import 'admin_businesses_page.dart';
 import 'admin_help_page.dart';
 import 'admin_mapa_page.dart';
+import 'admin_negocio_detalle_page.dart';
 import 'admin_reports_page.dart';
 import 'admin_requests_page.dart';
 import 'admin_settings_page.dart';
@@ -38,6 +39,15 @@ class AdminDashboardPage extends StatefulWidget {
 class _AdminDashboardPageState extends State<AdminDashboardPage> {
   AdminSection _selected = AdminSection.inicio;
 
+  /// Negocio para el que se abrió "Realidad aumentada" / "Recorridos 360"
+  /// desde el detalle de una solicitud: el formulario de alta sale con ese
+  /// negocio ya elegido. Se limpia al cambiar de sección desde el sidebar.
+  String? _negocioParaContenido;
+
+  /// Cambia para remontar "Solicitudes" (y recargarla) después de revisar una
+  /// solicitud abierta desde una notificación.
+  int _versionSolicitudes = 0;
+
   @override
   Widget build(BuildContext context) => ThemedBuilder(builder: _buildShell);
 
@@ -45,7 +55,10 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     return AdminShell(
       admin: widget.admin,
       selected: _selected,
-      onSelect: (s) => setState(() => _selected = s),
+      onSelect: (s) => setState(() {
+        _selected = s;
+        _negocioParaContenido = null;
+      }),
       onNotificationTap: _handleNotificationTap,
       body: _buildBody(),
     );
@@ -53,7 +66,33 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
 
   void _handleNotificationTap(AppNotification notification) {
     final section = adminSectionForNotification(notification.tipo);
-    if (section != null) setState(() => _selected = section);
+    if (section != null) {
+      setState(() {
+        _selected = section;
+        _negocioParaContenido = null;
+      });
+    }
+    // Una solicitud de negocio (registro nuevo o negocio adicional) abre
+    // directo su detalle: imagen, nombre, ubicación… para revisarla y editarla.
+    final negocioId = notification.negocioId;
+    if (section == AdminSection.solicitudes && negocioId != null) {
+      _abrirSolicitud(negocioId);
+    }
+  }
+
+  Future<void> _abrirSolicitud(String negocioId) async {
+    final resultado = await abrirDetalleNegocio(context, negocioId: negocioId, authService: widget.authService);
+    if (!mounted || resultado == null) return;
+    setState(() => _versionSolicitudes++);
+    final contenido = resultado.abrirContenido;
+    if (contenido != null) _abrirContenido(contenido, negocioId);
+  }
+
+  void _abrirContenido(ContenidoNegocio contenido, String negocioId) {
+    setState(() {
+      _selected = contenido == ContenidoNegocio.realidadAumentada ? AdminSection.realidadAumentada : AdminSection.recorridos360;
+      _negocioParaContenido = negocioId;
+    });
   }
 
   Widget _buildBody() {
@@ -61,7 +100,11 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
       case AdminSection.inicio:
         return _InicioContent(admin: widget.admin, authService: widget.authService, onNavigate: (s) => setState(() => _selected = s));
       case AdminSection.solicitudes:
-        return AdminRequestsPage(authService: widget.authService);
+        return AdminRequestsPage(
+          key: ValueKey(_versionSolicitudes),
+          authService: widget.authService,
+          onAbrirContenido: _abrirContenido,
+        );
       case AdminSection.usuarios:
         return AdminUsersPage(authService: widget.authService);
       case AdminSection.negocios:
@@ -69,9 +112,17 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
       case AdminSection.mapa:
         return AdminMapaPage(admin: widget.admin, authService: widget.authService);
       case AdminSection.realidadAumentada:
-        return AdminArPage(authService: widget.authService);
+        return AdminArPage(
+          key: ValueKey('ar-$_negocioParaContenido'),
+          authService: widget.authService,
+          initialNegocioId: _negocioParaContenido,
+        );
       case AdminSection.recorridos360:
-        return AdminRecorridosPage(authService: widget.authService);
+        return AdminRecorridosPage(
+          key: ValueKey('rec-$_negocioParaContenido'),
+          authService: widget.authService,
+          initialNegocioId: _negocioParaContenido,
+        );
       case AdminSection.admins:
         return AdminAdminsPage(currentAdmin: widget.admin, authService: widget.authService);
       case AdminSection.reportes:

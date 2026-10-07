@@ -24,7 +24,11 @@ class AdminRecorridosPage extends StatefulWidget {
   final AuthService authService;
   final RecorridosService recorridosService;
 
-  AdminRecorridosPage({super.key, AuthService? authService, RecorridosService? recorridosService})
+  /// Si viene, el formulario de alta se abre con este negocio ya elegido
+  /// (cuando el admin llega aquí desde el detalle de una solicitud).
+  final String? initialNegocioId;
+
+  AdminRecorridosPage({super.key, AuthService? authService, RecorridosService? recorridosService, this.initialNegocioId})
       : authService = authService ?? AuthService(),
         recorridosService = recorridosService ?? RecorridosService();
 
@@ -42,6 +46,7 @@ class _AdminRecorridosPageState extends State<AdminRecorridosPage> {
   // Formulario de datos: abierto para alta (`_editing == null`) o edición.
   bool _showForm = false;
   Recorrido360? _editing;
+  bool _initialAplicado = false;
 
   /// Recorrido cuyas escenas se están editando (vista de detalle).
   String? _abiertoId;
@@ -74,10 +79,18 @@ class _AdminRecorridosPageState extends State<AdminRecorridosPage> {
       if (!mounted) return;
       setState(() {
         _recorridos = results[0] as List<Recorrido360>;
-        // Solo negocios aprobados: el endpoint público oculta los recorridos
-        // de negocios pendientes/rechazados.
-        _negocios = (results[1] as List<NegocioSummary>).where((n) => n.aprobado).toList()
+        // Aprobados y pendientes: a una solicitud pendiente se le puede
+        // preparar su contenido desde ya. El endpoint público lo oculta hasta
+        // que el negocio se aprueba. Los rechazados no se ofrecen.
+        _negocios = (results[1] as List<NegocioSummary>).where((n) => !n.rechazado).toList()
           ..sort((a, b) => a.nombre.toLowerCase().compareTo(b.nombre.toLowerCase()));
+        // Abierto desde el detalle de una solicitud: alta con el negocio ya
+        // elegido.
+        if (widget.initialNegocioId != null && !_initialAplicado) {
+          _initialAplicado = true;
+          _showForm = true;
+          _editing = null;
+        }
       });
     } catch (err) {
       if (!mounted) return;
@@ -233,6 +246,7 @@ class _AdminRecorridosPageState extends State<AdminRecorridosPage> {
         _RecorridoForm(
           key: ValueKey(_editing?.id ?? 'nuevo'),
           recorrido: _editing,
+          initialNegocioId: _editing == null ? widget.initialNegocioId : null,
           negocios: _negocios,
           service: widget.recorridosService,
           onCancel: _closeForm,
@@ -297,6 +311,7 @@ Future<bool> _confirmar(BuildContext context, {required String titulo, required 
 
 class _RecorridoForm extends StatefulWidget {
   final Recorrido360? recorrido;
+  final String? initialNegocioId;
   final List<NegocioSummary> negocios;
   final RecorridosService service;
   final VoidCallback onCancel;
@@ -305,6 +320,7 @@ class _RecorridoForm extends StatefulWidget {
   const _RecorridoForm({
     super.key,
     required this.recorrido,
+    this.initialNegocioId,
     required this.negocios,
     required this.service,
     required this.onCancel,
@@ -320,7 +336,7 @@ class _RecorridoFormState extends State<_RecorridoForm> {
   late final _nombre = TextEditingController(text: widget.recorrido?.nombre);
   late final _titulo = TextEditingController(text: widget.recorrido?.titulo);
   late final _texto = TextEditingController(text: widget.recorrido?.texto);
-  late String? _negocioId = widget.recorrido?.negocioId;
+  late String? _negocioId = widget.recorrido?.negocioId ?? widget.initialNegocioId;
 
   bool _saving = false;
   String? _error;
@@ -408,14 +424,17 @@ class _RecorridoFormState extends State<_RecorridoForm> {
               items: [
                 const DropdownMenuItem<String?>(value: null, child: Text('General del destino (sin negocio)')),
                 ...widget.negocios.map(
-                  (n) => DropdownMenuItem<String?>(value: n.id, child: Text(n.nombre, overflow: TextOverflow.ellipsis)),
+                  (n) => DropdownMenuItem<String?>(
+                    value: n.id,
+                    child: Text(n.pendiente ? '${n.nombre} (pendiente)' : n.nombre, overflow: TextOverflow.ellipsis),
+                  ),
                 ),
               ],
               onChanged: _saving ? null : (v) => setState(() => _negocioId = v),
             ),
             const SizedBox(height: 4),
             Text(
-              'Un negocio aprobado (su hotel, su restaurante) o un lugar general como un mirador o la bahía.',
+              'Un negocio (su hotel, su restaurante) o un lugar general como un mirador o la bahía. Si el negocio está pendiente, el recorrido se publica al aprobarlo.',
               style: AppTypography.caption,
             ),
             const SizedBox(height: AppSpacing.md),

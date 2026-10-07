@@ -61,6 +61,13 @@ const suggestNegocioSchema = z.object({
   categoria: z.string().optional(),
   descripcion: z.string().max(350).optional(),
   direccion: z.string().optional(),
+  telefono: z.string().max(40).optional(),
+  sitioWeb: z.string().max(200).optional(),
+  horario: z.string().max(200).optional(),
+  // Ubicación elegida en el mapa por la empresa (opcional; el admin la
+  // puede corregir después desde el detalle de la solicitud).
+  latitud: z.number().min(-90).max(90).optional(),
+  longitud: z.number().min(-180).max(180).optional(),
 })
 
 type UserWithNegocios = User & { negocios: NegocioProfile[] }
@@ -89,6 +96,8 @@ export function toPublicUser(user: UserWithNegocios) {
       archivo360: n.archivo360,
       arMarcador: n.arMarcador,
       arGeo: n.arGeo,
+      latitud: n.latitud,
+      longitud: n.longitud,
       estado: n.estado,
       createdAt: n.createdAt,
     })),

@@ -277,24 +277,30 @@ export async function uploadNegocioPortada(negocioId: string, userId: string, fi
 
   return withDbGuard(async () => {
     await assertOwnedNegocio(negocioId, userId)
-
-    // Un archivo fijo por negocio (no por usuario, ya que un dueño puede
-    // tener varios) — cada subida nueva sobreescribe la portada anterior de
-    // ESE negocio en particular.
-    const path = `${negocioId}/portada`
-    const { error: uploadError } = await supabase.storage
-      .from(NEGOCIO_ASSETS_BUCKET)
-      .upload(path, file.buffer, { contentType: file.mimetype, upsert: true })
-
-    if (uploadError) {
-      throw new Error(`No se pudo subir la imagen: ${uploadError.message}`)
-    }
-
-    const { data } = supabase.storage.from(NEGOCIO_ASSETS_BUCKET).getPublicUrl(path)
-    const publicUrl = `${data.publicUrl}?v=${Date.now()}`
-
-    return prisma.negocioProfile.update({ where: { id: negocioId }, data: { portada: publicUrl } })
+    return guardarPortada(negocioId, file)
   })
+}
+
+/// Sube la portada de `negocioId` y guarda la URL. Lo usan el dueño
+/// ([uploadNegocioPortada]) y el admin ([adminUploadNegocioPortada]); cada uno
+/// valida antes sus propios permisos.
+async function guardarPortada(negocioId: string, file: { buffer: Buffer; mimetype: string }) {
+  // Un archivo fijo por negocio (no por usuario, ya que un dueño puede
+  // tener varios) — cada subida nueva sobreescribe la portada anterior de
+  // ESE negocio en particular.
+  const path = `${negocioId}/portada`
+  const { error: uploadError } = await supabase.storage
+    .from(NEGOCIO_ASSETS_BUCKET)
+    .upload(path, file.buffer, { contentType: file.mimetype, upsert: true })
+
+  if (uploadError) {
+    throw new Error(`No se pudo subir la imagen: ${uploadError.message}`)
+  }
+
+  const { data } = supabase.storage.from(NEGOCIO_ASSETS_BUCKET).getPublicUrl(path)
+  const publicUrl = `${data.publicUrl}?v=${Date.now()}`
+
+  return prisma.negocioProfile.update({ where: { id: negocioId }, data: { portada: publicUrl } })
 }
 
 export async function addNegocioGaleriaImage(
@@ -347,6 +353,11 @@ export interface SuggestNegocioInput {
   categoria?: string
   descripcion?: string
   direccion?: string
+  telefono?: string
+  sitioWeb?: string
+  horario?: string
+  latitud?: number
+  longitud?: number
 }
 
 /// Una cuenta de negocio ya aprobada sugiere un negocio adicional — cae en la
@@ -371,6 +382,11 @@ export async function suggestNegocio(userId: string, input: SuggestNegocioInput)
         categoria: input.categoria,
         descripcion: input.descripcion,
         direccion: input.direccion,
+        telefono: input.telefono,
+        sitioWeb: input.sitioWeb,
+        horario: input.horario,
+        latitud: input.latitud,
+        longitud: input.longitud,
       },
     })
 
@@ -462,6 +478,61 @@ export async function setUserActive(userId: string, activo: boolean) {
     }
     return prisma.user.update({ where: { id: userId }, data: { activo }, include: { negocios: true } })
   })
+}
+
+/// Detalle completo de un negocio para el panel admin: los datos que mandó
+/// la empresa (imagen, título, ubicación…), su dueño y el contenido de RA y
+/// recorridos 360 que ya tiene ligado.
+export async function getNegocioAdmin(negocioId: string) {
+  return withDbGuard(async () => {
+    const negocio = await prisma.negocioProfile.findUnique({
+      where: { id: negocioId },
+      include: {
+        user: { select: { id: true, email: true, nombres: true, createdAt: true } },
+        arMarcadores: { select: { id: true, nombre: true, titulo: true, activo: true }, orderBy: { createdAt: 'desc' } },
+        recorridos360: { select: { id: true, nombre: true, titulo: true, activo: true }, orderBy: { createdAt: 'desc' } },
+      },
+    })
+    if (!negocio) throw new NegocioNotFoundError('No se encontró ese negocio')
+    return negocio
+  })
+}
+
+/// Como [NegocioProfileInput] pero el admin puede mandar `null` para
+/// limpiar un dato que la empresa llenó mal.
+export interface AdminNegocioInput {
+  nombre?: string
+  categoria?: string | null
+  descripcion?: string | null
+  direccion?: string | null
+  telefono?: string | null
+  sitioWeb?: string | null
+  horario?: string | null
+  latitud?: number | null
+  longitud?: number | null
+}
+
+/// El admin puede corregir los datos de cualquier negocio (pendiente o no)
+/// antes de aprobarlo — no pasa por [assertOwnedNegocio].
+export async function updateNegocioAdmin(negocioId: string, data: AdminNegocioInput) {
+  await withDbGuard(async () => {
+    const existe = await prisma.negocioProfile.findUnique({ where: { id: negocioId }, select: { id: true } })
+    if (!existe) throw new NegocioNotFoundError('No se encontró ese negocio')
+    await prisma.negocioProfile.update({ where: { id: negocioId }, data })
+  })
+  return getNegocioAdmin(negocioId)
+}
+
+export async function adminUploadNegocioPortada(negocioId: string, file: { buffer: Buffer; mimetype: string }) {
+  if (!ALLOWED_IMAGE_TYPES[file.mimetype]) {
+    throw new Error('Formato de imagen no soportado (usa PNG, JPG, WEBP o GIF)')
+  }
+  await withDbGuard(async () => {
+    const existe = await prisma.negocioProfile.findUnique({ where: { id: negocioId }, select: { id: true } })
+    if (!existe) throw new NegocioNotFoundError('No se encontró ese negocio')
+    return guardarPortada(negocioId, file)
+  })
+  return getNegocioAdmin(negocioId)
 }
 
 export async function listNegociosAll() {

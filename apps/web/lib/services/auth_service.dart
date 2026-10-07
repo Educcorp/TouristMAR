@@ -149,6 +149,10 @@ class NegocioSummary {
   final String? arMarcador;
   final String? arGeo;
   final bool esAdicional;
+  final String? portada;
+  final String? direccion;
+  final double? latitud;
+  final double? longitud;
 
   const NegocioSummary({
     required this.id,
@@ -163,6 +167,10 @@ class NegocioSummary {
     this.arMarcador,
     this.arGeo,
     this.esAdicional = false,
+    this.portada,
+    this.direccion,
+    this.latitud,
+    this.longitud,
   });
 
   bool get pendiente => estado == 'pendiente';
@@ -182,6 +190,100 @@ class NegocioSummary {
         arMarcador: json['arMarcador'] as String?,
         arGeo: json['arGeo'] as String?,
         esAdicional: json['esAdicional'] as bool? ?? false,
+        portada: json['portada'] as String?,
+        direccion: json['direccion'] as String?,
+        latitud: (json['latitud'] as num?)?.toDouble(),
+        longitud: (json['longitud'] as num?)?.toDouble(),
+      );
+}
+
+/// Marcador de RA o recorrido 360 ya ligado a un negocio (resumen para el
+/// detalle de la solicitud en el panel admin).
+class ContenidoLigado {
+  final String id;
+  final String nombre;
+  final String titulo;
+  final bool activo;
+
+  const ContenidoLigado({required this.id, required this.nombre, required this.titulo, required this.activo});
+
+  factory ContenidoLigado.fromJson(Map<String, dynamic> json) => ContenidoLigado(
+        id: json['id'] as String,
+        nombre: json['nombre'] as String,
+        titulo: json['titulo'] as String? ?? '',
+        activo: json['activo'] as bool? ?? true,
+      );
+}
+
+/// Todo lo que el admin ve (y puede editar) de una solicitud de negocio:
+/// los datos que mandó la empresa desde su panel, el dueño y el contenido de
+/// realidad aumentada / recorridos 360 que ya tiene ligado.
+class NegocioDetalle {
+  final String id;
+  final String nombre;
+  final String? categoria;
+  final String? descripcion;
+  final String? direccion;
+  final String? telefono;
+  final String? sitioWeb;
+  final String? horario;
+  final String? portada;
+  final double? latitud;
+  final double? longitud;
+  final String estado;
+  final String email;
+  final String contacto;
+  final DateTime solicitadoEn;
+  final List<ContenidoLigado> marcadores;
+  final List<ContenidoLigado> recorridos;
+
+  const NegocioDetalle({
+    required this.id,
+    required this.nombre,
+    this.categoria,
+    this.descripcion,
+    this.direccion,
+    this.telefono,
+    this.sitioWeb,
+    this.horario,
+    this.portada,
+    this.latitud,
+    this.longitud,
+    required this.estado,
+    required this.email,
+    required this.contacto,
+    required this.solicitadoEn,
+    this.marcadores = const [],
+    this.recorridos = const [],
+  });
+
+  bool get pendiente => estado == 'pendiente';
+  bool get aprobado => estado == 'aprobado';
+  bool get rechazado => estado == 'rechazado';
+  bool get tieneUbicacion => latitud != null && longitud != null;
+
+  factory NegocioDetalle.fromJson(Map<String, dynamic> json) => NegocioDetalle(
+        id: json['id'] as String,
+        nombre: json['nombre'] as String,
+        categoria: json['categoria'] as String?,
+        descripcion: json['descripcion'] as String?,
+        direccion: json['direccion'] as String?,
+        telefono: json['telefono'] as String?,
+        sitioWeb: json['sitioWeb'] as String?,
+        horario: json['horario'] as String?,
+        portada: json['portada'] as String?,
+        latitud: (json['latitud'] as num?)?.toDouble(),
+        longitud: (json['longitud'] as num?)?.toDouble(),
+        estado: json['estado'] as String? ?? 'pendiente',
+        email: json['email'] as String? ?? '',
+        contacto: json['contacto'] as String? ?? '',
+        solicitadoEn: DateTime.parse(json['solicitadoEn'] as String),
+        marcadores: ((json['marcadores'] as List?) ?? const [])
+            .map((m) => ContenidoLigado.fromJson(m as Map<String, dynamic>))
+            .toList(),
+        recorridos: ((json['recorridos'] as List?) ?? const [])
+            .map((r) => ContenidoLigado.fromJson(r as Map<String, dynamic>))
+            .toList(),
       );
 }
 
@@ -441,15 +543,25 @@ class AuthService {
     String? categoria,
     String? descripcion,
     String? direccion,
+    String? telefono,
+    String? horario,
+    String? sitioWeb,
+    double? latitud,
+    double? longitud,
   }) async {
+    bool lleno(String? v) => v != null && v.trim().isNotEmpty;
     final res = await _client.post(
       Uri.parse('$apiUrl/auth/profile/negocios'),
       headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
       body: jsonEncode({
         'nombre': nombre,
-        if (categoria != null && categoria.trim().isNotEmpty) 'categoria': categoria,
-        if (descripcion != null && descripcion.trim().isNotEmpty) 'descripcion': descripcion,
-        if (direccion != null && direccion.trim().isNotEmpty) 'direccion': direccion,
+        if (lleno(categoria)) 'categoria': categoria,
+        if (lleno(descripcion)) 'descripcion': descripcion,
+        if (lleno(direccion)) 'direccion': direccion,
+        if (lleno(telefono)) 'telefono': telefono,
+        if (lleno(horario)) 'horario': horario,
+        if (lleno(sitioWeb)) 'sitioWeb': sitioWeb,
+        if (latitud != null && longitud != null) ...{'latitud': latitud, 'longitud': longitud},
       }),
     );
 
@@ -485,6 +597,41 @@ class AuthService {
   Future<List<NegocioSummary>> adminListNegociosPendientes(String token) async {
     final data = await _get('/admin/negocios/pendientes', token);
     return (data['negocios'] as List).map((n) => NegocioSummary.fromJson(n as Map<String, dynamic>)).toList();
+  }
+
+  Future<NegocioDetalle> adminGetNegocio(String token, String negocioId) async {
+    final data = await _get('/admin/negocios/$negocioId', token);
+    return NegocioDetalle.fromJson(data['negocio'] as Map<String, dynamic>);
+  }
+
+  /// [fields] admite `null` en los textos opcionales para borrarlos.
+  Future<NegocioDetalle> adminUpdateNegocio(String token, String negocioId, Map<String, dynamic> fields) async {
+    final data = await _patch('/admin/negocios/$negocioId', token, fields);
+    return NegocioDetalle.fromJson(data['negocio'] as Map<String, dynamic>);
+  }
+
+  Future<NegocioDetalle> adminUploadNegocioPortada(String token, String negocioId, Uint8List bytes, String filename) async {
+    final ext = filename.contains('.') ? filename.split('.').last.toLowerCase() : 'jpg';
+    final subtype = ext == 'jpg' ? 'jpeg' : ext;
+
+    final request = http.MultipartRequest('POST', Uri.parse('$apiUrl/admin/negocios/$negocioId/portada'))
+      ..headers['Authorization'] = 'Bearer $token'
+      ..files.add(http.MultipartFile.fromBytes(
+        'file',
+        bytes,
+        filename: filename,
+        contentType: MediaType('image', subtype),
+      ));
+
+    final streamed = await _client.send(request);
+    final res = await http.Response.fromStream(streamed);
+    final data = _decode(res.body);
+
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      throw AuthError((data['error'] as String?) ?? 'No se pudo subir la imagen');
+    }
+
+    return NegocioDetalle.fromJson(data['negocio'] as Map<String, dynamic>);
   }
 
   Future<void> adminApproveNegocio(String token, String negocioId) {

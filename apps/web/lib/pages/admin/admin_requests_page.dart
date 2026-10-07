@@ -10,13 +10,19 @@ import '../../widgets/admin/ds_button.dart';
 import '../../widgets/admin/ds_card.dart';
 import '../../widgets/admin/ds_icon_badge.dart';
 import '../../widgets/admin/ds_states.dart';
+import 'admin_negocio_detalle_page.dart';
 
 /// Contenido de la sección "Solicitudes" embebido en [AdminShell] — sin
 /// Scaffold/AppBar propio, ya que el sidebar/topbar los provee el shell.
 class AdminRequestsPage extends StatefulWidget {
   final AuthService authService;
 
-  AdminRequestsPage({super.key, AuthService? authService}) : authService = authService ?? AuthService();
+  /// El admin pidió, desde el detalle de una solicitud, añadir contenido de
+  /// RA para ese negocio — el panel cambia a la sección correspondiente.
+  final void Function(ContenidoNegocio contenido, String negocioId)? onAbrirContenido;
+
+  AdminRequestsPage({super.key, AuthService? authService, this.onAbrirContenido})
+      : authService = authService ?? AuthService();
 
   @override
   State<AdminRequestsPage> createState() => _AdminRequestsPageState();
@@ -78,6 +84,25 @@ class _AdminRequestsPageState extends State<AdminRequestsPage> {
     }
   }
 
+  Future<void> _abrirDetalle(NegocioSummary negocio) async {
+    final resultado = await abrirDetalleNegocio(context, negocioId: negocio.id, authService: widget.authService);
+    if (!mounted || resultado == null) return;
+    if (resultado.aprobado != null) {
+      setState(() => _requests.removeWhere((r) => r.id == negocio.id));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(resultado.aprobado!
+              ? 'Solicitud aprobada. El negocio ya puede acceder a su panel.'
+              : 'Solicitud rechazada.'),
+        ),
+      );
+    } else if (resultado.editado) {
+      _load();
+    }
+    final contenido = resultado.abrirContenido;
+    if (contenido != null) widget.onAbrirContenido?.call(contenido, negocio.id);
+  }
+
   @override
   Widget build(BuildContext context) {
     return RefreshIndicator(
@@ -127,6 +152,7 @@ class _AdminRequestsPageState extends State<AdminRequestsPage> {
                   isDeciding: _deciding.contains(r.id),
                   onApprove: () => _decide(r, true),
                   onReject: () => _decide(r, false),
+                  onOpen: () => _abrirDetalle(r),
                 ),
               ))
           .toList(),
@@ -139,37 +165,63 @@ class _RequestRow extends StatelessWidget {
   final bool isDeciding;
   final VoidCallback onApprove;
   final VoidCallback onReject;
+  final VoidCallback onOpen;
 
-  const _RequestRow({required this.negocio, required this.isDeciding, required this.onApprove, required this.onReject});
+  const _RequestRow({
+    required this.negocio,
+    required this.isDeciding,
+    required this.onApprove,
+    required this.onReject,
+    required this.onOpen,
+  });
 
   @override
   Widget build(BuildContext context) {
     final date = formatDateEs(negocio.solicitadoEn);
 
     return DsCard(
+      onTap: onOpen,
       child: LayoutBuilder(
         builder: (context, constraints) {
           final compact = Breakpoints.isCompact(constraints.maxWidth);
+          final badges = Wrap(
+            spacing: AppSpacing.sm,
+            runSpacing: 4,
+            children: [
+              if (negocio.esAdicional) const DsBadge(text: 'Negocio adicional', tone: BadgeTone.info),
+              const DsBadge(text: 'Pendiente', tone: BadgeTone.warning),
+            ],
+          );
+          // En pantallas angostas (celular) las insignias van debajo del
+          // nombre; a lo ancho no caben junto a él y la fila se desborda.
           final identity = Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              DsIconBadgeCircle(icon: Icons.apartment, color: AppColors.businessOrange),
+              _Miniatura(url: negocio.portada),
               const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(negocio.nombre, style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700, fontSize: 14)),
+                    Text(
+                      negocio.nombre,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700, fontSize: 14),
+                    ),
                     const SizedBox(height: 2),
                     Text(negocio.categoria ?? 'Sin categoría', style: AppTypography.bodySmall),
+                    if (compact) ...[
+                      const SizedBox(height: 6),
+                      badges,
+                    ],
                   ],
                 ),
               ),
-              if (negocio.esAdicional) ...[
-                const DsBadge(text: 'Negocio adicional', tone: BadgeTone.info),
+              if (!compact) ...[
                 const SizedBox(width: AppSpacing.sm),
+                badges,
               ],
-              const DsBadge(text: 'Pendiente', tone: BadgeTone.warning),
             ],
           );
 
@@ -182,6 +234,10 @@ class _RequestRow extends StatelessWidget {
                 _InfoChip(icon: Icons.person_outline, text: negocio.contacto),
                 _InfoChip(icon: Icons.mail_outline, text: negocio.email),
                 _InfoChip(icon: Icons.event_outlined, text: date),
+                _InfoChip(
+                  icon: negocio.latitud != null ? Icons.location_on_outlined : Icons.location_off_outlined,
+                  text: negocio.latitud != null ? 'Con ubicación' : 'Sin ubicación',
+                ),
               ],
             ),
           );
@@ -194,10 +250,18 @@ class _RequestRow extends StatelessWidget {
                     height: 20,
                     child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.slate400),
                   )
-                : Row(
+                : Wrap(
+                    spacing: AppSpacing.sm,
+                    runSpacing: AppSpacing.sm,
                     children: [
+                      DsButton(
+                        label: 'Ver y editar',
+                        icon: Icons.open_in_new,
+                        size: DsButtonSize.sm,
+                        accent: AppColors.adminViolet,
+                        onPressed: onOpen,
+                      ),
                       DsButton(label: 'Rechazar', variant: DsButtonVariant.danger, size: DsButtonSize.sm, onPressed: onReject),
-                      const SizedBox(width: AppSpacing.sm),
                       DsButton(
                         label: 'Aprobar',
                         variant: DsButtonVariant.secondary,
@@ -229,8 +293,34 @@ class _InfoChip extends StatelessWidget {
       children: [
         Icon(icon, size: 13, color: AppColors.slate500),
         const SizedBox(width: 6),
-        Text(text, style: AppTypography.bodySmall),
+        Flexible(child: Text(text, style: AppTypography.bodySmall, overflow: TextOverflow.ellipsis)),
       ],
+    );
+  }
+}
+
+/// Portada que mandó la empresa, en chico; si no mandó, el ícono de negocio.
+class _Miniatura extends StatelessWidget {
+  final String? url;
+
+  // ignore: prefer_const_constructors_in_immutables
+  _Miniatura({required this.url});
+
+  @override
+  Widget build(BuildContext context) {
+    final u = url;
+    if (u == null || u.isEmpty) {
+      return DsIconBadgeCircle(icon: Icons.apartment, color: AppColors.businessOrange);
+    }
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(10),
+      child: Image.network(
+        u,
+        width: 44,
+        height: 44,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) => DsIconBadgeCircle(icon: Icons.apartment, color: AppColors.businessOrange),
+      ),
     );
   }
 }

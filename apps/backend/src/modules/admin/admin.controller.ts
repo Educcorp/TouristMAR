@@ -11,8 +11,12 @@ import {
   listAdmins,
   createAdmin,
   deleteAdmin,
+  getNegocioAdmin,
+  updateNegocioAdmin,
+  adminUploadNegocioPortada,
   DatabaseNotReadyError,
   CannotModifyAdminError,
+  NegocioNotFoundError,
 } from '../auth/auth.service'
 import { toPublicUser } from '../auth/auth.controller'
 import type { AuthedRequest } from '../auth/auth.middleware'
@@ -41,6 +45,10 @@ export async function listPendingNegocios(_req: AuthedRequest, res: Response) {
         email: n.user.email,
         contacto: n.user.nombres,
         solicitadoEn: n.createdAt,
+        portada: n.portada,
+        direccion: n.direccion,
+        latitud: n.latitud,
+        longitud: n.longitud,
         // Distingue, para el admin, un registro nuevo de una empresa que
         // sugiere un negocio adicional (ya tiene al menos uno aprobado).
         esAdicional: aprobadosPorDueño.has(n.userId),
@@ -77,6 +85,97 @@ export async function listNegocios(_req: AuthedRequest, res: Response) {
       return res.status(503).json({ error: err.message })
     }
     return res.status(500).json({ error: 'Error interno' })
+  }
+}
+
+type NegocioAdmin = Awaited<ReturnType<typeof getNegocioAdmin>>
+
+/// Forma del detalle que consume la página "Detalle de solicitud" del panel.
+function toNegocioDetalle(n: NegocioAdmin) {
+  return {
+    id: n.id,
+    ownerId: n.userId,
+    nombre: n.nombre,
+    categoria: n.categoria,
+    descripcion: n.descripcion,
+    direccion: n.direccion,
+    telefono: n.telefono,
+    sitioWeb: n.sitioWeb,
+    horario: n.horario,
+    portada: n.portada,
+    galeria: n.galeria,
+    latitud: n.latitud,
+    longitud: n.longitud,
+    estado: n.estado,
+    email: n.user.email,
+    contacto: n.user.nombres,
+    solicitadoEn: n.createdAt,
+    marcadores: n.arMarcadores,
+    recorridos: n.recorridos360,
+  }
+}
+
+function negocioError(res: Response, err: unknown) {
+  if (err instanceof DatabaseNotReadyError) {
+    return res.status(503).json({ error: err.message })
+  }
+  if (err instanceof NegocioNotFoundError) {
+    return res.status(404).json({ error: err.message })
+  }
+  return res.status(400).json({ error: (err as Error).message })
+}
+
+export async function getNegocio(req: AuthedRequest, res: Response) {
+  try {
+    const negocio = await getNegocioAdmin(req.params.negocioId)
+    return res.json({ negocio: toNegocioDetalle(negocio) })
+  } catch (err) {
+    return negocioError(res, err)
+  }
+}
+
+// Texto vacío = borrar el dato (null). Así el admin puede limpiar un campo
+// que la empresa llenó mal.
+const textoOpcional = (max: number) =>
+  z.preprocess((v) => (typeof v === 'string' && v.trim() === '' ? null : v), z.string().max(max).nullable().optional())
+
+const updateNegocioSchema = z.object({
+  nombre: z.string().trim().min(1).max(120).optional(),
+  categoria: textoOpcional(80),
+  descripcion: textoOpcional(350),
+  direccion: textoOpcional(200),
+  telefono: textoOpcional(40),
+  sitioWeb: textoOpcional(200),
+  horario: textoOpcional(200),
+  latitud: z.number().min(-90).max(90).nullable().optional(),
+  longitud: z.number().min(-180).max(180).nullable().optional(),
+})
+
+export async function updateNegocio(req: AuthedRequest, res: Response) {
+  const parsed = updateNegocioSchema.safeParse(req.body)
+  if (!parsed.success) {
+    return res.status(400).json({ error: 'Datos inválidos', details: parsed.error.flatten().fieldErrors })
+  }
+  try {
+    const negocio = await updateNegocioAdmin(req.params.negocioId, parsed.data)
+    return res.json({ negocio: toNegocioDetalle(negocio) })
+  } catch (err) {
+    return negocioError(res, err)
+  }
+}
+
+export async function uploadNegocioPortadaAdmin(req: AuthedRequest & { file?: Express.Multer.File }, res: Response) {
+  if (!req.file) {
+    return res.status(400).json({ error: 'No se recibió ningún archivo' })
+  }
+  try {
+    const negocio = await adminUploadNegocioPortada(req.params.negocioId, {
+      buffer: req.file.buffer,
+      mimetype: req.file.mimetype,
+    })
+    return res.json({ negocio: toNegocioDetalle(negocio) })
+  } catch (err) {
+    return negocioError(res, err)
   }
 }
 
