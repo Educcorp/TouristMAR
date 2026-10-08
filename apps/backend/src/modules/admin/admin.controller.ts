@@ -174,7 +174,7 @@ const lugarSchema = z
     direccion: z.string().trim().max(200).nullable().optional(),
     telefono: z.string().trim().max(40).nullable().optional(),
     sitioWeb: z.string().trim().max(200).nullable().optional(),
-    horario: z.string().trim().max(200).nullable().optional(),
+    horario: z.string().trim().max(300).nullable().optional(),
     latitud: z.number().min(-90).max(90).nullable().optional(),
     longitud: z.number().min(-180).max(180).nullable().optional(),
   })

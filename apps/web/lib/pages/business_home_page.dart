@@ -5,6 +5,7 @@ import '../models/business_profile.dart';
 import '../navegacion/rutas.dart';
 import '../navegacion/sesion.dart';
 import '../services/auth_service.dart';
+import '../widgets/business/aviso_informacion_incompleta.dart';
 import '../widgets/business/business_shell.dart';
 import '../widgets/themed_builder.dart';
 import 'business_dashboard_page.dart';
@@ -52,6 +53,50 @@ class _BusinessHomePageState extends State<BusinessHomePage> {
   void _selectSection(BusinessSection section) => _ir(section);
 
   void _refreshSelected() => setState(() {});
+
+  /// El aviso de "Completa la información de tu negocio" está abierto (para
+  /// no apilar dos).
+  bool _avisoAbierto = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _revisarInformacion();
+  }
+
+  @override
+  void didUpdateWidget(BusinessHomePage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Cambió de sección o de negocio (la URL): se vuelve a revisar.
+    _revisarInformacion();
+  }
+
+  /// Si el negocio elegido ya está aprobado pero su ficha está incompleta,
+  /// sale el aviso obligatorio y de ahí se va a "Editar negocio" en modo
+  /// obligatorio. Hasta que la complete no puede usar el panel.
+  void _revisarInformacion() {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted || _avisoAbierto) return;
+      final negocio = _selected;
+      if (!negocio.verified || negocio.informacionCompleta) return;
+
+      _avisoAbierto = true;
+      final completar = await mostrarAvisoInformacionIncompleta(context, negocio);
+      _avisoAbierto = false;
+      if (!mounted) return;
+
+      if (completar == true) {
+        await context.push<bool>(rutaCompletarNegocio(negocio.id));
+        if (!mounted) return;
+        setState(() {});
+        // Si regresó sin terminar (p. ej. con "atrás" del navegador), el
+        // aviso vuelve a salir.
+        _revisarInformacion();
+      } else if (completar == false) {
+        cerrarSesion(context);
+      }
+    });
+  }
 
   Future<void> _openSuggestForm() async {
     final created = await context.push<BusinessProfile>('/empresa/sugerir');

@@ -312,7 +312,7 @@ void main() {
       );
       await _tocar(tester, find.text('Abrir'));
 
-      await tester.enterText(_campo('Horario'), 'Lun–Sáb 10:00–20:00');
+      await tester.enterText(_campo('Teléfono'), '314 555 0000');
       await tester.pump();
       await _tocar(tester, find.text('Guardar y aprobar'));
 

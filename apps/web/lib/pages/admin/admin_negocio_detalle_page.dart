@@ -12,6 +12,7 @@ import '../../widgets/admin/ds_button.dart';
 import '../../widgets/admin/ds_card.dart';
 import '../../widgets/admin/ds_states.dart';
 import '../../widgets/app_text_field.dart';
+import '../../widgets/horario_field.dart';
 import '../../widgets/mapa/ubicacion_lugar.dart';
 import '../../widgets/themed_builder.dart';
 
@@ -71,7 +72,8 @@ class _AdminNegocioDetallePageState extends State<AdminNegocioDetallePage> {
   final _descripcion = TextEditingController();
   final _direccion = TextEditingController();
   final _telefono = TextEditingController();
-  final _horario = TextEditingController();
+  /// Horario elegido con el selector (null = no se tocó: se conserva el guardado).
+  String? _horario;
   final _sitioWeb = TextEditingController();
 
   NegocioDetalle? _negocio;
@@ -85,7 +87,7 @@ class _AdminNegocioDetallePageState extends State<AdminNegocioDetallePage> {
   String? _error;
 
   List<TextEditingController> get _controllers =>
-      [_nombre, _categoria, _descripcion, _direccion, _telefono, _horario, _sitioWeb];
+      [_nombre, _categoria, _descripcion, _direccion, _telefono, _sitioWeb];
 
   @override
   void initState() {
@@ -117,7 +119,7 @@ class _AdminNegocioDetallePageState extends State<AdminNegocioDetallePage> {
     _descripcion.text = n.descripcion ?? '';
     _direccion.text = n.direccion ?? '';
     _telefono.text = n.telefono ?? '';
-    _horario.text = n.horario ?? '';
+    _horario = null;
     _sitioWeb.text = n.sitioWeb ?? '';
     _cargandoCampos = false;
     _ubicacion = n.tieneUbicacion ? Coordenadas(n.latitud!, n.longitud!) : null;
@@ -178,7 +180,7 @@ class _AdminNegocioDetallePageState extends State<AdminNegocioDetallePage> {
         'descripcion': texto(_descripcion),
         'direccion': texto(_direccion),
         'telefono': texto(_telefono),
-        'horario': texto(_horario),
+        'horario': _horario ?? _negocio?.horario,
         'sitioWeb': texto(_sitioWeb),
         'latitud': _ubicacion?.lat,
         'longitud': _ubicacion?.lng,
@@ -348,11 +350,17 @@ class _AdminNegocioDetallePageState extends State<AdminNegocioDetallePage> {
                         accentColor: AppColors.adminViolet,
                       ),
                       const SizedBox(height: AppSpacing.md),
-                      AppTextField(
-                        label: 'Horario',
-                        icon: Icons.schedule_outlined,
-                        controller: _horario,
-                        accentColor: AppColors.adminViolet,
+                      HorarioField(
+                        // Se vuelve a crear con lo guardado en el servidor.
+                        key: ValueKey('horario-${n.horario}'),
+                        inicial: n.horario,
+                        acento: AppColors.adminViolet,
+                        habilitado: !ocupado,
+                        obligatorio: false,
+                        onChanged: (v) => setState(() {
+                          _horario = v;
+                          _dirty = true;
+                        }),
                       ),
                       const SizedBox(height: AppSpacing.md),
                       AppTextField(
