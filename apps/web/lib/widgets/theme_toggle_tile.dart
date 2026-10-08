@@ -41,7 +41,6 @@ class ThemeToggleTile extends StatelessWidget {
               Switch.adaptive(
                 value: isDark,
                 onChanged: (_) => ThemeController.toggle(),
-                activeThumbColor: AppColors.brandTeal,
               ),
             ],
           ),

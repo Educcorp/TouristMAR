@@ -370,10 +370,10 @@ class _PuntoYo extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF2563EB),
+        color: AppColors.azul,
         shape: BoxShape.circle,
         border: Border.all(color: Colors.white, width: 3),
-        boxShadow: [BoxShadow(color: const Color(0xFF2563EB).withValues(alpha: 0.4), blurRadius: 10, spreadRadius: 4)],
+        boxShadow: [BoxShadow(color: AppColors.azul.withValues(alpha: 0.4), blurRadius: 10, spreadRadius: 4)],
       ),
     );
   }

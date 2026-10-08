@@ -298,7 +298,7 @@ class _EstadoChip extends StatelessWidget {
           child: Text(
             texto,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600),
+            style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600),
           ),
         ),
       ],
@@ -792,7 +792,7 @@ class _Pasos extends StatelessWidget {
                   alignment: Alignment.center,
                   decoration: BoxDecoration(color: AppColors.overlay(0.08), shape: BoxShape.circle),
                   child: Text('${i + 1}',
-                      style: TextStyle(color: AppColors.textPrimary, fontSize: 11, fontWeight: FontWeight.w700)),
+                      style: TextStyle(color: AppColors.textPrimary, fontSize: 12, fontWeight: FontWeight.w700)),
                 ),
                 const SizedBox(width: AppSpacing.md),
                 Expanded(

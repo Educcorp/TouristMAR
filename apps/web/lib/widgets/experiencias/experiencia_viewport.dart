@@ -100,7 +100,7 @@ class ExperienciaViewport extends StatelessWidget {
                     const SizedBox(width: 4),
                     Text(
                       info.tituloCorto.toUpperCase(),
-                      style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w700, letterSpacing: 1),
+                      style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 1),
                     ),
                   ],
                 ),

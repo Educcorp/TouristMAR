@@ -86,7 +86,7 @@ class _NotificationBellState extends State<NotificationBell> {
                     child: Text(
                       _unread > 9 ? '9+' : '$_unread',
                       textAlign: TextAlign.center,
-                      style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w700),
+                      style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700),
                     ),
                   ),
                 ),
@@ -347,7 +347,7 @@ class _NotificationTile extends StatelessWidget {
                     const SizedBox(height: 3),
                     Text(notification.cuerpo, style: TextStyle(color: AppColors.textSecondary, fontSize: 12.5, height: 1.35)),
                     const SizedBox(height: 4),
-                    Text(formatDateEs(notification.createdAt), style: TextStyle(color: AppColors.slate500, fontSize: 10.5)),
+                    Text(formatDateEs(notification.createdAt), style: TextStyle(color: AppColors.slate500, fontSize: 12)),
                   ],
                 ),
               ),

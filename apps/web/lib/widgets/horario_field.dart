@@ -223,7 +223,6 @@ class _FilaDia extends StatelessWidget {
               Switch(
                 key: ValueKey('horario-$indice-abierto'),
                 value: dia.abierto,
-                activeThumbColor: acento,
                 onChanged: habilitado ? (v) => onChanged(dia.conAbierto(v)) : null,
               ),
             ],

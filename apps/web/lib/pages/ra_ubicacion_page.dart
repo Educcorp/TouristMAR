@@ -338,7 +338,7 @@ class _RaUbicacionPageState extends State<RaUbicacionPage> with WidgetsBindingOb
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [Color(0xFF0B1A2E), Color(0xFF12324F)],
+          colors: [Color(0xFF0B2A3A), Color(0xFF123F52)],
         ),
       ),
       alignment: Alignment.center,
@@ -613,7 +613,7 @@ class _GuiaCompletaState extends State<_GuiaCompleta> {
     final color = AppColors.emerald;
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xF20B1A2E),
+        color: const Color(0xF20B2A3A),
         borderRadius: BorderRadius.circular(AppRadius.card),
         border: Border.all(color: color, width: 2),
         boxShadow: [BoxShadow(color: color.withValues(alpha: 0.35), blurRadius: 24)],

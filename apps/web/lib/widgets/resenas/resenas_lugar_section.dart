@@ -142,7 +142,7 @@ class _ResenasLugarSectionState extends State<ResenasLugarSection> {
           ),
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Eliminar', style: TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.w600)),
+            child: const Text('Eliminar', style: TextStyle(color: AppColors.rojo, fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -219,7 +219,7 @@ class _ResenasLugarSectionState extends State<ResenasLugarSection> {
                           onPressed: _eliminar,
                           icon: const Icon(Icons.delete_outline, size: 15),
                           label: const Text('Eliminar'),
-                          style: TextButton.styleFrom(foregroundColor: const Color(0xFFEF4444)),
+                          style: TextButton.styleFrom(foregroundColor: AppColors.rojo),
                         ),
                       ],
                     )

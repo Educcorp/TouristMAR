@@ -448,7 +448,7 @@ class _Tira extends StatelessWidget {
                           '${i + 1}. ${e.titulo}',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(color: Colors.white, fontSize: 11),
+                          style: const TextStyle(color: Colors.white, fontSize: 12),
                         ),
                       ),
                     ),

@@ -52,7 +52,7 @@ class PlaceCard extends StatelessWidget {
                       ),
                       child: Text(
                         category,
-                        style: TextStyle(color: AppColors.panelNavy, fontSize: 11, fontWeight: FontWeight.w600),
+                        style: TextStyle(color: AppColors.panelNavy, fontSize: 12, fontWeight: FontWeight.w600),
                       ),
                     ),
                   ),
