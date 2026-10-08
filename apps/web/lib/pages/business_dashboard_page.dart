@@ -103,8 +103,6 @@ class _BusinessDashboardContentState extends State<BusinessDashboardContent> {
                   ),
                   const SizedBox(height: 12),
                   ResenasRecientes(resenas: _resenas),
-                  const SizedBox(height: 20),
-                  _buildAlertBanner(),
                 ],
                 const SizedBox(height: 24),
               ],
@@ -305,49 +303,6 @@ class _BusinessDashboardContentState extends State<BusinessDashboardContent> {
           }).toList(),
         );
       },
-    );
-  }
-
-  Widget _buildAlertBanner() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.businessOrange.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.businessOrange.withValues(alpha: 0.25)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(Icons.info_outline, size: 16, color: AppColors.businessOrange),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Completa tu perfil de negocio',
-                  style: TextStyle(color: AppColors.textPrimary, fontSize: 14, fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  'Agrega horarios detallados y al menos 5 fotos para aparecer destacado en el mapa.',
-                  style: TextStyle(color: AppColors.slate400, fontSize: 12),
-                ),
-                const SizedBox(height: 6),
-                GestureDetector(
-                  onTap: _openEdit,
-                  child: Text(
-                    'Completar ahora →',
-                    style: TextStyle(color: AppColors.businessOrange, fontSize: 12, fontWeight: FontWeight.w600),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

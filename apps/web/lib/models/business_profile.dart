@@ -1,5 +1,6 @@
 import '../services/auth_service.dart';
 import '../services/resenas_service.dart';
+import 'horario.dart';
 
 class BusinessProfile {
   final String id;
@@ -55,6 +56,27 @@ class BusinessProfile {
     this.longitud,
   });
 
+  /// Portada que se pone cuando el negocio todavía no sube la suya.
+  static const portadaPredeterminada = 'assets/images/place-playa-audiencia.jpg';
+
+  /// Lo que le falta a la ficha del negocio para estar completa (lo que ve
+  /// el visitante). Mientras falte algo, al entrar al panel de empresa sale
+  /// el aviso obligatorio "Completa la información de tu negocio".
+  List<String> get datosFaltantes => [
+        if (businessName.trim().isEmpty) 'Nombre del negocio',
+        if (category.trim().isEmpty) 'Categoría',
+        if (description.trim().isEmpty) 'Descripción',
+        if (coverImage.trim().isEmpty || coverImage.startsWith('assets/')) 'Foto de portada',
+        if (address.trim().isEmpty) 'Dirección',
+        if (latitud == null || longitud == null) 'Ubicación en el mapa',
+        if (phone.replaceAll(RegExp(r'[^0-9]'), '').length < 7) 'Teléfono',
+        // Un horario escrito a mano antes del selector de días y horas
+        // también cuenta como pendiente: se tiene que volver a elegir.
+        if (!(HorarioSemanal.parse(hours)?.algunDiaAbierto ?? false)) 'Horario (días y horas)',
+      ];
+
+  bool get informacionCompleta => datosFaltantes.isEmpty;
+
   /// Trae las reseñas reales de este negocio y deja al día la calificación
   /// promedio, el total y las reseñas del último mes. Devuelve null si no se
   /// pudo (sin conexión): se conserva lo que ya había.
@@ -83,7 +105,7 @@ class BusinessProfile {
       email: user.email,
       category: negocio.categoria ?? '',
       description: negocio.descripcion ?? '',
-      coverImage: negocio.portada ?? 'assets/images/place-playa-audiencia.jpg',
+      coverImage: negocio.portada ?? portadaPredeterminada,
       gallery: negocio.galeria,
       rating: 0,
       totalReviews: 0,
