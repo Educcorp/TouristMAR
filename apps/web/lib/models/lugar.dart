@@ -35,23 +35,23 @@ class ExperienciaInfo {
 
   /// Color de acento por tipo — getter porque [AppColors] depende del tema.
   Color get color => switch (tipo) {
-        ExperienciaTipo.arMarcador => AppColors.brandTeal,
-        ExperienciaTipo.arGeo => AppColors.emerald,
-        ExperienciaTipo.recorrido360 => AppColors.oceanBlue,
+        ExperienciaTipo.arMarcador => AppColors.turquesaTexto,
+        ExperienciaTipo.arGeo => AppColors.azulTexto,
+        ExperienciaTipo.recorrido360 => AppColors.rojoTexto,
       };
 
   static ExperienciaInfo of(ExperienciaTipo tipo) => switch (tipo) {
         ExperienciaTipo.arMarcador => const ExperienciaInfo._(
             ExperienciaTipo.arMarcador,
             'Realidad aumentada con marcador',
-            'RA marcador',
+            'Escanear marcador',
             'Apunta la cámara al marcador del lugar y mira el contenido 3D sobre él.',
             Icons.qr_code_scanner,
           ),
         ExperienciaTipo.arGeo => const ExperienciaInfo._(
             ExperienciaTipo.arGeo,
             'RA por geolocalización',
-            'RA geo',
+            'RA al llegar',
             'Acércate al lugar: verás su información flotando en la cámara y, al llegar, la guía completa.',
             Icons.explore_outlined,
           ),
@@ -103,14 +103,26 @@ extension CategoriaLugarX on CategoriaLugar {
         CategoriaLugar.otro => Icons.place_outlined,
       };
 
+  /// Color para texto e iconos sobre el casco (pasa contraste 4.5:1).
   Color get color => switch (this) {
-        CategoriaLugar.playa => AppColors.brandTeal,
-        CategoriaLugar.mirador => AppColors.emerald,
-        CategoriaLugar.restaurante => AppColors.orange,
-        CategoriaLugar.hotel => AppColors.adminViolet,
-        CategoriaLugar.recreacion => AppColors.oceanBlue,
-        CategoriaLugar.cultura => AppColors.amber,
+        CategoriaLugar.playa => AppColors.turquesaTexto,
+        CategoriaLugar.mirador => AppColors.azulTexto,
+        CategoriaLugar.restaurante => AppColors.amarilloTexto,
+        CategoriaLugar.hotel => AppColors.tinta,
+        CategoriaLugar.recreacion => AppColors.azulTexto,
+        CategoriaLugar.cultura => AppColors.rojoTexto,
         CategoriaLugar.otro => AppColors.slate400,
+      };
+
+  /// Esmalte de la franja de flotación (relleno; el texto encima va en tinta).
+  Color get esmalte => switch (this) {
+        CategoriaLugar.playa => AppColors.turquesa,
+        CategoriaLugar.mirador => AppColors.azul,
+        CategoriaLugar.restaurante => AppColors.amarillo,
+        CategoriaLugar.hotel => AppColors.riel,
+        CategoriaLugar.recreacion => AppColors.azul,
+        CategoriaLugar.cultura => AppColors.rojo,
+        CategoriaLugar.otro => AppColors.slate500,
       };
 }
 
@@ -191,6 +203,19 @@ class Lugar {
 
   static bool idEsReal(String id) => _uuid.hasMatch(id);
 
+  /// Lugar de ejemplo (no viene de la base de datos): su foto es ilustrativa.
+  bool get esEjemplo => !idEsReal(id);
+
+  /// Matrícula pintada del lugar, como la de una panga: "MZ-014". Es estable
+  /// para cada lugar (se deriva de su id) y solo sirve para reconocerlo.
+  String get matricula {
+    var h = 0;
+    for (final c in id.codeUnits) {
+      h = (h * 31 + c) & 0x7fffffff;
+    }
+    return 'MZ-${(h % 900 + 100)}';
+  }
+
   CategoriaLugar get categoria => CategoriaLugarDetector.detectar(categoriaTexto);
 
   bool tiene(ExperienciaTipo tipo) => switch (tipo) {
@@ -221,7 +246,7 @@ class Lugar {
         direccion: negocio.direccion,
         horario: negocio.horario,
         telefono: negocio.telefono,
-        portada: negocio.portada ?? 'assets/images/place-playa-audiencia.jpg',
+        portada: negocio.portada ?? '',
         galeria: negocio.galeria,
         ubicacion: ubicacion ??
             (negocio.latitud != null && negocio.longitud != null

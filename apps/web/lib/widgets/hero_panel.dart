@@ -2,148 +2,98 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import 'app_logo.dart';
 
-class _Category {
-  final String label;
-  final IconData icon;
-  const _Category(this.label, this.icon);
-}
-
-class _Stat {
-  final String value;
-  final String label;
-  const _Stat(this.value, this.label);
-}
-
-const _categories = [
-  _Category('Playas', Icons.beach_access),
-  _Category('Senderismo', Icons.hiking),
-  _Category('Restaurantes', Icons.restaurant),
-  _Category('Miradores', Icons.landscape),
-  _Category('Recreación', Icons.attractions),
+/// Lo que la app hace, pintado con la franja de su esmalte. Son capacidades
+/// reales del producto, no cifras: el panel no inventa conteos ni promedios.
+const _franjas = [
+  (AppColors.turquesa, Icons.qr_code_scanner, 'Realidad aumentada con marcadores'),
+  (AppColors.azul, Icons.explore_outlined, 'Realidad aumentada al llegar al lugar'),
+  (AppColors.rojo, Icons.threesixty, 'Recorridos 360°'),
+  (AppColors.amarillo, Icons.storefront_outlined, 'Negocios locales verificados'),
 ];
 
-const _stats = [
-  _Stat('80+', 'Lugares'),
-  _Stat('4.8★', 'Valoración media'),
-  _Stat('360°', 'Fotos inmersivas'),
-];
-
+/// Panel izquierdo del login en pantallas anchas: la foto de la bahía arriba
+/// de la línea de flotación y, abajo, el casco en tinta marina con lo que se
+/// puede hacer en la app.
 class HeroPanel extends StatelessWidget {
   const HeroPanel({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      fit: StackFit.expand,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Image.asset(
-          'assets/images/hero-manzanillo.jpg',
-          fit: BoxFit.cover,
-          alignment: Alignment.centerLeft,
-        ),
-        DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.bottomCenter,
-              end: Alignment.topCenter,
-              colors: [
-                AppColors.scrimDark,
-                AppColors.scrimDark.withValues(alpha: 0.5),
-                Colors.black.withValues(alpha: 0.1),
-              ],
-            ),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.all(40),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        Expanded(
+          child: Stack(
+            fit: StackFit.expand,
             children: [
-              Row(
-                children: [
-                  AppLogo(size: 36, sobreFoto: true),
-                  const SizedBox(width: 8),
-                  const Text(
-                    'TOURISTMAR',
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, letterSpacing: 3, fontSize: 14),
+              Image.asset('assets/images/hero-manzanillo.jpg', fit: BoxFit.cover, alignment: Alignment.centerLeft),
+              Positioned(
+                left: 32,
+                top: 28,
+                child: Container(
+                  padding: const EdgeInsets.fromLTRB(10, 8, 14, 8),
+                  decoration: BoxDecoration(color: AppColors.riel, borderRadius: BorderRadius.circular(AppRadius.button)),
+                  child: Row(
+                    children: [
+                      AppLogo(size: 30, sobreFoto: true),
+                      const SizedBox(width: 8),
+                      const Text(
+                        'TOURISTMAR',
+                        style: TextStyle(color: AppColors.sobreRiel, fontWeight: FontWeight.w700, letterSpacing: 2, fontSize: 14),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              const Spacer(),
-              const Text(
-                'MANZANILLO · COLIMA',
-                style: TextStyle(color: Color(0xFF22D3EE), fontWeight: FontWeight.w600, fontSize: 12, letterSpacing: 3),
-              ),
-              const SizedBox(height: 16),
-              Text('Descubre el Pacífico\nMexicano',
-                  style: Theme.of(context).textTheme.headlineLarge?.copyWith(color: Colors.white)),
-              const SizedBox(height: 16),
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 420),
-                child: const Text(
-                  'Playas, senderos de hiking, miradores y sabores locales — todo '
-                  'centralizado para que explores Manzanillo como nunca antes.',
-                  style: TextStyle(color: Colors.white70, fontSize: 15, height: 1.4),
-                ),
-              ),
-              const SizedBox(height: 20),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: _categories.map((c) => _CategoryPill(category: c)).toList(),
-              ),
-              const SizedBox(height: 24),
-              Container(
-                padding: const EdgeInsets.only(top: 20),
-                decoration: BoxDecoration(
-                  border: Border(top: BorderSide(color: AppColors.overlay(0.1))),
-                ),
-                child: Row(
-                  children: _stats
-                      .map(
-                        (s) => Padding(
-                          padding: const EdgeInsets.only(right: 40),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(s.value, style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w600)),
-                              Text(s.label, style: const TextStyle(color: Colors.white60, fontSize: 12)),
-                            ],
-                          ),
-                        ),
-                      )
-                      .toList(),
                 ),
               ),
             ],
           ),
         ),
+        Row(children: [for (final f in _franjas) Expanded(child: Container(height: kFranja, color: f.$1))]),
+        Container(
+          color: AppColors.riel,
+          padding: const EdgeInsets.fromLTRB(40, 32, 40, 40),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Manzanillo, lugar por lugar',
+                style: AppTypography.display.copyWith(color: AppColors.sobreRiel, fontSize: 44),
+              ),
+              const SizedBox(height: 12),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 460),
+                child: const Text(
+                  'Playas, mariscos, miradores y cultura del puerto. Encuentra qué hay cerca '
+                  'y vive cada lugar con realidad aumentada o en 360°.',
+                  style: TextStyle(color: AppColors.sobreRielSuave, fontSize: 17, height: 1.45),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Wrap(
+                spacing: 24,
+                runSpacing: 14,
+                children: [
+                  for (final f in _franjas)
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 18,
+                          height: kFranja,
+                          decoration: BoxDecoration(color: f.$1, borderRadius: BorderRadius.circular(2)),
+                        ),
+                        const SizedBox(width: 8),
+                        Icon(f.$2, size: 18, color: AppColors.sobreRiel),
+                        const SizedBox(width: 6),
+                        Text(f.$3, style: const TextStyle(color: AppColors.sobreRiel, fontSize: 15, fontWeight: FontWeight.w500)),
+                      ],
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
       ],
-    );
-  }
-}
-
-class _CategoryPill extends StatelessWidget {
-  final _Category category;
-  const _CategoryPill({required this.category});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.3),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: AppColors.overlay(0.1)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(category.icon, size: 14, color: Colors.white),
-          const SizedBox(width: 6),
-          Text(category.label, style: const TextStyle(color: Colors.white, fontSize: 12)),
-        ],
-      ),
     );
   }
 }

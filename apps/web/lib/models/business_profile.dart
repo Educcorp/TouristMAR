@@ -57,7 +57,8 @@ class BusinessProfile {
   });
 
   /// Portada que se pone cuando el negocio todavía no sube la suya.
-  static const portadaPredeterminada = 'assets/images/place-playa-audiencia.jpg';
+  /// Sin portada: [CoverImage] pinta el casco vacío en lugar de una foto ajena.
+  static const portadaPredeterminada = '';
 
   /// Lo que le falta a la ficha del negocio para estar completa (lo que ve
   /// el visitante). Mientras falte algo, al entrar al panel de empresa sale

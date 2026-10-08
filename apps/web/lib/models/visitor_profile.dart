@@ -84,31 +84,9 @@ class VisitorProfile {
       email: user.email,
       bio: user.bio ?? '',
       avatarUrl: user.avatarUrl,
-      // TODO: "visitados" todavía no tiene backend — placeholder. Las reseñas
-      // son reales: se cargan con [cargarResenas].
-      visited: const [
-        VisitedPlace(
-          image: 'assets/images/place-playa-audiencia.jpg',
-          category: 'Playas',
-          name: 'Playa de Santiago',
-          rating: 4.8,
-          dateLabel: '12 ago 2026',
-        ),
-        VisitedPlace(
-          image: 'assets/images/place-laguna-cuyutlan.jpg',
-          category: 'Recreación',
-          name: 'Laguna de Cuyutlán',
-          rating: 4.6,
-          dateLabel: '3 jul 2026',
-        ),
-        VisitedPlace(
-          image: 'assets/images/place-cerro-vigia.jpg',
-          category: 'Miradores',
-          name: 'Cerro del Vigía',
-          rating: 4.7,
-          dateLabel: '18 jun 2026',
-        ),
-      ],
+      // "Lugares visitados" todavía no tiene backend: queda vacío en vez de
+      // mostrar visitas inventadas. Las reseñas son reales ([cargarResenas]).
+      visited: const [],
     );
   }
 }
