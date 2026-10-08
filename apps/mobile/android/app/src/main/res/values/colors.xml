@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Paleta "Pangas pintadas" (ver apps/web/lib/theme/app_theme.dart). -->
+    <color name="casco">#F4F7F6</color>
+    <color name="casco_noche">#071C26</color>
+</resources>
