@@ -96,7 +96,12 @@ class _LoginFormState extends State<LoginForm> {
     Sesion.iniciar(user);
     final ruta = rutaInicio(user);
     if (ruta != null) {
-      context.go(ruta);
+      // `replace`, no `go`: reemplaza esta entrada del historial en vez de
+      // apilar una nueva. Si no, "atrás" después de iniciar sesión volvía a
+      // este mismo formulario de login (que, con sesión abierta, rebota de
+      // inmediato de regreso al panel) — un vaivén sin efecto visible antes
+      // de llegar a lo que de verdad había en el historial del navegador.
+      context.replace(ruta);
       return;
     }
     setState(() {

@@ -88,7 +88,10 @@ Future<void> abrirRecorrido(BuildContext context, RecorridoPublico recorrido, {S
 /// al registro de negocio).
 void cerrarSesion(BuildContext context, {String? mensaje, bool registroNegocio = false}) {
   Sesion.cerrar(mensaje: mensaje);
-  context.go(registroNegocio ? '/login?registro=negocio' : '/login');
+  // `replace`, no `go`: ver el comentario en `_routeUser` (login_form.dart) —
+  // misma razón, pero al revés (no queremos que "atrás" regrese al panel ya
+  // cerrado).
+  context.replace(registroNegocio ? '/login?registro=negocio' : '/login');
 }
 
 /// Pantalla sin animación: cambiar de sección se siente como cambiar de

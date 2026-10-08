@@ -9,16 +9,22 @@ abstract class KeyValueStore {
   void remove(String key);
 }
 
-abstract class GoogleLogin {
-  /// Si esta pestaña es la ventana emergente que abrió [start] y ya volvió
-  /// del login de Google, le entrega el resultado a quien la abrió (vía
-  /// `postMessage`) y se cierra sola — devuelve `true` en ese caso, y quien
-  /// llama no debe construir la app normal en esta pestaña. En móvil (no hay
-  /// ventana emergente) siempre devuelve `false`.
-  bool resolvePopupIfNeeded();
+/// Datos con los que el navegador vuelve del login con Google (van en la URL).
+/// En móvil no hay redirección, así que siempre llega vacío.
+class GoogleRedirectResult {
+  final String? token;
+  final String? error;
+  final String? message;
 
-  /// Abre el selector de cuentas de Google (una ventana emergente en la web,
-  /// el flujo nativo en móvil) y devuelve la sesión iniciada, o null si el
-  /// usuario cierra la ventana/cancela sin elegir cuenta.
+  const GoogleRedirectResult({this.token, this.error, this.message});
+}
+
+abstract class GoogleLogin {
+  /// Lee (y limpia de la URL) lo que dejó el redireccionamiento de Google.
+  GoogleRedirectResult consumeRedirectResult();
+
+  /// Web: redirige el navegador y devuelve null (la página se recarga).
+  /// Móvil: abre el selector de cuentas y devuelve la sesión, o null si el
+  /// usuario lo cancela.
   Future<AuthResponse?> start(AuthService authService);
 }
