@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart';
 
 import '../models/business_profile.dart';
 import '../models/visitor_profile.dart';
-import '../platform/platform_services.dart';
 import '../services/auth_service.dart';
 import '../services/session_storage.dart';
 
@@ -25,14 +24,9 @@ class Sesion {
   static VisitorProfile? _perfil;
   static List<BusinessProfile>? _negocios;
 
-  /// Abre la sesión guardada (o la que regresa del login con Google en la
-  /// web). Si el token ya no sirve, la borra.
+  /// Abre la sesión guardada. Si el token ya no sirve, la borra.
   static Future<void> restaurar([AuthService? authService]) async {
-    final redirect = PlatformServices.googleLogin.consumeRedirectResult();
-    if (redirect.error != null) {
-      mensajePendiente = redirect.message ?? 'No se pudo iniciar sesión con Google';
-    }
-    final token = redirect.token ?? SessionStorage.token;
+    final token = SessionStorage.token;
     if (token == null) return;
     try {
       final user = await (authService ?? AuthService()).getCurrentUser(token);

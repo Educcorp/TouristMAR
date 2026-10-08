@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import 'navegacion/rutas.dart';
 import 'navegacion/sesion.dart';
+import 'platform/platform_services.dart';
 import 'services/auth_service.dart';
 import 'services/experiencias_launcher.dart';
 import 'services/ubicacion_dispositivo.dart';
@@ -16,6 +17,10 @@ void main() {
   // cualquier ruta (ver apps/backend/src/index.ts), así que recargar
   // /admin/mapa funciona.
   usePathUrlStrategy();
+  // Si esta pestaña es la ventana emergente del login con Google (ver
+  // platform_defaults_web.dart) que ya volvió con el resultado, le avisa a
+  // quien la abrió y se cierra: no debe construir la app en esta ventana.
+  if (PlatformServices.googleLogin.resolvePopupIfNeeded()) return;
   // En la web el recorrido 360° se ve con el visor de Flutter (la RA solo
   // existe en la app móvil, con Unity).
   ExperienciasLauncher.current = const VisorFlutterLauncher();

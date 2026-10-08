@@ -22,7 +22,7 @@ class _MemoryStore implements KeyValueStore {
 
 class _UnconfiguredGoogleLogin implements GoogleLogin {
   @override
-  GoogleRedirectResult consumeRedirectResult() => const GoogleRedirectResult();
+  bool resolvePopupIfNeeded() => false;
 
   @override
   Future<AuthResponse?> start(AuthService authService) {
