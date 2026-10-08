@@ -107,6 +107,20 @@ class _LoginFormState extends State<LoginForm> {
 
   bool _isGoogleSigningIn = false;
 
+  /// La pestaña elegida ("Visitante"/"Empresa") no es solo cosmética: cada
+  /// una solo deja entrar al tipo de cuenta que le corresponde (una empresa
+  /// no debe poder entrar por "Visitante" y terminar en su panel de negocio,
+  /// ni un turista/admin colarse por "Empresa"). null = puede entrar.
+  String? _tipoNoCoincide(AuthUser user) {
+    if (_isBusiness && !user.isNegocio) {
+      return 'Esta cuenta no es de empresa. Inicia sesión desde la pestaña "Visitante".';
+    }
+    if (!_isBusiness && user.isNegocio) {
+      return 'Esta es una cuenta de empresa. Inicia sesión desde la pestaña "Empresa".';
+    }
+    return null;
+  }
+
   Future<void> _handleGoogleOrBusinessClick() async {
     if (_isGoogleSigningIn) return;
     _isGoogleSigningIn = true;
@@ -114,6 +128,11 @@ class _LoginFormState extends State<LoginForm> {
     try {
       final response = await PlatformServices.googleLogin.start(widget.authService);
       if (response == null || !mounted) return;
+      final mismatch = _tipoNoCoincide(response.user);
+      if (mismatch != null) {
+        setState(() => _error = mismatch);
+        return;
+      }
       SessionStorage.saveToken(response.token);
       _routeUser(response.user);
     } catch (err) {
@@ -144,6 +163,14 @@ class _LoginFormState extends State<LoginForm> {
               rol: _isBusiness ? 'negocio' : 'turista',
               categoria: _isBusiness ? valorTipoNegocio(_tipoNegocio, _categoryController) : null,
             );
+      final mismatch = _tipoNoCoincide(response.user);
+      if (mismatch != null) {
+        setState(() {
+          _error = mismatch;
+          _isSubmitting = false;
+        });
+        return;
+      }
       SessionStorage.saveToken(response.token);
       _routeUser(response.user);
       // Igual que en `_restoreSession`: no tocar el estado de este formulario
