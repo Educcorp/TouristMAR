@@ -58,6 +58,11 @@ class _BusinessHomePageState extends State<BusinessHomePage> {
   /// no apilar dos).
   bool _avisoAbierto = false;
 
+  /// Está en "Editar negocio" completando la ficha: mientras tanto no se
+  /// revisa (el router reconstruye el panel que queda debajo y, sin esto, el
+  /// aviso volvía a salir encima del formulario).
+  bool _completando = false;
+
   @override
   void initState() {
     super.initState();
@@ -67,8 +72,10 @@ class _BusinessHomePageState extends State<BusinessHomePage> {
   @override
   void didUpdateWidget(BusinessHomePage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Cambió de sección o de negocio (la URL): se vuelve a revisar.
-    _revisarInformacion();
+    // Solo si cambió de sección o de negocio (la URL) se vuelve a revisar.
+    if (oldWidget.seccion != widget.seccion || oldWidget.negocioId != widget.negocioId) {
+      _revisarInformacion();
+    }
   }
 
   /// Si el negocio elegido ya está aprobado pero su ficha está incompleta,
@@ -76,24 +83,30 @@ class _BusinessHomePageState extends State<BusinessHomePage> {
   /// obligatorio. Hasta que la complete no puede usar el panel.
   void _revisarInformacion() {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      if (!mounted || _avisoAbierto) return;
+      if (!mounted || _avisoAbierto || _completando) return;
       final negocio = _selected;
       if (!negocio.verified || negocio.informacionCompleta) return;
 
       _avisoAbierto = true;
       final completar = await mostrarAvisoInformacionIncompleta(context, negocio);
-      _avisoAbierto = false;
       if (!mounted) return;
 
       if (completar == true) {
-        await context.push<bool>(rutaCompletarNegocio(negocio.id));
+        _completando = true;
+        _avisoAbierto = false;
+        try {
+          await context.push<bool>(rutaCompletarNegocio(negocio.id));
+        } finally {
+          _completando = false;
+        }
         if (!mounted) return;
         setState(() {});
         // Si regresó sin terminar (p. ej. con "atrás" del navegador), el
         // aviso vuelve a salir.
         _revisarInformacion();
-      } else if (completar == false) {
-        cerrarSesion(context);
+      } else {
+        _avisoAbierto = false;
+        if (completar == false) cerrarSesion(context);
       }
     });
   }

@@ -258,6 +258,15 @@ void main() {
 
       expect(find.byType(BusinessEditPage), findsOneWidget);
       expect(tester.widget<BusinessEditPage>(find.byType(BusinessEditPage)).obligatorio, isTrue);
+      // Mientras llena la ficha el aviso no vuelve a salir encima del
+      // formulario (el router reconstruye el panel que queda debajo).
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pumpAndSettle();
+      expect(find.byType(AvisoInformacionIncompleta), findsNothing);
+      expect(find.text('Completar mi información'), findsNothing);
+      await tester.enterText(find.byType(EditableText).first, 'Café del Puerto Centro');
+      await tester.pumpAndSettle();
+      expect(find.byType(AvisoInformacionIncompleta), findsNothing);
       await _desmontar(tester);
     });
 
