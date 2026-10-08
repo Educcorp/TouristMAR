@@ -163,7 +163,6 @@ class _HomePageState extends State<HomePage> {
         name: _profile.name,
         email: _profile.email,
         avatarUrl: _profile.avatarUrl,
-        visitedCount: _profile.visited.length,
         reviewsCount: _profile.reviews.length,
       ),
       navItems: visitorNavItems(context, profile: _profile, current: VisitorSection.home),

@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
 
 import '../../models/lugar.dart';
+import '../../services/geocoding_service.dart';
 import '../../theme/app_theme.dart';
 import '../admin/ds_button.dart';
 import 'mapa_lugares.dart';
@@ -44,6 +47,13 @@ class CampoCoordenadas extends StatefulWidget {
   /// mover y tocar para poner el pin ahí mismo, sin abrir la ventana.
   final bool marcarEnMapa;
 
+  /// Si se da, cada vez que el pin cambia se busca una dirección aproximada
+  /// para esas coordenadas (Nominatim/OpenStreetMap) y se la entrega a quien
+  /// use este campo — así quien edita no tiene que escribirla a mano. Quien
+  /// la recibe decide si la aplica (p. ej. solo si el campo de dirección
+  /// seguía vacío).
+  final ValueChanged<String>? onDireccionSugerida;
+
   const CampoCoordenadas({
     super.key,
     required this.lugar,
@@ -52,6 +62,7 @@ class CampoCoordenadas extends StatefulWidget {
     this.habilitado = true,
     this.acento,
     this.marcarEnMapa = false,
+    this.onDireccionSugerida,
   });
 
   @override
@@ -64,10 +75,17 @@ class _CampoCoordenadasState extends State<CampoCoordenadas> {
   String? _error;
   final _mapa = MapController();
 
+  /// Evita que una respuesta de geocodificación vieja (de un pin que ya se
+  /// movió otra vez) le gane a la más reciente.
+  int _geoToken = 0;
+  bool _buscandoDireccion = false;
+  Timer? _geoDebounce;
+
   @override
   void dispose() {
     _texto.dispose();
     _mapa.dispose();
+    _geoDebounce?.cancel();
     super.dispose();
   }
 
@@ -83,8 +101,24 @@ class _CampoCoordenadasState extends State<CampoCoordenadas> {
       } catch (_) {
         // El mapa todavía no estaba dibujado: se centra solo al aparecer.
       }
+      // Con debounce: si el pin se mueve varias veces seguidas (o se teclean
+      // las coordenadas número a número), solo se busca la dirección de la
+      // última posición, no de cada paso intermedio.
+      _geoDebounce?.cancel();
+      _geoDebounce = Timer(const Duration(milliseconds: 600), () => _buscarDireccion(c));
     }
     widget.onChanged(c);
+  }
+
+  Future<void> _buscarDireccion(Coordenadas c) async {
+    final onDireccionSugerida = widget.onDireccionSugerida;
+    if (onDireccionSugerida == null) return;
+    final token = ++_geoToken;
+    setState(() => _buscandoDireccion = true);
+    final direccion = await GeocodingService.direccionAproximada(c.lat, c.lng);
+    if (!mounted || token != _geoToken) return;
+    setState(() => _buscandoDireccion = false);
+    if (direccion != null) onDireccionSugerida(direccion);
   }
 
   void _alEscribir(String texto) {
@@ -157,6 +191,21 @@ class _CampoCoordenadasState extends State<CampoCoordenadas> {
             ),
           ],
         ),
+        if (_buscandoDireccion) ...[
+          const SizedBox(height: 6),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: 12,
+                height: 12,
+                child: CircularProgressIndicator(strokeWidth: 1.5, color: AppColors.slate400),
+              ),
+              const SizedBox(width: 6),
+              Text('Buscando dirección aproximada…', style: AppTypography.bodySmall),
+            ],
+          ),
+        ],
         if (widget.marcarEnMapa) ...[
           const SizedBox(height: AppSpacing.sm),
           Row(

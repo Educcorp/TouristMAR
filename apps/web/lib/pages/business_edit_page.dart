@@ -408,6 +408,11 @@ class _BusinessEditPageState extends State<BusinessEditPage> {
                             habilitado: !_isSaving,
                             marcarEnMapa: true,
                             onChanged: (c) => setState(() => _ubicacion = c),
+                            onDireccionSugerida: (direccion) {
+                              if (_addressController.text.trim().isEmpty) {
+                                setState(() => _addressController.text = direccion);
+                              }
+                            },
                           ),
                           if (!_recorridoNoDisponible) ...[
                             const SizedBox(height: 16),

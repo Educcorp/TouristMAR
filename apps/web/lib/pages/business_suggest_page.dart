@@ -183,6 +183,9 @@ class _BusinessSuggestPageState extends State<BusinessSuggestPage> {
                       acento: AppColors.businessOrange,
                       habilitado: !_isSaving,
                       onChanged: (c) => _ubicacion = c,
+                      onDireccionSugerida: (direccion) {
+                        if (_addressController.text.trim().isEmpty) _addressController.text = direccion;
+                      },
                     ),
                     const SizedBox(height: 20),
                     AppTextField(

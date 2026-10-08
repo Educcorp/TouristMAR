@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../models/visitor_profile.dart';
+import '../services/favoritos_service.dart';
 import '../theme/app_theme.dart';
 import '../theme/breakpoints.dart';
 import '../widgets/app_button.dart';
@@ -25,6 +26,7 @@ class _ProfilePageState extends State<ProfilePage> {
     widget.profile.cargarResenas().then((_) {
       if (mounted) setState(() {});
     });
+    FavoritosService.instance.cargarIds();
   }
 
   Future<void> _editProfile() async {
@@ -45,7 +47,6 @@ class _ProfilePageState extends State<ProfilePage> {
         name: profile.name,
         email: profile.email,
         avatarUrl: profile.avatarUrl,
-        visitedCount: profile.visited.length,
         reviewsCount: profile.reviews.length,
       ),
       navItems: visitorNavItems(context, profile: profile, current: VisitorSection.profile),
