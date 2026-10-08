@@ -8,32 +8,13 @@ import '../services/auth_service.dart';
 import '../services/favoritos_service.dart';
 import '../services/lugares_service.dart';
 import '../theme/app_theme.dart';
-import '../theme/breakpoints.dart';
 import '../widgets/app_shell.dart';
-import '../widgets/place_card.dart';
-import '../widgets/quick_action_card.dart';
+import '../services/experiencias_launcher.dart';
+import '../widgets/casco_lugar.dart';
 import '../widgets/register_place_banner.dart';
 import '../widgets/themed_builder.dart';
 import '../utils/keyboard.dart';
 import '../widgets/user_avatar.dart';
-import '../widgets/notification_bell.dart';
-
-class _QuickAction {
-  final IconData icon;
-  final String label;
-  final Color accent;
-  final VoidCallback? onTap;
-  const _QuickAction(this.icon, this.label, this.accent, [this.onTap]);
-}
-
-class _FeaturedPlace {
-  final String lugarId;
-  final String image;
-  final String category;
-  final String name;
-  final double rating;
-  _FeaturedPlace(this.lugarId, this.image, this.category, this.name, this.rating);
-}
 
 class HomePage extends StatefulWidget {
   final AuthUser user;
@@ -64,19 +45,8 @@ class _HomePageState extends State<HomePage> {
     _profile.cargarResenas().then((_) {
       if (mounted) setState(() {});
     });
+    _cargarLugares();
   }
-
-  late final _quickActions = [
-    _QuickAction(Icons.map_outlined, 'Explorar mapa', AppColors.brandTeal, () => openVisitorMap(context, _profile)),
-    _QuickAction(Icons.favorite_border, 'Mis favoritos', AppColors.orange, () => openVisitorFavoritos(context, _profile)),
-    _QuickAction(Icons.add, 'Proponer lugar', AppColors.brandTeal, _proposePlace),
-    _QuickAction(
-      Icons.notifications_outlined,
-      'Notificaciones',
-      AppColors.amber,
-      () => showNotificationsDialog(context, AppColors.brandTeal),
-    ),
-  ];
 
   /// Error 1: el banner "¿Te gustaría registrar un lugar nuevo?" (y la acción
   /// rápida "Proponer lugar") no hacían nada. El backend solo deja registrar
@@ -111,33 +81,58 @@ class _HomePageState extends State<HomePage> {
     cerrarSesion(context, registroNegocio: true);
   }
 
-  late final List<_FeaturedPlace> _places = [
-    _FeaturedPlace('demo-audiencia', 'assets/images/place-playa-audiencia.jpg', 'Playas', 'Playa Audiencia', 4.9),
-    _FeaturedPlace('demo-vigia', 'assets/images/place-cerro-vigia.jpg', 'Miradores', 'Cerro del Vigía', 4.8),
-    _FeaturedPlace('demo-cuyutlan', 'assets/images/place-laguna-cuyutlan.jpg', 'Recreación', 'Laguna de Cuyutlán', 4.6),
-  ];
+  /// Lugares públicos (reales y de ejemplo); `null` mientras cargan.
+  List<Lugar>? _lugares;
 
-  Future<void> _openPlace(String lugarId) async {
-    final lugares = await const LugaresService().listarPublicos();
-    final lugar = lugares.where((l) => l.id == lugarId).firstOrNull;
-    if (lugar == null || !mounted) return;
-    await abrirLugar(context, lugar);
+  /// Ubicación del visitante, solo si la compartió (se pide con un botón,
+  /// nunca al abrir la pantalla).
+  Coordenadas? _yo;
+  bool _pidiendoUbicacion = false;
+
+  String _busqueda = '';
+  CategoriaLugar? _filtro;
+  final _buscador = TextEditingController();
+
+  @override
+  void dispose() {
+    _buscador.dispose();
+    super.dispose();
   }
 
-  /// Las tarjetas destacadas de hoy son lugares de ejemplo (sin registro en
-  /// la base de datos), así que todavía no se pueden guardar; en cuanto sean
-  /// negocios reales el corazón funciona igual que en la ficha del lugar.
-  Future<void> _toggleFavorite(String lugarId) async {
-    final messenger = ScaffoldMessenger.of(context);
-    if (!Lugar.idEsReal(lugarId)) {
-      messenger.showSnackBar(const SnackBar(content: Text('Este lugar es de ejemplo y aún no se puede guardar en favoritos')));
-      return;
+  Future<void> _cargarLugares() async {
+    final lugares = await const LugaresService().listarPublicos();
+    if (mounted) setState(() => _lugares = lugares);
+  }
+
+  Future<void> _pedirUbicacion() async {
+    setState(() => _pidiendoUbicacion = true);
+    final yo = await UbicacionProvider.current.actual();
+    if (!mounted) return;
+    setState(() {
+      _pidiendoUbicacion = false;
+      _yo = yo;
+    });
+    if (yo == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No pudimos leer tu ubicación. Revisa el permiso del navegador o del teléfono.')),
+      );
     }
-    try {
-      await FavoritosService.instance.alternar(lugarId);
-    } on FavoritosError catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(e.message)));
+  }
+
+  double? _distancia(Lugar l) => (_yo == null || l.ubicacion == null) ? null : distanciaMetros(_yo!, l.ubicacion!);
+
+  /// Filtrados por búsqueda y franja; con ubicación, del más cercano al más
+  /// lejano (los que no tienen pin van al final).
+  List<Lugar> get _visibles {
+    final q = _busqueda.trim().toLowerCase();
+    final lista = (_lugares ?? const <Lugar>[])
+        .where((l) => _filtro == null || l.categoria == _filtro)
+        .where((l) => q.isEmpty || l.nombre.toLowerCase().contains(q) || l.categoria.etiqueta.toLowerCase().contains(q))
+        .toList();
+    if (_yo != null) {
+      lista.sort((a, b) => (_distancia(a) ?? double.infinity).compareTo(_distancia(b) ?? double.infinity));
     }
+    return lista;
   }
 
   String get _greeting {
@@ -166,142 +161,41 @@ class _HomePageState extends State<HomePage> {
         reviewsCount: _profile.reviews.length,
       ),
       navItems: visitorNavItems(context, profile: _profile, current: VisitorSection.home),
-      body: SingleChildScrollView(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 960),
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildHeroCard(firstName),
-                  const SizedBox(height: 20),
-                  _buildSearchBar(),
-                  const SizedBox(height: 28),
-                  Text(
-                    'Acciones rápidas',
-                    style: TextStyle(color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 12),
-                  _buildQuickActions(),
-                  const SizedBox(height: 28),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      // Flexible + ellipsis: en pantallas angostas o con letra
-                      // grande el título ya no empuja "Ver todos" fuera del borde.
-                      Flexible(
-                        child: Text(
-                          'Lugares destacados',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.w600),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        'Ver todos',
-                        style: TextStyle(color: AppColors.brandTeal, fontSize: 13, fontWeight: FontWeight.w500),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  _buildFeaturedPlaces(),
-                  const SizedBox(height: 24),
-                  RegisterPlaceBanner(onTap: _proposePlace),
-                  const SizedBox(height: 24),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeroCard(String firstName) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(20),
-      child: SizedBox(
-        height: 200,
-        width: double.infinity,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            Image.asset('assets/images/hero-manzanillo.jpg', fit: BoxFit.cover, alignment: Alignment.centerLeft),
-            DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.bottomLeft,
-                  end: Alignment.topRight,
-                  colors: [AppColors.scrimDark.withValues(alpha: 0.9), AppColors.scrimDark.withValues(alpha: 0.35)],
+      body: CustomScrollView(
+        slivers: [
+          SliverToBoxAdapter(
+            child: _Ancho(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('$_greeting, $firstName', style: AppTypography.h1),
+                    const SizedBox(height: 4),
+                    Text('¿A dónde vas hoy en Manzanillo?', style: AppTypography.body),
+                    const SizedBox(height: 16),
+                    _buildSearchBar(),
+                    const SizedBox(height: 14),
+                  ],
                 ),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  const Text(
-                    'MANZANILLO · COLIMA',
-                    style: TextStyle(color: Color(0xFF22D3EE), fontWeight: FontWeight.w600, fontSize: 11, letterSpacing: 2),
-                  ),
-                  const SizedBox(height: 6),
-                  // Ícono en vez de emoji: el emoji ☀️ lleva un selector de
-                  // variante (U+FE0F) que ninguna fuente Noto cubre, y Flutter
-                  // web avisaba en consola que no podía dibujarlo.
-                  Text.rich(
-                    TextSpan(children: [
-                      TextSpan(text: '$_greeting, $firstName '),
-                      WidgetSpan(
-                        alignment: PlaceholderAlignment.middle,
-                        child: Icon(
-                          DateTime.now().hour < 19 ? Icons.wb_sunny_rounded : Icons.nightlight_round,
-                          size: 22,
-                          color: const Color(0xFFFBBF24),
-                        ),
-                      ),
-                    ]),
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 24, color: Colors.white),
-                  ),
-                  const SizedBox(height: 2),
-                  const Text('¿Qué vas a explorar hoy?', style: TextStyle(color: Colors.white70, fontSize: 13)),
-                ],
+          ),
+          SliverToBoxAdapter(child: _Ancho(child: _buildFranjas())),
+          SliverToBoxAdapter(
+            child: _Ancho(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 28, 20, 12),
+                child: _buildEncabezadoLista(),
               ),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSearchBar() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        color: AppColors.panelNavySoft,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.overlay(0.1)),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.search, size: 18, color: AppColors.slate500),
-          const SizedBox(width: 10),
-          Expanded(
-            child: TextField(
-              // Tocar fuera de la barra cierra el teclado (en Android, por
-              // defecto, un toque fuera no le quita el foco al campo).
-              onTapOutside: (_) => hideKeyboard(),
-              style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
-              decoration: InputDecoration(
-                border: InputBorder.none,
-                isDense: true,
-                contentPadding: const EdgeInsets.symmetric(vertical: 14),
-                hintText: 'Buscar playas, restaurantes, miradores...',
-                hintStyle: TextStyle(color: AppColors.slate500),
+          ),
+          SliverToBoxAdapter(child: _Ancho(child: _buildLista())),
+          SliverToBoxAdapter(
+            child: _Ancho(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 28, 20, 32),
+                child: RegisterPlaceBanner(onTap: _proposePlace),
               ),
             ),
           ),
@@ -310,60 +204,163 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildQuickActions() {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final columns = Breakpoints.isCompact(constraints.maxWidth) ? 2 : 4;
-        return GridView.count(
-          crossAxisCount: columns,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          mainAxisSpacing: 12,
-          crossAxisSpacing: 12,
-          childAspectRatio: 1.05,
-          children: _quickActions
-              .map((action) => QuickActionCard(
-                    icon: action.icon,
-                    label: action.label,
-                    accent: action.accent,
-                    onTap: action.onTap,
-                  ))
-              .toList(),
-        );
-      },
-    );
-  }
-
-  Widget _buildFeaturedPlaces() {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isNarrow = Breakpoints.isCompact(constraints.maxWidth);
-        final cardWidth = isNarrow ? constraints.maxWidth : (constraints.maxWidth - 24) / 3;
-
-        return ValueListenableBuilder<Set<String>>(
-          valueListenable: FavoritosService.instance.ids,
-          builder: (context, _, __) => Wrap(
-          spacing: 12,
-          runSpacing: 12,
-          children: _places
-              .map(
-                (place) => SizedBox(
-                  width: cardWidth,
-                  child: PlaceCard(
-                    image: place.image,
-                    category: place.category,
-                    name: place.name,
-                    rating: place.rating,
-                    isFavorite: FavoritosService.instance.esFavorito(place.lugarId),
-                    onTap: () => _openPlace(place.lugarId),
-                    onToggleFavorite: () => _toggleFavorite(place.lugarId),
+  Widget _buildFranjas() {
+    const categorias = [
+      CategoriaLugar.playa,
+      CategoriaLugar.restaurante,
+      CategoriaLugar.mirador,
+      CategoriaLugar.recreacion,
+      CategoriaLugar.cultura,
+      CategoriaLugar.hotel,
+    ];
+    return SizedBox(
+      height: 48,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        itemCount: categorias.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (context, i) {
+          final c = categorias[i];
+          final activa = _filtro == c;
+          // Sobre un esmalte oscuro (azul, rojo, tinta) el texto va en blanco.
+          final sobreOscuro = c.esmalte.computeLuminance() < 0.3;
+          final colorTexto = activa ? (sobreOscuro ? Colors.white : AppColors.riel) : AppColors.tinta;
+          return Semantics(
+            selected: activa,
+            button: true,
+            label: 'Filtrar por ${c.etiqueta}',
+            excludeSemantics: true,
+            child: Material(
+              color: activa ? c.esmalte : AppColors.cubierta,
+              shape: StadiumBorder(side: BorderSide(color: activa ? c.esmalte : AppColors.borderSubtle)),
+              child: InkWell(
+                customBorder: const StadiumBorder(),
+                onTap: () => setState(() => _filtro = activa ? null : c),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 16,
+                        height: kFranja,
+                        decoration: BoxDecoration(
+                          color: activa ? colorTexto : c.esmalte,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(c.etiqueta, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: colorTexto)),
+                    ],
                   ),
                 ),
-              )
-              .toList(),
-          ),
-        );
-      },
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
+
+  Widget _buildEncabezadoLista() {
+    return Row(
+      children: [
+        Expanded(child: Text(_yo != null ? 'Cerca de ti' : 'Lugares en Manzanillo', style: AppTypography.h2)),
+        if (_yo == null)
+          TextButton.icon(
+            onPressed: _pidiendoUbicacion ? null : _pedirUbicacion,
+            icon: _pidiendoUbicacion
+                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                : const Icon(Icons.near_me_outlined, size: 20),
+            label: const Text('Ordenar por cercanía'),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildLista() {
+    final cargando = _lugares == null;
+    final lugares = cargando ? const <Lugar>[] : _visibles;
+    if (!cargando && lugares.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 32),
+        child: Column(
+          children: [
+            Icon(Icons.travel_explore, size: 40, color: AppColors.slate400),
+            const SizedBox(height: 12),
+            Text('Nada coincide con tu búsqueda', style: AppTypography.h3),
+            const SizedBox(height: 4),
+            TextButton(
+              onPressed: () => setState(() {
+                _busqueda = '';
+                _filtro = null;
+                _buscador.clear();
+              }),
+              child: const Text('Ver todos los lugares'),
+            ),
+          ],
+        ),
+      );
+    }
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final columnas = constraints.maxWidth >= 900 ? 3 : (constraints.maxWidth >= 560 ? 2 : 1);
+          const espacio = 16.0;
+          final ancho = (constraints.maxWidth - espacio * (columnas - 1)) / columnas;
+          return Wrap(
+            spacing: espacio,
+            runSpacing: espacio,
+            children: cargando
+                ? [for (var i = 0; i < columnas * 2; i++) SizedBox(width: ancho, child: const CascoEsqueleto())]
+                : [
+                    for (final l in lugares)
+                      SizedBox(
+                        width: ancho,
+                        child: CascoLugar(lugar: l, distanciaMetros: _distancia(l), onTap: () => abrirLugar(context, l)),
+                      ),
+                  ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildSearchBar() {
+    return TextField(
+      controller: _buscador,
+      // Tocar fuera de la barra cierra el teclado (en Android, por defecto,
+      // un toque fuera no le quita el foco al campo).
+      onTapOutside: (_) => hideKeyboard(),
+      onChanged: (v) => setState(() => _busqueda = v),
+      textInputAction: TextInputAction.search,
+      style: TextStyle(color: AppColors.textPrimary, fontSize: 16),
+      decoration: InputDecoration(
+        hintText: 'Buscar playas, mariscos, miradores…',
+        prefixIcon: Icon(Icons.search, color: AppColors.slate400),
+        suffixIcon: _busqueda.isEmpty
+            ? null
+            : IconButton(
+                tooltip: 'Borrar búsqueda',
+                icon: const Icon(Icons.close),
+                onPressed: () => setState(() {
+                  _busqueda = '';
+                  _buscador.clear();
+                }),
+              ),
+      ),
+    );
+  }
+}
+
+/// Limita el contenido a una columna legible en pantallas anchas.
+class _Ancho extends StatelessWidget {
+  final Widget child;
+
+  const _Ancho({required this.child});
+
+  @override
+  Widget build(BuildContext context) =>
+      Center(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 1080), child: child));
 }

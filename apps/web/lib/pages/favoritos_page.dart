@@ -7,7 +7,7 @@ import '../services/favoritos_service.dart';
 import '../theme/app_theme.dart';
 import '../theme/breakpoints.dart';
 import '../widgets/app_shell.dart';
-import '../widgets/place_card.dart';
+import '../widgets/casco_lugar.dart';
 import '../widgets/themed_builder.dart';
 import '../widgets/user_avatar.dart';
 
@@ -73,15 +73,6 @@ class _FavoritosPageState extends State<FavoritosPage> {
     }
   }
 
-  Future<void> _quitar(Lugar lugar) async {
-    final messenger = ScaffoldMessenger.of(context);
-    try {
-      await FavoritosService.instance.alternar(lugar.id);
-    } on FavoritosError catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(e.message)));
-    }
-  }
-
   @override
   Widget build(BuildContext context) => ThemedBuilder(builder: _buildShell);
 
@@ -110,7 +101,7 @@ class _FavoritosPageState extends State<FavoritosPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Mis favoritos', style: AppTypography.h2),
+                    Text('Mis favoritos', style: AppTypography.h1),
                     const SizedBox(height: 4),
                     Text('Los lugares que guardaste para volver a visitar.', style: AppTypography.bodySmall),
                     const SizedBox(height: AppSpacing.lg),
@@ -134,9 +125,16 @@ class _FavoritosPageState extends State<FavoritosPage> {
 
   Widget _buildContenido() {
     if (_cargando) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 64),
-        child: Center(child: CircularProgressIndicator()),
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          final columnas = Breakpoints.isCompact(constraints.maxWidth) ? 1 : 3;
+          final ancho = (constraints.maxWidth - 16 * (columnas - 1)) / columnas;
+          return Wrap(
+            spacing: 16,
+            runSpacing: 16,
+            children: [for (var i = 0; i < columnas; i++) SizedBox(width: ancho, child: const CascoEsqueleto())],
+          );
+        },
       );
     }
     if (_error != null) {
@@ -161,24 +159,18 @@ class _FavoritosPageState extends State<FavoritosPage> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final columnas = Breakpoints.isCompact(constraints.maxWidth) ? 1 : 3;
-        final ancho = (constraints.maxWidth - 12 * (columnas - 1)) / columnas;
-        return Wrap(
-          spacing: 12,
-          runSpacing: 12,
-          children: _lugares
-              .map((lugar) => SizedBox(
-                    width: ancho,
-                    child: PlaceCard(
-                      image: lugar.portada,
-                      category: lugar.categoriaTexto.isEmpty ? lugar.categoria.etiqueta : lugar.categoriaTexto,
-                      name: lugar.nombre,
-                      rating: lugar.rating,
-                      isFavorite: true,
-                      onTap: () => abrirLugar(context, lugar),
-                      onToggleFavorite: () => _quitar(lugar),
-                    ),
-                  ))
-              .toList(),
+        final ancho = (constraints.maxWidth - 16 * (columnas - 1)) / columnas;
+        // Al quitar el corazón en un casco, el lugar sale de la lista.
+        return ValueListenableBuilder<Set<String>>(
+          valueListenable: FavoritosService.instance.ids,
+          builder: (context, ids, _) => Wrap(
+            spacing: 16,
+            runSpacing: 16,
+            children: [
+              for (final lugar in _lugares.where((l) => ids.contains(l.id)))
+                SizedBox(width: ancho, child: CascoLugar(lugar: lugar, onTap: () => abrirLugar(context, lugar))),
+            ],
+          ),
         );
       },
     );

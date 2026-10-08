@@ -5,6 +5,7 @@ import '../navegacion/sesion.dart';
 import '../theme/app_theme.dart';
 import '../theme/breakpoints.dart';
 import 'ruta_lugar_page.dart';
+import '../widgets/casco_lugar.dart';
 import '../widgets/cover_image.dart';
 import '../widgets/experiencias/experiencias_lugar.dart';
 import '../widgets/favorito_button.dart';
@@ -107,105 +108,101 @@ class _Hero extends StatelessWidget {
     final cat = lugar.categoria;
     final rating = resumen?.promedio ?? lugar.rating;
     final totalResenas = resumen?.total ?? lugar.totalResenas;
-    return SizedBox(
-      height: 300,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          CoverImage(source: lugar.portada),
-          DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.bottomCenter,
-                end: Alignment.topCenter,
-                colors: [AppColors.scrimDark.withValues(alpha: 0.95), AppColors.scrimDark.withValues(alpha: 0.1)],
-              ),
-            ),
-          ),
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Material(
-                    color: Colors.black.withValues(alpha: 0.4),
-                    shape: const CircleBorder(),
-                    child: IconButton(
-                      tooltip: 'Volver',
-                      onPressed: () => Navigator.of(context).maybePop(),
-                      icon: const Icon(Icons.arrow_back, color: Colors.white),
-                    ),
-                  ),
-                  const Spacer(),
-                  if (vistaPrevia)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: AppColors.amber,
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      child: const Text('VISTA PREVIA',
-                          style: TextStyle(color: AppColors.scrimDark, fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 1)),
-                    )
-                  else
-                    FavoritoButton(lugar: lugar, size: 24),
-                ],
-              ),
-            ),
-          ),
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 1040),
+    final esmalte = cat.esmalte;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SizedBox(
+          height: 280,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              CoverImage(source: lugar.portada),
+              SafeArea(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-                  child: Column(
+                  padding: const EdgeInsets.all(12),
+                  child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(color: cat.color, borderRadius: BorderRadius.circular(999)),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(cat.icon, size: 12, color: Colors.white),
-                            const SizedBox(width: 4),
-                            Text(lugar.categoriaTexto.isEmpty ? cat.etiqueta : lugar.categoriaTexto,
-                                style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600)),
-                          ],
+                      Material(
+                        color: AppColors.riel.withValues(alpha: 0.7),
+                        shape: const CircleBorder(),
+                        child: IconButton(
+                          tooltip: 'Volver',
+                          onPressed: () => Navigator.of(context).maybePop(),
+                          icon: const Icon(Icons.arrow_back, color: Colors.white),
                         ),
                       ),
-                      const SizedBox(height: 10),
-                      Text(lugar.nombre, style: AppTypography.h1.copyWith(color: Colors.white)),
-                      const SizedBox(height: 6),
-                      Row(
-                        children: [
-                          ...List.generate(
-                            5,
-                            (i) => Icon(i < rating.round() ? Icons.star : Icons.star_border,
-                                size: 16, color: Colors.amber),
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            totalResenas == 0
-                                ? 'Sin reseñas aún'
-                                : '${rating.toStringAsFixed(1)} · $totalResenas ${totalResenas == 1 ? 'reseña' : 'reseñas'}',
-                            style: const TextStyle(color: Colors.white70, fontSize: 13),
-                          ),
-                        ],
-                      ),
+                      const Spacer(),
+                      if (vistaPrevia)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(color: AppColors.amarillo, borderRadius: BorderRadius.circular(4)),
+                          child: Text('VISTA PREVIA', style: AppTypography.matricula(size: 14, color: AppColors.riel)),
+                        )
+                      else if (lugar.esFavoritable)
+                        DecoratedBox(
+                          decoration: BoxDecoration(color: AppColors.riel.withValues(alpha: 0.7), shape: BoxShape.circle),
+                          child: FavoritoButton(lugar: lugar, size: 24),
+                        ),
                     ],
                   ),
                 ),
               ),
+              if (lugar.esEjemplo) const Positioned(left: 16, bottom: 14, child: EtiquetaEjemplo()),
+            ],
+          ),
+        ),
+        // La línea de flotación.
+        Container(height: kFranja, color: esmalte),
+        Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 1040),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 18, 24, 4),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(cat.icon, size: 20, color: cat.color),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          lugar.categoriaTexto.isEmpty ? cat.etiqueta : lugar.categoriaTexto,
+                          style: AppTypography.bodySmall.copyWith(color: AppColors.slate300, fontSize: 15),
+                        ),
+                      ),
+                      Text(lugar.matricula, style: AppTypography.matricula(size: 18, color: AppColors.slate400)),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(lugar.nombre, style: AppTypography.display.copyWith(fontSize: 34)),
+                  const SizedBox(height: 8),
+                  if (totalResenas == 0)
+                    Text(
+                      lugar.esEjemplo ? 'Lugar de ejemplo: todavía no tiene reseñas' : 'Sin reseñas todavía',
+                      style: AppTypography.bodySmall,
+                    )
+                  else
+                    Row(
+                      children: [
+                        const Icon(Icons.star_rounded, size: 20, color: AppColors.amarillo),
+                        const SizedBox(width: 4),
+                        Text(rating.toStringAsFixed(1), style: AppTypography.h3.copyWith(fontWeight: FontWeight.w700)),
+                        const SizedBox(width: 6),
+                        Text(
+                          '$totalResenas ${totalResenas == 1 ? 'reseña' : 'reseñas'}',
+                          style: AppTypography.bodySmall,
+                        ),
+                      ],
+                    ),
+                ],
+              ),
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

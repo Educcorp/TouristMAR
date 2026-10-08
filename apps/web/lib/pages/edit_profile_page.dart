@@ -103,7 +103,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
     return Scaffold(
       backgroundColor: AppColors.panelNavy,
       body: SafeArea(
-        child: Center(
+        child: Align(
+          alignment: Alignment.topCenter,
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
             child: ConstrainedBox(
@@ -148,7 +149,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                           const SizedBox(height: 6),
                           Text(
                             'Vista previa — se aplicará al guardar',
-                            style: TextStyle(color: AppColors.slate400, fontSize: 11),
+                            style: TextStyle(color: AppColors.slate400, fontSize: 12),
                           ),
                         ],
                         const SizedBox(height: 10),
@@ -219,7 +220,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
       filled: true,
       fillColor: AppColors.panelNavySoft,
       contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
-      counterStyle: TextStyle(color: AppColors.slate500, fontSize: 11),
+      counterStyle: TextStyle(color: AppColors.slate500, fontSize: 12),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
         borderSide: BorderSide(color: AppColors.overlay(0.1)),
