@@ -5,6 +5,7 @@ import '../models/business_profile.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_button.dart';
 import '../services/resenas_service.dart';
+import '../utils/contact_launcher.dart';
 import '../widgets/cover_image.dart';
 import '../widgets/resenas/resenas_widgets.dart';
 
@@ -180,11 +181,25 @@ class _BusinessProfileContentState extends State<BusinessProfileContent> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _contactRow(Icons.place_outlined, business.address),
+                          _contactRow(
+                            Icons.place_outlined,
+                            business.address,
+                            onTap: business.address.trim().isEmpty
+                                ? null
+                                : () => abrirDireccionEnMapa(business.address, latitud: business.latitud, longitud: business.longitud),
+                          ),
                           const SizedBox(height: 10),
-                          _contactRow(Icons.phone_outlined, business.phone),
+                          _contactRow(
+                            Icons.phone_outlined,
+                            business.phone,
+                            onTap: business.phone.trim().isEmpty ? null : () => abrirTelefono(business.phone),
+                          ),
                           const SizedBox(height: 10),
-                          _contactRow(Icons.language, business.website),
+                          _contactRow(
+                            Icons.language,
+                            business.website,
+                            onTap: business.website.trim().isEmpty ? null : () => abrirSitioWeb(business.website),
+                          ),
                           const SizedBox(height: 10),
                           _contactRow(Icons.schedule_outlined, business.hours),
                         ],
@@ -248,14 +263,28 @@ class _BusinessProfileContentState extends State<BusinessProfileContent> {
     );
   }
 
-  Widget _contactRow(IconData icon, String value) {
-    return Row(
+  Widget _contactRow(IconData icon, String value, {VoidCallback? onTap}) {
+    final texto = Text(
+      value,
+      style: TextStyle(
+        color: onTap == null ? AppColors.textSecondary : AppColors.brandTeal,
+        fontSize: 13.5,
+        decoration: onTap == null ? null : TextDecoration.underline,
+        decorationColor: AppColors.brandTeal.withValues(alpha: 0.5),
+      ),
+    );
+    final fila = Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Icon(icon, size: 15, color: AppColors.brandTeal),
         const SizedBox(width: 10),
-        Expanded(child: Text(value, style: TextStyle(color: AppColors.textSecondary, fontSize: 13.5))),
+        Expanded(child: texto),
       ],
+    );
+    if (onTap == null) return fila;
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(onTap: onTap, child: fila),
     );
   }
 

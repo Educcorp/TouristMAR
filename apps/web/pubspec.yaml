@@ -13,6 +13,8 @@ dependencies:
   flutter_web_plugins:
     sdk: flutter
   http: ^1.2.2
+  # Abrir tel:/mailto:/maps y sitios web desde los datos de contacto de un negocio.
+  url_launcher: ^6.3.1
   google_fonts: ^6.2.1
   flutter_svg: ^2.0.10+1
   file_picker: ^8.1.4
