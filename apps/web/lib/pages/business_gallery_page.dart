@@ -148,7 +148,8 @@ class _BusinessGalleryPageState extends State<BusinessGalleryPage> {
       child: Scaffold(
         backgroundColor: AppColors.panelNavy,
         body: SafeArea(
-          child: Center(
+          child: Align(
+            alignment: Alignment.topCenter,
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
               child: ConstrainedBox(
@@ -280,7 +281,7 @@ class _GalleryTile extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.6), borderRadius: BorderRadius.circular(6)),
-                  child: const Text('Sin guardar', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w600)),
+                  child: const Text('Sin guardar', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
                 ),
               ),
             if (!isBusy)
@@ -334,7 +335,7 @@ class _AddTile extends StatelessWidget {
                   children: [
                     Icon(Icons.add, size: 18, color: AppColors.slate400),
                     const SizedBox(height: 2),
-                    Text('Agregar', style: TextStyle(color: AppColors.slate400, fontSize: 9)),
+                    Text('Agregar', style: TextStyle(color: AppColors.slate400, fontSize: 12)),
                   ],
                 ),
         ),

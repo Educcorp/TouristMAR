@@ -115,47 +115,36 @@ class _BusinessDashboardContentState extends State<BusinessDashboardContent> {
 
   Widget _buildHero(BusinessProfile business) {
     return ClipRRect(
-      borderRadius: BorderRadius.circular(20),
-      child: SizedBox(
-        height: 170,
-        width: double.infinity,
-        child: Stack(
-          fit: StackFit.expand,
+      borderRadius: BorderRadius.circular(AppRadius.card),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: AppColors.cubierta,
+          border: Border.all(color: AppColors.borderSubtle),
+          borderRadius: BorderRadius.circular(AppRadius.card),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            CoverImage(source: business.coverImage),
-            DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.bottomLeft,
-                  end: Alignment.topRight,
-                  colors: [AppColors.scrimDark.withValues(alpha: 0.92), AppColors.scrimDark.withValues(alpha: 0.4)],
-                ),
-              ),
-            ),
+            SizedBox(height: 150, child: CoverImage(source: business.coverImage)),
+            Container(height: kFranja, color: AppColors.amarillo),
             Padding(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.fromLTRB(18, 14, 18, 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.end,
                 children: [
+                  Text(business.businessName, style: AppTypography.h1.copyWith(fontSize: 28)),
+                  const SizedBox(height: 4),
                   Row(
                     children: [
-                      const Text(
-                        'PANEL DE NEGOCIO',
-                        style: TextStyle(
-                            color: Color(0xFFF97316), fontWeight: FontWeight.w700, fontSize: 11, letterSpacing: 2),
-                      ),
+                      Flexible(child: Text(business.category, style: AppTypography.bodySmall.copyWith(fontSize: 15))),
                       if (business.verified) ...[
-                        const SizedBox(width: 6),
-                        const Icon(Icons.check_circle, size: 12, color: Color(0xFF22D3EE)),
+                        const SizedBox(width: 10),
+                        Icon(Icons.verified, size: 18, color: AppColors.turquesaTexto),
+                        const SizedBox(width: 4),
+                        Text('Verificado', style: AppTypography.bodySmall.copyWith(color: AppColors.turquesaTexto)),
                       ],
                     ],
                   ),
-                  const SizedBox(height: 4),
-                  Text(business.businessName,
-                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 22, color: Colors.white)),
-                  const SizedBox(height: 2),
-                  Text(business.category, style: const TextStyle(color: Colors.white70, fontSize: 13)),
                 ],
               ),
             ),
@@ -167,34 +156,41 @@ class _BusinessDashboardContentState extends State<BusinessDashboardContent> {
 
   Widget _buildEstadoBanner(BusinessProfile business) {
     final rechazado = business.estado == 'rechazado';
-    final color = rechazado ? AppColors.errorRed : AppColors.amber;
+    final color = rechazado ? AppColors.rojo : AppColors.amarillo;
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: color.withValues(alpha: 0.25)),
+        color: AppColors.cubierta,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        border: Border.all(color: AppColors.borderSubtle),
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Icon(rechazado ? Icons.cancel_outlined : Icons.hourglass_top, color: color),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
+          Container(height: kFranja, color: color),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  rechazado ? 'Solicitud rechazada' : 'Pendiente de aprobación',
-                  style: TextStyle(color: AppColors.textPrimary, fontSize: 14, fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  rechazado
-                      ? 'Un administrador rechazó este negocio. Puedes actualizar la información e intentarlo de nuevo.'
-                      : 'Un administrador revisará esta solicitud pronto. Mientras tanto puedes completar la información.',
-                  style: TextStyle(color: AppColors.slate400, fontSize: 12),
+                Icon(rechazado ? Icons.cancel_outlined : Icons.hourglass_top,
+                    color: rechazado ? AppColors.rojoTexto : AppColors.amarilloTexto),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(rechazado ? 'Solicitud rechazada' : 'Pendiente de aprobación', style: AppTypography.h3),
+                      const SizedBox(height: 4),
+                      Text(
+                        rechazado
+                            ? 'Un administrador rechazó este negocio. Puedes actualizar la información e intentarlo de nuevo.'
+                            : 'Un administrador revisará esta solicitud pronto. Mientras tanto puedes completar la información.',
+                        style: AppTypography.body.copyWith(fontSize: 15),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -204,105 +200,89 @@ class _BusinessDashboardContentState extends State<BusinessDashboardContent> {
     );
   }
 
+  /// Las cuatro cifras del mes en una sola tira, como un tablero: celdas
+  /// separadas por filetes, números en la letra de matrícula.
   Widget _buildStatsGrid(BusinessProfile business) {
-    final stats = [
-      (Icons.people_outline, '${business.monthlyVisits}', 'Visitas este mes', AppColors.brandTeal),
-      (Icons.star_outline, business.totalReviews == 0 ? '—' : '${business.rating}★', 'Calificación promedio', Colors.amber),
-      (Icons.forum_outlined, '${business.newReviews}', 'Reseñas del mes', AppColors.businessOrange),
-      (Icons.thumb_up_outlined, '${business.favorites}', 'Marcado favorito', Colors.greenAccent),
+    final calificacion = business.totalReviews == 0
+        ? ('—', 'Sin reseñas todavía')
+        : (business.rating.toStringAsFixed(1), 'Calificación · ${business.totalReviews} ${business.totalReviews == 1 ? 'reseña' : 'reseñas'}');
+    final celdas = [
+      (Icons.people_outline, '${business.monthlyVisits}', 'Visitas este mes'),
+      (Icons.star_outline, calificacion.$1, calificacion.$2),
+      (Icons.forum_outlined, '${business.newReviews}', 'Reseñas del mes'),
+      (Icons.favorite_border, '${business.favorites}', 'En favoritos'),
     ];
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final columns = Breakpoints.isCompact(constraints.maxWidth) ? 2 : 4;
-        return GridView.count(
-          crossAxisCount: columns,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          mainAxisSpacing: 12,
-          crossAxisSpacing: 12,
-          childAspectRatio: 1.1,
-          children: stats.map((s) {
-            final (icon, value, label, color) = s;
-            return Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: color.withValues(alpha: 0.2)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(icon, size: 16, color: color),
-                  const SizedBox(height: 8),
-                  Text(value, style: TextStyle(color: color, fontSize: 22, fontWeight: FontWeight.w700)),
-                  const SizedBox(height: 2),
-                  Text(label, style: TextStyle(color: AppColors.slate400, fontSize: 11)),
-                ],
-              ),
-            );
-          }).toList(),
+        final columnas = Breakpoints.isCompact(constraints.maxWidth) ? 2 : 4;
+        final ancho = constraints.maxWidth / columnas;
+        return Container(
+          decoration: BoxDecoration(
+            color: AppColors.cubierta,
+            borderRadius: BorderRadius.circular(AppRadius.card),
+            border: Border.all(color: AppColors.borderSubtle),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Wrap(
+            children: [
+              for (var i = 0; i < celdas.length; i++)
+                Container(
+                  width: ancho - (i % columnas == columnas - 1 ? 2 : 0),
+                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      right: i % columnas == columnas - 1 ? BorderSide.none : BorderSide(color: AppColors.borderSubtle),
+                      top: i >= columnas ? BorderSide(color: AppColors.borderSubtle) : BorderSide.none,
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(celdas[i].$1, size: 20, color: AppColors.slate400),
+                      const SizedBox(height: 8),
+                      Text(celdas[i].$2, style: AppTypography.cifra(size: 32)),
+                      const SizedBox(height: 2),
+                      Text(celdas[i].$3, style: AppTypography.caption.copyWith(color: AppColors.slate400)),
+                    ],
+                  ),
+                ),
+            ],
+          ),
         );
       },
     );
   }
 
   Widget _buildManageGrid() {
-    final actions = [
-      (Icons.edit_outlined, 'Editar información', AppColors.brandTeal, _openEdit),
-      (Icons.image_outlined, 'Gestionar fotos', AppColors.businessOrange, _openGallery),
-      (Icons.view_in_ar_outlined, 'Mapa y experiencias', AppColors.emerald, widget.onOpenExperiencias),
+    final acciones = [
+      (Icons.edit_outlined, 'Editar información', 'Nombre, horario, contacto y ubicación', _openEdit),
+      (Icons.image_outlined, 'Gestionar fotos', 'Portada y galería', _openGallery),
+      (Icons.view_in_ar_outlined, 'Mapa y experiencias', 'Pin del mapa, RA y recorrido 360°', widget.onOpenExperiencias),
     ];
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final columns = Breakpoints.isCompact(constraints.maxWidth) ? 2 : 4;
-        return GridView.count(
-          crossAxisCount: columns,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          mainAxisSpacing: 12,
-          crossAxisSpacing: 12,
-          childAspectRatio: 1.05,
-          children: actions.map((a) {
-            final (icon, label, color, onTap) = a;
-            return Material(
-              color: AppColors.overlay(0.03),
-              borderRadius: BorderRadius.circular(16),
-              child: InkWell(
-                onTap: onTap,
-                borderRadius: BorderRadius.circular(16),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 12),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppColors.overlay(0.08)),
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(color: color.withValues(alpha: 0.15), shape: BoxShape.circle),
-                        child: Icon(icon, color: color, size: 18),
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        label,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: AppColors.textPrimary, fontSize: 12, fontWeight: FontWeight.w500),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          }).toList(),
-        );
-      },
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.cubierta,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        border: Border.all(color: AppColors.borderSubtle),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          for (var i = 0; i < acciones.length; i++) ...[
+            if (i > 0) Divider(height: 1, color: AppColors.borderSubtle),
+            ListTile(
+              onTap: acciones[i].$4,
+              minTileHeight: 64,
+              leading: Icon(acciones[i].$1, color: AppColors.tinta),
+              title: Text(acciones[i].$2, style: AppTypography.h3),
+              subtitle: Text(acciones[i].$3, style: AppTypography.caption.copyWith(color: AppColors.slate400)),
+              trailing: Icon(Icons.chevron_right, color: AppColors.slate400),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }

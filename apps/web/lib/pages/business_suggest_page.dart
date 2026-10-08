@@ -121,7 +121,8 @@ class _BusinessSuggestPageState extends State<BusinessSuggestPage> {
     return Scaffold(
       backgroundColor: AppColors.panelNavy,
       body: SafeArea(
-        child: Center(
+        child: Align(
+          alignment: Alignment.topCenter,
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
             child: ConstrainedBox(
@@ -219,7 +220,7 @@ class _BusinessSuggestPageState extends State<BusinessSuggestPage> {
                         filled: true,
                         fillColor: AppColors.panelNavySoft,
                         contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
-                        counterStyle: TextStyle(color: AppColors.slate500, fontSize: 11),
+                        counterStyle: TextStyle(color: AppColors.slate500, fontSize: 12),
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.overlay(0.1))),
                         enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.overlay(0.1))),
                         focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.businessOrange)),
@@ -314,7 +315,7 @@ class _PortadaPicker extends StatelessWidget {
                       const SizedBox(height: 6),
                       Text('Elegir imagen', style: TextStyle(color: AppColors.slate300, fontSize: 13)),
                       const SizedBox(height: 2),
-                      Text('PNG, JPG o WEBP · máx. 5 MB', style: TextStyle(color: AppColors.slate500, fontSize: 11)),
+                      Text('PNG, JPG o WEBP · máx. 5 MB', style: TextStyle(color: AppColors.slate500, fontSize: 12)),
                     ],
                   ),
           ),

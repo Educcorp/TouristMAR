@@ -272,7 +272,8 @@ class _BusinessEditPageState extends State<BusinessEditPage> {
     return Scaffold(
       backgroundColor: AppColors.panelNavy,
       body: SafeArea(
-        child: Center(
+        child: Align(
+          alignment: Alignment.topCenter,
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
             child: ConstrainedBox(
@@ -372,7 +373,7 @@ class _BusinessEditPageState extends State<BusinessEditPage> {
                         filled: true,
                         fillColor: AppColors.panelNavySoft,
                         contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
-                        counterStyle: TextStyle(color: AppColors.slate500, fontSize: 11),
+                        counterStyle: TextStyle(color: AppColors.slate500, fontSize: 12),
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.overlay(0.1))),
                         enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.overlay(0.1))),
                         focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.businessOrange)),
@@ -388,8 +389,8 @@ class _BusinessEditPageState extends State<BusinessEditPage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'INFORMACIÓN DE CONTACTO',
-                            style: TextStyle(color: AppColors.slate500, fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 1),
+                            'Información de contacto',
+                            style: AppTypography.h3,
                           ),
                           const SizedBox(height: 16),
                           AppTextField(

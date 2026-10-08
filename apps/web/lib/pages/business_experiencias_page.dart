@@ -289,7 +289,6 @@ class _BusinessExperienciasContentState extends State<BusinessExperienciasConten
           min: 20,
           max: 300,
           divisions: 28,
-          activeColor: color,
           onChanged: (v) => setState(() => _radio = v),
         ),
         Text(

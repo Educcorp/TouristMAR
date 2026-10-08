@@ -177,7 +177,7 @@ class _BusinessProfileContentState extends State<BusinessProfileContent> {
                     ),
                     const SizedBox(height: 16),
                     _card(
-                      title: 'INFORMACIÓN DE CONTACTO',
+                      title: 'Información de contacto',
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -255,7 +255,7 @@ class _BusinessProfileContentState extends State<BusinessProfileContent> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: TextStyle(color: AppColors.slate500, fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 1)),
+          Text(title, style: AppTypography.h3),
           const SizedBox(height: 8),
           child,
         ],
@@ -317,7 +317,7 @@ class _BusinessProfileContentState extends State<BusinessProfileContent> {
                 children: [
                   Icon(Icons.add, size: 18, color: AppColors.slate400),
                   const SizedBox(height: 2),
-                  Text('Agregar', style: TextStyle(color: AppColors.slate400, fontSize: 9)),
+                  Text('Agregar', style: TextStyle(color: AppColors.slate400, fontSize: 12)),
                 ],
               ),
             ),
@@ -363,7 +363,7 @@ class _EstadoBadge extends StatelessWidget {
         children: [
           Icon(icon, size: 10, color: color),
           const SizedBox(width: 4),
-          Text(label, style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w700)),
+          Text(label, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w700)),
         ],
       ),
     );

@@ -147,7 +147,7 @@ class _BusinessReviewsContentState extends State<BusinessReviewsContent> {
                     onPressed: () => _quitarRespuesta(r),
                     icon: const Icon(Icons.delete_outline, size: 15),
                     label: const Text('Quitar respuesta'),
-                    style: TextButton.styleFrom(foregroundColor: const Color(0xFFEF4444)),
+                    style: TextButton.styleFrom(foregroundColor: AppColors.rojo),
                   ),
                 TextButton.icon(
                   onPressed: () => _responder(r),
