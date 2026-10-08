@@ -33,7 +33,7 @@ import 'sesion.dart';
 //   /lugar/:id                     ficha de un lugar (?vista=previa para admin/negocio)
 //   /recorrido/:nombre             recorrido 360° a pantalla completa
 //   /empresa/:seccion              panel de empresa (?negocio=<id>)
-//   /empresa/editar|galeria|sugerir
+//   /empresa/editar|galeria|sugerir  (/empresa/editar?completar=1: ficha obligatoria)
 //   /admin/:seccion                panel admin
 //   /admin/mapa/lugar/:id          un lugar dentro de "Mapa y RA"
 //
@@ -56,6 +56,11 @@ String rutaEmpresa(BusinessSection seccion, {String? negocioId}) {
 }
 
 String rutaAdmin(AdminSection seccion) => '/admin/${seccion.slug}';
+
+/// "Editar negocio" en modo obligatorio: lo abre el aviso de información
+/// incompleta y no deja salir hasta guardar la ficha completa.
+String rutaCompletarNegocio(String negocioId) =>
+    Uri(path: '/empresa/editar', queryParameters: {'negocio': negocioId, 'completar': '1'}).toString();
 
 String rutaLugarAdmin(String lugarId) => '/admin/mapa/lugar/${Uri.encodeComponent(lugarId)}';
 
@@ -164,7 +169,14 @@ GoRouter crearRouter({AuthService? authService, String? inicial}) {
       // --- Empresa ----------------------------------------------------------
       GoRoute(
         path: '/empresa/editar',
-        builder: (context, state) => _conNegocio(state, (n) => BusinessEditPage(business: n, authService: authService)),
+        builder: (context, state) => _conNegocio(
+          state,
+          (n) => BusinessEditPage(
+            business: n,
+            authService: authService,
+            obligatorio: state.uri.queryParameters['completar'] == '1',
+          ),
+        ),
       ),
       GoRoute(
         path: '/empresa/galeria',

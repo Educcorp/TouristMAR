@@ -8,6 +8,7 @@ import '../services/session_storage.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_button.dart';
 import '../widgets/app_text_field.dart';
+import '../widgets/horario_field.dart';
 import '../widgets/mapa/ubicacion_lugar.dart';
 import '../widgets/themed_builder.dart';
 
@@ -35,7 +36,8 @@ class _BusinessSuggestPageState extends State<BusinessSuggestPage> {
   final _descriptionController = TextEditingController();
   final _addressController = TextEditingController();
   final _phoneController = TextEditingController();
-  final _scheduleController = TextEditingController();
+  /// Horario elegido con el selector de días y horas (null = sin elegir).
+  String? _horario;
   late final AuthService _authService = widget.authService ?? AuthService();
   PickedImage? _portada;
   /// Pin en el mapa (opcional al sugerir).
@@ -50,7 +52,6 @@ class _BusinessSuggestPageState extends State<BusinessSuggestPage> {
     _descriptionController.dispose();
     _addressController.dispose();
     _phoneController.dispose();
-    _scheduleController.dispose();
     super.dispose();
   }
 
@@ -82,7 +83,7 @@ class _BusinessSuggestPageState extends State<BusinessSuggestPage> {
         descripcion: _descriptionController.text.trim(),
         direccion: _addressController.text.trim(),
         telefono: _phoneController.text.trim(),
-        horario: _scheduleController.text.trim(),
+        horario: _horario,
         latitud: _ubicacion?.lat,
         longitud: _ubicacion?.lng,
       );
@@ -196,12 +197,13 @@ class _BusinessSuggestPageState extends State<BusinessSuggestPage> {
                       accentColor: AppColors.businessOrange,
                     ),
                     const SizedBox(height: 20),
-                    AppTextField(
-                      label: 'Horario (opcional)',
-                      icon: Icons.schedule_outlined,
-                      controller: _scheduleController,
-                      hintText: 'Ej. Lun–Dom 9:00–21:00',
-                      accentColor: AppColors.businessOrange,
+                    HorarioField(
+                      inicial: null,
+                      etiqueta: 'Horario (opcional)',
+                      acento: AppColors.businessOrange,
+                      habilitado: !_isSaving,
+                      obligatorio: false,
+                      onChanged: (v) => _horario = v,
                     ),
                     const SizedBox(height: 20),
                     Text('Descripción', style: TextStyle(color: AppColors.slate300, fontSize: 14)),

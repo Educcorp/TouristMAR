@@ -11,8 +11,10 @@ import '../services/session_storage.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_button.dart';
 import '../widgets/app_text_field.dart';
+import '../widgets/business/aviso_informacion_incompleta.dart';
 import '../widgets/business/solicitud_recorrido_card.dart';
 import '../widgets/cover_image.dart';
+import '../widgets/horario_field.dart';
 import '../widgets/mapa/ubicacion_lugar.dart';
 import '../widgets/themed_builder.dart';
 
@@ -23,7 +25,18 @@ class BusinessEditPage extends StatefulWidget {
   final AuthService? authService;
   final RecorridosService? recorridosService;
 
-  const BusinessEditPage({super.key, required this.business, this.authService, this.recorridosService});
+  /// Abierta desde el aviso "Completa la información de tu negocio": no se
+  /// puede salir sin guardar la ficha completa (portada, ubicación y horario
+  /// con el selector incluidos).
+  final bool obligatorio;
+
+  const BusinessEditPage({
+    super.key,
+    required this.business,
+    this.authService,
+    this.recorridosService,
+    this.obligatorio = false,
+  });
 
   @override
   State<BusinessEditPage> createState() => _BusinessEditPageState();
@@ -41,7 +54,9 @@ class _BusinessEditPageState extends State<BusinessEditPage> {
       : null;
   late final _phoneController = TextEditingController(text: widget.business.phone);
   late final _websiteController = TextEditingController(text: widget.business.website);
-  late final _hoursController = TextEditingController(text: widget.business.hours);
+  /// Horario elegido con el selector (null = no se ha tocado: se guarda el
+  /// que ya tenía).
+  String? _horario;
   late final AuthService _authService = widget.authService ?? AuthService();
   late final RecorridosService _recorridosService = widget.recorridosService ?? RecorridosService();
   bool _isSaving = false;
@@ -122,7 +137,6 @@ class _BusinessEditPageState extends State<BusinessEditPage> {
     _addressController.dispose();
     _phoneController.dispose();
     _websiteController.dispose();
-    _hoursController.dispose();
     super.dispose();
   }
 
@@ -130,6 +144,21 @@ class _BusinessEditPageState extends State<BusinessEditPage> {
   /// solicitud de recorrido 360° (el backend la pide con el pin ya guardado).
   Future<void> _save({bool solicitarRecorrido = false}) async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
+
+    // En modo obligatorio también se piden la portada y el pin del mapa
+    // (fuera de ese modo siguen siendo opcionales al editar).
+    if (widget.obligatorio) {
+      final sinPortada = _pendingCoverBytes == null &&
+          (widget.business.coverImage.trim().isEmpty || widget.business.coverImage.startsWith('assets/'));
+      final faltan = [
+        if (sinPortada) 'la foto de portada',
+        if (_ubicacion == null) 'la ubicación en el mapa',
+      ];
+      if (faltan.isNotEmpty) {
+        setState(() => _error = 'Para continuar falta ${faltan.join(' y ')}.');
+        return;
+      }
+    }
 
     final token = SessionStorage.token;
     if (token == null) {
@@ -163,7 +192,7 @@ class _BusinessEditPageState extends State<BusinessEditPage> {
         'direccion': _addressController.text.trim(),
         'telefono': _phoneController.text.trim(),
         'sitioWeb': _websiteController.text.trim(),
-        'horario': _hoursController.text.trim(),
+        'horario': _horario ?? widget.business.hours.trim(),
         'latitud': _ubicacion?.lat,
         'longitud': _ubicacion?.lng,
       });
@@ -201,7 +230,12 @@ class _BusinessEditPageState extends State<BusinessEditPage> {
           return;
         }
       }
-      if (mounted) Navigator.of(context).pop(true);
+      if (!mounted) return;
+      if (widget.obligatorio && !business.informacionCompleta) {
+        setState(() => _error = 'Se guardó, pero aún falta: ${business.datosFaltantes.join(', ')}.');
+        return;
+      }
+      Navigator.of(context).pop(true);
     } catch (err) {
       setState(() => _error = err is AuthError ? err.message : 'No se pudo guardar el negocio');
     } finally {
@@ -209,10 +243,32 @@ class _BusinessEditPageState extends State<BusinessEditPage> {
     }
   }
 
+  /// "Volver", "Cancelar" o "atrás". En modo obligatorio no sale: avisa que
+  /// primero hay que completar la información.
+  void _salir() {
+    if (!widget.obligatorio) {
+      Navigator.of(context).pop(false);
+      return;
+    }
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(const SnackBar(content: Text(mensajeCompletarPrimero)));
+  }
+
   @override
   Widget build(BuildContext context) => ThemedBuilder(builder: _buildScaffold);
 
   Widget _buildScaffold(BuildContext context) {
+    return PopScope(
+      canPop: !widget.obligatorio,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _salir();
+      },
+      child: _buildContenido(context),
+    );
+  }
+
+  Widget _buildContenido(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.panelNavy,
       body: SafeArea(
@@ -229,18 +285,25 @@ class _BusinessEditPageState extends State<BusinessEditPage> {
                     Align(
                       alignment: Alignment.centerLeft,
                       child: TextButton.icon(
-                        onPressed: () => Navigator.of(context).pop(false),
+                        onPressed: _salir,
                         icon: Icon(Icons.arrow_back, size: 15, color: AppColors.slate400),
                         label: Text('Volver a mi negocio', style: TextStyle(color: AppColors.slate400, fontSize: 13)),
                       ),
                     ),
                     const SizedBox(height: 12),
-                    Text('Editar negocio', style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 24)),
+                    Text(
+                      widget.obligatorio ? 'Completa la información de tu negocio' : 'Editar negocio',
+                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 24),
+                    ),
                     const SizedBox(height: 4),
                     Text(
                       'Actualiza la información visible a los visitantes en el mapa.',
                       style: TextStyle(color: AppColors.slate400, fontSize: 14),
                     ),
+                    if (widget.obligatorio) ...[
+                      const SizedBox(height: 16),
+                      _AvisoObligatorio(faltantes: widget.business.datosFaltantes),
+                    ],
                     const SizedBox(height: 24),
                     GestureDetector(
                       onTap: _isSaving ? null : _changeCover,
@@ -382,13 +445,14 @@ class _BusinessEditPageState extends State<BusinessEditPage> {
                             validator: _websiteValidator,
                           ),
                           const SizedBox(height: 16),
-                          AppTextField(
-                            label: 'Horario',
-                            icon: Icons.schedule_outlined,
-                            controller: _hoursController,
-                            hintText: 'Lun – Dom: 9:00 am – 6:00 pm',
-                            accentColor: AppColors.businessOrange,
-                            validator: (v) => _requiredValidator(v, 'Ingresa el horario'),
+                          HorarioField(
+                            inicial: widget.business.hours,
+                            acento: AppColors.businessOrange,
+                            habilitado: !_isSaving,
+                            // Fuera del modo obligatorio se acepta el horario
+                            // escrito a mano de antes mientras no se cambie.
+                            aceptarAnterior: !widget.obligatorio,
+                            onChanged: (v) => _horario = v,
                           ),
                         ],
                       ),
@@ -403,7 +467,7 @@ class _BusinessEditPageState extends State<BusinessEditPage> {
                         Expanded(
                           child: AppButton(
                             variant: AppButtonVariant.ghost,
-                            onPressed: () => Navigator.of(context).pop(false),
+                            onPressed: _salir,
                             child: const Text('Cancelar'),
                           ),
                         ),
@@ -424,6 +488,42 @@ class _BusinessEditPageState extends State<BusinessEditPage> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Recuadro arriba del formulario en modo obligatorio: por qué está aquí y
+/// qué le falta.
+class _AvisoObligatorio extends StatelessWidget {
+  final List<String> faltantes;
+
+  // ignore: prefer_const_constructors_in_immutables
+  _AvisoObligatorio({required this.faltantes});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.businessOrange.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppColors.businessOrange.withValues(alpha: 0.35)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.info_outline, size: 18, color: AppColors.businessOrange),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              faltantes.isEmpty
+                  ? 'Revisa tu información y guarda para continuar.'
+                  : 'Para continuar completa: ${faltantes.join(', ')}.',
+              style: TextStyle(color: AppColors.textPrimary, fontSize: 13, height: 1.35),
+            ),
+          ),
+        ],
       ),
     );
   }

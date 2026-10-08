@@ -68,7 +68,7 @@ const suggestNegocioSchema = z.object({
   direccion: z.string().optional(),
   telefono: z.string().max(40).optional(),
   sitioWeb: z.string().max(200).optional(),
-  horario: z.string().max(200).optional(),
+  horario: z.string().max(300).optional(),
   // Pin del mapa (opcional): los dos juntos o ninguno. El admin lo puede
   // corregir después desde el detalle de la solicitud.
   latitud: z.number().min(-90).max(90).optional(),
