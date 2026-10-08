@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../models/visitor_profile.dart';
 import '../navegacion/rutas.dart';
+import '../services/favoritos_service.dart';
 import '../theme/app_theme.dart';
 import '../theme/breakpoints.dart';
 import 'notification_bell.dart';
@@ -108,12 +109,11 @@ class _DrawerStat extends StatelessWidget {
 }
 
 /// Bloque de identidad del visitante mostrado arriba del menú de navegación
-/// (avatar, nombre, correo, y stats de lugares/reseñas).
+/// (avatar, nombre, correo, y stats de favoritos/reseñas).
 class VisitorIdentityCard extends StatelessWidget {
   final String name;
   final String email;
   final String? avatarUrl;
-  final int visitedCount;
   final int reviewsCount;
 
   const VisitorIdentityCard({
@@ -121,7 +121,6 @@ class VisitorIdentityCard extends StatelessWidget {
     required this.name,
     required this.email,
     this.avatarUrl,
-    required this.visitedCount,
     required this.reviewsCount,
   });
 
@@ -154,7 +153,14 @@ class VisitorIdentityCard extends StatelessWidget {
         const SizedBox(height: 16),
         Row(
           children: [
-            _DrawerStat(value: '$visitedCount', label: 'Lugares'),
+            // "Lugares" = favoritos guardados (el único conteo de lugares por
+            // cuenta que hoy tiene datos reales); se escucha en vivo para que
+            // se actualice solo al marcar/quitar un favorito en cualquier
+            // pantalla, sin tener que volver a entrar al drawer.
+            ValueListenableBuilder<Set<String>>(
+              valueListenable: FavoritosService.instance.ids,
+              builder: (context, ids, _) => _DrawerStat(value: '${ids.length}', label: 'Lugares'),
+            ),
             const SizedBox(width: 24),
             _DrawerStat(value: '$reviewsCount', label: 'Reseñas'),
           ],

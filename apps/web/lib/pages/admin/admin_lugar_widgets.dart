@@ -167,6 +167,9 @@ class _LugarFormState extends State<LugarForm> {
             inicial: _ubicacion,
             habilitado: !_guardando,
             onChanged: (c) => _ubicacion = c,
+            onDireccionSugerida: (direccion) {
+              if (_direccion.text.trim().isEmpty) _direccion.text = direccion;
+            },
           ),
           const SizedBox(height: AppSpacing.md),
           AppTextField(
@@ -267,6 +270,9 @@ class _UbicacionLugarSectionState extends State<UbicacionLugarSection> {
           acento: color,
           habilitado: !_guardando,
           onChanged: (c) => _ubicacion = c,
+          onDireccionSugerida: (direccion) {
+            if (_direccion.text.trim().isEmpty) _direccion.text = direccion;
+          },
         ),
         const SizedBox(height: AppSpacing.md),
         AppTextField(

@@ -331,6 +331,9 @@ class _AdminNegocioDetallePageState extends State<AdminNegocioDetallePage> {
                           _ubicacion = v;
                           _dirty = true;
                         }),
+                        onDireccionSugerida: (direccion) {
+                          if (_direccion.text.trim().isEmpty) setState(() => _direccion.text = direccion);
+                        },
                       ),
                       const SizedBox(height: AppSpacing.md),
                       AppTextField(

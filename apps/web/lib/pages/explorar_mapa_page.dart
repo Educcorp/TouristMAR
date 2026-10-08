@@ -144,7 +144,6 @@ class _ExplorarMapaPageState extends State<ExplorarMapaPage> {
         name: profile.name,
         email: profile.email,
         avatarUrl: profile.avatarUrl,
-        visitedCount: profile.visited.length,
         reviewsCount: profile.reviews.length,
       ),
       navItems: visitorNavItems(context, profile: profile, current: VisitorSection.mapa),
