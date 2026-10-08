@@ -6,8 +6,8 @@ namespace TouristMAR
     /// Lo que la app (Flutter, MainActivity.kt) le manda a Unity al abrirlo, en
     /// los extras del Intent:
     /// <list type="bullet">
-    /// <item><c>escena</c>: "marcadores" | "recorrido" | "geo" (ver <see cref="Arranque"/>).</item>
-    /// <item><c>parametro</c>: en "recorrido", el nombre del recorrido; en "geo", el id del lugar.</item>
+    /// <item><c>escena</c>: "marcadores" | "geo" (ver <see cref="Arranque"/>).</item>
+    /// <item><c>parametro</c>: en "geo", el id del lugar (igual que <c>lugarId</c>).</item>
     /// <item><c>apiBaseUrl</c>: la API, con /api incluido (ej. https://touristmar-production.up.railway.app/api).</item>
     /// <item><c>lugarId</c>: el id del lugar desde el que se abrió. Es el MISMO id que usa
     /// Flutter: GET {apiBaseUrl}/ra/lugares/{lugarId} y GET {apiBaseUrl}/marcadores?negocioId={lugarId}.

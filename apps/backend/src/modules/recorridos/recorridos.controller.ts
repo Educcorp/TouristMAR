@@ -29,14 +29,14 @@ type RecorridoAdmin = RecorridoConEscenas & { negocio: { nombre: string } | null
 
 const tituloEscena = (e: Recorrido360Escena) => e.titulo || `Escenario ${e.orden + 1}`
 
-/// Contrato con el equipo de Unity (GET /api/recorridos). Mismo estilo que
-/// el de marcadores: `textoParaMostrar` = título + "\n" + información, y
-/// nada de `null` (JsonUtility no los maneja): lo que falta va como "".
+/// Contrato público de GET /api/recorridos, que consume el visor 360° de
+/// Flutter (RecorridoPublico en apps/web/lib/services/recorridos_service.dart).
+/// Unity ya no lo usa. Mismo estilo que el de marcadores: `textoParaMostrar`
+/// = título + "\n" + información, y nada de `null`: lo que falta va como "".
 /// `escenas` viene en orden de casilla y el visor arranca en `escenaInicial`
 /// (el Escenario 1, o el primero que tenga foto). Cada flecha apunta a otra
 /// escena por su `id`. Ángulos en grados.
-/// Si cambia, avisarles y actualizar ModelosRecorrido.cs en apps/ar-module.
-function toUnityRecorrido(r: RecorridoConEscenas) {
+function toPublicRecorrido(r: RecorridoConEscenas) {
   const titulos = new Map(r.escenas.map((e) => [e.id, tituloEscena(e)]))
   return {
     nombre: r.nombre,
@@ -127,7 +127,7 @@ function handleError(err: unknown, res: Response) {
 const uuid = z.string().uuid()
 
 // Mismo formato que el nombre de los marcadores: seguro para usarlo en URLs
-// y como clave en Unity, p. ej. "cerro_vigia_360".
+// y como clave del recorrido, p. ej. "cerro_vigia_360".
 const nombreSchema = z
   .string()
   .trim()
@@ -186,10 +186,10 @@ const enlacesSchema = z.object({
 
 const posicionInvalida = `El escenario debe ser del 1 al ${MAX_ESCENARIOS}`
 
-// --- Público (lo consume Unity) -------------------------------------------
+// --- Público (lo consume el visor 360° de Flutter) ------------------------
 
 /// Se arma en cada petición con lo que hay en la base (no hay archivo JSON
-/// generado). Solo lleva URLs: Unity descarga cada foto cuando la necesita.
+/// generado). Solo lleva URLs: el visor descarga cada foto cuando la necesita.
 export async function listRecorridosPublic(req: Request, res: Response) {
   const negocioId = req.query.negocioId === undefined ? undefined : uuid.safeParse(req.query.negocioId)
   if (negocioId && !negocioId.success) {
@@ -199,7 +199,7 @@ export async function listRecorridosPublic(req: Request, res: Response) {
   try {
     const recorridos = await listPublicRecorridos(negocioId?.data)
     res.set('Cache-Control', 'no-cache')
-    return res.json({ recorridos: recorridos.map(toUnityRecorrido) })
+    return res.json({ recorridos: recorridos.map(toPublicRecorrido) })
   } catch (err) {
     return handleError(err, res)
   }
@@ -214,7 +214,7 @@ export async function getRecorridoPublic(req: Request, res: Response) {
   try {
     const recorrido = await getPublicRecorrido(nombre.data)
     res.set('Cache-Control', 'no-cache')
-    return res.json({ recorrido: toUnityRecorrido(recorrido) })
+    return res.json({ recorrido: toPublicRecorrido(recorrido) })
   } catch (err) {
     return handleError(err, res)
   }

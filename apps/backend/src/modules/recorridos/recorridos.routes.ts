@@ -15,8 +15,8 @@ import {
 import { listSolicitudesAdmin, atenderSolicitudAdmin } from './solicitudes.controller'
 import { requireAuth, requireRole } from '../auth/auth.middleware'
 
-/// Endpoints públicos que consume el módulo de Unity (se monta en
-/// /api/recorridos). Sin login, igual que los marcadores.
+/// Endpoints públicos que consume el visor 360° de Flutter, web y móvil (se
+/// monta en /api/recorridos). Sin login, igual que los marcadores.
 export const recorridosRouter = Router()
 
 recorridosRouter.get('/', listRecorridosPublic)

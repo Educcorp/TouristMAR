@@ -53,7 +53,7 @@ const includeAdmin = {
   escenas: escenasOrdenadas,
 }
 
-/// Lo que ve Unity: recorridos activos, con al menos un escenario, que no
+/// Lo que ve el turista: recorridos activos, con al menos un escenario, que no
 /// pertenezcan a un negocio sin aprobar (igual que los marcadores).
 export async function listPublicRecorridos(negocioId?: string) {
   return withDbGuard(() =>

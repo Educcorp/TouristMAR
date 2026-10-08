@@ -40,8 +40,8 @@ apiRouter.use('/admin/recorridos', recorridosAdminRouter)
 apiRouter.use('/admin/ra-geo', raGeoAdminRouter)
 apiRouter.use('/admin/resenas', resenasAdminRouter)
 apiRouter.use('/admin', adminRouter)
-// Contratos con Unity: GET /api/marcadores (ver ar.controller.ts) y
-// GET /api/recorridos (ver recorridos.controller.ts).
+// Contrato con Unity: GET /api/marcadores (ver ar.controller.ts).
+// GET /api/recorridos lo consume Flutter (visor 360°), no Unity.
 apiRouter.use('/marcadores', marcadoresRouter)
 apiRouter.use('/recorridos', recorridosRouter)
 apiRouter.use('/lugares', lugaresRouter)

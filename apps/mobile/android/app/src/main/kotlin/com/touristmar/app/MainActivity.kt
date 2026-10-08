@@ -9,8 +9,8 @@ import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
 /**
- * Abre el módulo de Unity (RA con marcadores, recorrido 360° o RA por
- * coordenadas) como una pantalla aparte. Unity corre en su propio proceso
+ * Abre el módulo de Unity (RA con marcadores o RA por geolocalización) como
+ * una pantalla aparte. El recorrido 360° no pasa por aquí: lo hace Flutter. Unity corre en su propio proceso
  * (":unity", ver AndroidManifest): al cerrarlo con X o "atrás" se vuelve a esta
  * actividad sin perder la sesión ni la pantalla de Flutter.
  *
@@ -56,7 +56,6 @@ class MainActivity : FlutterActivity() {
         }
 
     private fun permisosPara(escena: String): Array<String> = when (escena) {
-        "recorrido" -> emptyArray()
         "geo" -> arrayOf(Manifest.permission.CAMERA, Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
         else -> arrayOf(Manifest.permission.CAMERA)
     }

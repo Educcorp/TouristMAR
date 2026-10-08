@@ -44,8 +44,8 @@ int _compararNatural(String a, String b) {
 /// `/admin/mapa/lugar/<id>`): los recorridos de ese lugar, el formulario para
 /// registrar uno nuevo y, al abrir uno, su editor de escenarios (visor 360°,
 /// fotos y flechas). Lo que se guarda aquí lo ve el turista al tocar "Ver en
-/// 360°" en el mapa o en la ficha del lugar: en el teléfono lo abre Unity
-/// (`GET /api/recorridos`) y en la web el visor de Flutter.
+/// 360°" en el mapa o en la ficha del lugar, con el visor de Flutter (web y
+/// teléfono, `GET /api/recorridos`).
 class RecorridosLugarSection extends StatefulWidget {
   final NegocioSummary lugar;
   final RecorridosService recorridosService;

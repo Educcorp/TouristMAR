@@ -8,14 +8,13 @@ namespace TouristMAR
     /// lee qué experiencia pidió la app (<see cref="ParametrosApp.Escena"/>) y
     /// carga su escena. Ponle este componente a un GameObject vacío y escribe en
     /// el Inspector el nombre exacto de cada escena de tu proyecto.
+    /// El recorrido 360° no pasa por aquí: lo hace Flutter (visor_360.dart).
     /// </summary>
     public class Arranque : MonoBehaviour
     {
         [Tooltip("Escena de RA con marcadores (MarcadorDinamico + PuenteApp).")]
         [SerializeField] private string escenaMarcadores = "AR";
-        [Tooltip("Escena del visor de recorridos 360° (VisorRecorrido360).")]
-        [SerializeField] private string escenaRecorrido = "Recorrido";
-        [Tooltip("Escena de RA por geolocalización (solo si la app se compila con RA_GEO_EN_UNITY=true; por defecto la hace Flutter).")]
+        [Tooltip("Escena de RA por geolocalización (CargadorLugarRA, GET /api/ra/lugares/{lugarId}).")]
         [SerializeField] private string escenaGeo = "Geo";
 
         private void Start()
@@ -23,7 +22,6 @@ namespace TouristMAR
             var pedida = ParametrosApp.Escena;
             var destino = pedida switch
             {
-                "recorrido" => escenaRecorrido,
                 "geo" => escenaGeo,
                 _ => escenaMarcadores,
             };

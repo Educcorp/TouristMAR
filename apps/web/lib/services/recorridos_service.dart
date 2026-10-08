@@ -112,7 +112,7 @@ class Recorrido360 {
 
   bool get tieneUbicacion => latitud != null && longitud != null;
 
-  /// Lo que ve Unity: activo y con al menos un escenario (el endpoint público
+  /// Lo que ve el turista: activo y con al menos un escenario (el endpoint público
   /// además oculta los de negocios sin aprobar).
   bool get publicado => activo && escenas.isNotEmpty;
 
@@ -172,8 +172,7 @@ class EnlacePublico {
       );
 }
 
-/// Escenario tal como lo publica `GET /api/recorridos` (el mismo JSON que
-/// lee Unity, ver ModelosRecorrido.cs).
+/// Escenario tal como lo publica `GET /api/recorridos`.
 class EscenaPublica {
   final String id;
   final String titulo;
@@ -206,8 +205,8 @@ class EscenaPublica {
       );
 }
 
-/// Recorrido tal como lo publica `GET /api/recorridos` (el contrato con
-/// Unity). Lo usan la ficha del lugar, el mapa y el visor 360° de la web.
+/// Recorrido tal como lo publica `GET /api/recorridos`. Lo usan la ficha del
+/// lugar, el mapa y el visor 360° (web y móvil).
 class RecorridoPublico {
   final String nombre;
   final String textoParaMostrar;
@@ -419,8 +418,8 @@ class EstadoRecorridoNegocio {
 }
 
 /// Gestión de recorridos 360° para admin / super_admin, más la solicitud de
-/// recorrido que hace un negocio. La app móvil no usa esto: Unity lee
-/// directo el endpoint público `GET /api/recorridos`.
+/// recorrido que hace un negocio. El turista usa el endpoint público
+/// `GET /api/recorridos` ([listPublicos]).
 class RecorridosService {
   final http.Client _client;
 
@@ -489,7 +488,7 @@ class RecorridosService {
   }
 
   /// Sube (o reemplaza) la foto de una casilla: `posicion` 1 = "Escenario 1"…
-  /// La casilla decide el orden que ve Unity, no el orden de subida. Se
+  /// La casilla decide el orden que ve el turista, no el orden de subida. Se
   /// manda como stream (sin cargar la foto entera en memoria del navegador);
   /// el backend la optimiza antes de guardarla.
   Future<Escena360> setEscena(

@@ -9,7 +9,7 @@ import '../../services/recorridos_service.dart';
 import '../../theme/app_theme.dart';
 
 /// Flecha de un escenario hacia otro. Ángulos en grados con la misma
-/// convención que el backend y Unity: [yaw] -180…180, 0 = centro horizontal
+/// convención que el backend: [yaw] -180…180, 0 = centro horizontal
 /// de la foto equirectangular y positivo hacia la derecha
 /// (`yaw = (u − 0.5) · 360`, con u = x / ancho de la imagen); [pitch] -90…90,
 /// 0 = horizonte y negativo hacia el piso.
@@ -92,9 +92,8 @@ class Visor360Controller {
 /// envuelta en una esfera, flechas para pasar al siguiente escenario, el
 /// nombre del lugar arriba y la tira de escenarios abajo.
 ///
-/// Es el mismo visor para el turista (web y móvil sin Unity) y para la vista
-/// previa del panel de administración; el visor de Unity copia este diseño
-/// (ver apps/ar-module/README.md → "Recorrido 360°").
+/// Es el mismo visor para el turista (web y móvil) y para la vista previa del
+/// panel de administración.
 class Visor360 extends StatefulWidget {
   final List<EscenaVisor> escenas;
   final String? escenaInicialId;
@@ -339,7 +338,7 @@ class _Visor360State extends State<Visor360> {
 }
 
 /// Flecha para pasar a otro escenario: círculo blanco con la flecha y el
-/// nombre del destino debajo (mismo diseño que el prefab de Unity).
+/// nombre del destino debajo.
 class _Flecha extends StatelessWidget {
   final String etiqueta;
   final Color acento;

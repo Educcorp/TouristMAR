@@ -21,7 +21,8 @@ class ExperienciaError implements Exception {
 }
 
 /// Punto de conexión con quien ejecuta realmente cada experiencia: el
-/// módulo Unity (RA de marcador, RA de ubicación y recorrido 360°).
+/// módulo Unity (RA de marcador y RA por geolocalización) o Flutter
+/// (recorrido 360°, y la RA por geolocalización donde no hay Unity).
 ///
 /// La interfaz nunca abre la cámara ni carga modelos por su cuenta: llama a
 /// [ExperienciasLauncher.current]. Por defecto no hay nada configurado y la

@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../services/recorridos_service.dart';
 import '../widgets/recorrido360/visor_360.dart';
 
-/// Recorrido 360° a pantalla completa (web, o móvil sin el módulo de Unity):
+/// Recorrido 360° a pantalla completa (web y móvil):
 /// se entra desde la tarjeta del lugar en el mapa o desde su ficha, como el
 /// Street View de Google.
 class Recorrido360Page extends StatelessWidget {

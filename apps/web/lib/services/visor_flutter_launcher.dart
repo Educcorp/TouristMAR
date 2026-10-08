@@ -9,8 +9,9 @@ import 'recorridos_service.dart';
 
 /// Experiencias hechas en Flutter, sin Unity: el recorrido 360° con el
 /// visor de Flutter ([Recorrido360Page]) y la RA por ubicación con cámara,
-/// GPS y brújula ([RaUbicacionPage]) sobre el pin del lugar. Lo usa la web y
-/// la app móvil para lo que su build de Unity no trae. La RA con marcador
+/// GPS y brújula ([RaUbicacionPage]) sobre los puntos del lugar. Lo usa la
+/// web, y la app móvil para el 360° (siempre) y para la RA por
+/// geolocalización cuando su build no trae Unity. La RA con marcador
 /// sigue siendo solo de Unity.
 class VisorFlutterLauncher implements ExperienciasLauncher {
   final RecorridosService? _service;

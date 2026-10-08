@@ -6,28 +6,32 @@ Cómo funciona la realidad aumentada basada en geolocalización (Location-based 
 
 Cada lugar tiene **puntos de interés** (la entrada de FIME, su explanada, un mural…). Cada punto tiene sus coordenadas y **dos radios**:
 
-| Distancia del turista al punto | Qué ve | Quién lo hace |
-|---|---|---|
-| Fuera del `radioVisible` | Guía: "El punto más cercano está a 500 m hacia el norte" | Flutter |
-| Dentro del `radioVisible` (≈100 m) | **Marcador flotante** en la cámara, en la dirección real del punto, con título, resumen y distancia. Si el punto no está en la vista: "Gira a la derecha 90°" | Flutter |
-| Dentro del `radioCercano` (≈5–10 m) | **Guía completa** (información, imagen, audio) y, si el lugar tiene marcadores de imagen, el botón **"Abrir RA con marcadores"** | Flutter → **Unity** |
+| Distancia del turista al punto | Qué ve |
+|---|---|
+| Fuera del `radioVisible` | Guía: "El punto más cercano está a 500 m hacia el norte" |
+| Dentro del `radioVisible` (≈100 m) | **Marcador flotante** en la cámara, en la dirección real del punto, con título, resumen y distancia. Si el punto no está en la vista: "Gira a la derecha 90°" |
+| Dentro del `radioCercano` (≈5–10 m) | **Guía completa** (información, imagen, audio) y, si el lugar tiene marcadores de imagen, el paso a la **RA con marcadores** |
+
+**Quién la dibuja:** en la app móvil con el módulo de Unity, **Unity** (escena `geo`). En la web, y en un build móvil sin Unity, la misma experiencia la hace Flutter (`ra_ubicacion_page.dart`). Las dos leen la misma API.
 
 A corta distancia el GPS ya no es preciso (falla 5–15 m). Por eso la experiencia de alta precisión la hacen los **marcadores de imagen** colocados en el lugar, que reconoce Unity con ARCore.
 
 Si un lugar no tiene puntos dados de alta, **su pin hace de punto único** (radio visible de 100 m y cercano de 10 m, con la descripción del lugar). Así cualquier lugar con pin ya tiene RA por geolocalización.
 
 ```
-Ficha del lugar / "Cómo llegar"
+Ficha del lugar → "RA por geolocalización"
         │
         ▼
-RA por geolocalización (Flutter: cámara + GPS + brújula)      ← web y app móvil
+App móvil → Unity, escena "geo"                    (web / sin Unity: Flutter)
+  extras: escena=geo, parametro={lugarId}, lugarId={lugarId}, apiBaseUrl={API}
   GET {API}/ra/lugares/{lugarId}
         │  al entrar al radioCercano y si tieneMarcadores
         ▼
-"Abrir RA con marcadores" → Unity, escena "marcadores"        ← solo app móvil
-  extras: escena=marcadores, lugarId={lugarId}, apiBaseUrl={API}
+Unity, escena "marcadores"
   GET {API}/marcadores?negocioId={lugarId}
 ```
+
+> El **recorrido 360°** no tiene nada que ver con esta experiencia ni con Unity: lo hace Flutter con `GET {API}/recorridos` (ver `recorrido_360.md`).
 
 **El lugar siempre se identifica por su `id`**, el mismo en Flutter, en Unity y en la base de datos. Ejemplo: FIME = `f24442e4-6613-4427-99df-a7f962d6b99e`.
 
@@ -109,12 +113,12 @@ Los marcadores de imagen de ese lugar, con el mismo contrato de siempre (`{ "mar
 
 | Extra | Valor |
 |---|---|
-| `escena` | `marcadores`, `recorrido` o `geo` |
-| `parametro` | en `recorrido`: nombre del recorrido; en `geo`: id del lugar |
+| `escena` | `marcadores` o `geo` |
+| `parametro` | en `geo`: id del lugar (igual que `lugarId`) |
 | `apiBaseUrl` | la misma API que usa la app (ej. `https://touristmar-production.up.railway.app/api`) |
 | `lugarId` | **id del lugar** (siempre que se abre desde un lugar) |
 
-Por defecto la RA por geolocalización la hace **Flutter**. Si algún día la quieren en Unity, se compila la app con `--dart-define=RA_GEO_EN_UNITY=true`: la app abre la escena `geo` de Unity con `parametro` = id del lugar.
+Si el build trae Unity, la RA con marcador y la RA por geolocalización se abren en Unity. Si no lo trae, la RA por geolocalización se abre con Flutter y la de marcadores no está disponible. El recorrido 360° siempre se abre con Flutter.
 
 ## 5. Unity: qué configurar
 
@@ -123,12 +127,12 @@ Scripts del repo, en `apps/ar-module/Assets/Scripts/`:
 | Script | Para qué |
 |---|---|
 | `Bridge/ParametrosApp.cs` | Lee los extras (`Escena`, `Parametro`, `ApiBaseUrl`, `LugarId`). En el Editor usa valores por defecto (API `http://localhost:5173/api`, lugar FIME). |
-| `Bridge/Arranque.cs` | Escena **Arranque**, la primera en *Build Profiles → Scene List*: carga la escena según `escena`. Escribe en el Inspector los nombres de tus escenas. |
+| `Bridge/Arranque.cs` | Escena **Arranque**, la primera en *Build Profiles → Scene List*: carga `marcadores` o `geo` según `escena`. Escribe en el Inspector los nombres de tus escenas. La escena `geo` (por defecto "Geo") **tiene que estar en el Scene List**, o Unity no la puede abrir. |
 | `AR/ModelosLugarRA.cs` | Clases del JSON de `/ra/lugares` (`DatosLugarRA`, `DatosPuntoRA`, …). |
 | `AR/CargadorLugarRA.cs` | Pide `/ra/lugares/{lugarId}`. Nunca deja `puntos` en `null`: si la respuesta viene en el formato anterior, arma el punto con el pin. |
 | `AR/MarcadorDinamico.cs` + `Bridge/PuenteApp.cs` | Escena de marcadores: con `lugarId` baja solo los marcadores de ese lugar. |
 
-Ejemplo de lectura de los puntos (escena `geo`, si la hacen en Unity):
+Ejemplo de lectura de los puntos (escena `geo`):
 
 ```csharp
 StartCoroutine(CargadorLugarRA.Cargar(ParametrosApp.ApiBaseUrl, ParametrosApp.LugarId,

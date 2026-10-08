@@ -174,7 +174,7 @@ beforeEach(() => {
 })
 
 describe('GET /api/recorridos', () => {
-  it('es público y devuelve el contrato para Unity: escenarios en orden con sus flechas, sin nulls', async () => {
+  it('es público y devuelve el contrato público: escenarios en orden con sus flechas, sin nulls', async () => {
     recorridoFindMany.mockResolvedValue([recorridoRow()] as any)
 
     const res = await request(buildApp()).get('/api/recorridos')
@@ -343,7 +343,7 @@ describe('/api/admin/recorridos', () => {
     expect(recorridoUpdate.mock.calls[0][0].data).toEqual({ latitud: null, longitud: null })
   })
 
-  it('sin pin, Unity recibe tieneUbicacion: false y nada de null', async () => {
+  it('sin pin, el contrato trae tieneUbicacion: false y nada de null', async () => {
     recorridoFindMany.mockResolvedValue([recorridoRow({ latitud: null, longitud: null })] as any)
 
     const res = await request(buildApp()).get('/api/recorridos')

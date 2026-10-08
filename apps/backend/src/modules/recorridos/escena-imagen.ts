@@ -25,7 +25,7 @@ export interface EscenaProcesada {
 }
 
 /// Valida que sea una foto 360° equirectangular (JPG/PNG, 2:1) y genera las
-/// dos versiones que se guardan: la escena optimizada para Unity y una
+/// dos versiones que se guardan: la escena optimizada para el visor y una
 /// miniatura para el panel. El original de la cámara nunca se guarda.
 export async function procesarEscena(buffer: Buffer): Promise<EscenaProcesada> {
   const meta = await sharp(buffer)
@@ -54,7 +54,7 @@ export async function procesarEscena(buffer: Buffer): Promise<EscenaProcesada> {
     )
   }
 
-  // Siempre 2:1 exacto (ancho par): la esfera de Unity mapea la textura
+  // Siempre 2:1 exacto (ancho par): la esfera del visor mapea la textura
   // completa, así que unos píxeles de más se verían como una costura.
   const ancho = Math.min(anchoOriginal, ESCENA_ANCHO_MAX) & ~1
   const alto = ancho / 2
@@ -64,8 +64,8 @@ export async function procesarEscena(buffer: Buffer): Promise<EscenaProcesada> {
     base
       .clone()
       .resize({ width: ancho, height: alto, fit: 'fill' })
-      // JPG baseline (no progresivo): lo decodifica cualquier versión de
-      // Unity en Android/iOS. Por eso no `mozjpeg: true` (fuerza progresivo),
+      // JPG baseline (no progresivo): lo decodifica cualquier navegador o
+      // teléfono. Por eso no `mozjpeg: true` (fuerza progresivo),
       // sino sus optimizaciones de tamaño una por una. Sin metadatos
       // (EXIF/GPS) — no hacen falta.
       .jpeg({
