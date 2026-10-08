@@ -224,14 +224,14 @@ class _IdentityCell extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        UserAvatar(fallbackLetter: user.name, imageUrl: user.avatarUrl, radius: 16, color: AppColors.brandTeal),
+        UserAvatar(fallbackLetter: user.name, imageUrl: user.avatarUrl, radius: 18, color: AppColors.brandTeal),
         const SizedBox(width: AppSpacing.sm),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(user.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 13)),
+              Text(user.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 15)),
               Text(user.email, maxLines: 1, overflow: TextOverflow.ellipsis, style: AppTypography.bodySmall),
             ],
           ),
@@ -255,8 +255,10 @@ class _ActionCell extends StatelessWidget {
     }
     return DsButton(
       label: blocked ? 'Desbloquear' : 'Bloquear',
-      variant: blocked ? DsButtonVariant.secondary : DsButtonVariant.danger,
-      accent: blocked ? AppColors.emerald : null,
+      // Contorno, no rojo sólido: bloquear es la excepción, no debe gritar
+      // en cada fila de la lista.
+      variant: DsButtonVariant.secondary,
+      accent: blocked ? AppColors.emerald : AppColors.rojoTexto,
       size: DsButtonSize.sm,
       onPressed: onToggleActive,
     );
@@ -274,21 +276,24 @@ class _UserCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final blocked = !user.activo;
     return DsCard(
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _IdentityCell(user: user),
-          const SizedBox(width: AppSpacing.sm),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
+          const SizedBox(height: AppSpacing.md),
+          Row(
             children: [
-              Wrap(
-                spacing: 6,
-                children: [
-                  DsBadge(text: user.isNegocio ? 'Empresa' : 'Visitante', tone: user.isNegocio ? BadgeTone.warning : BadgeTone.info),
-                  DsBadge(text: blocked ? 'Bloqueado' : 'Activo', tone: blocked ? BadgeTone.danger : BadgeTone.success),
-                ],
+              Expanded(
+                child: Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    DsBadge(text: user.isNegocio ? 'Empresa' : 'Visitante', tone: user.isNegocio ? BadgeTone.warning : BadgeTone.info),
+                    DsBadge(text: blocked ? 'Bloqueado' : 'Activo', tone: blocked ? BadgeTone.danger : BadgeTone.success),
+                  ],
+                ),
               ),
-              const SizedBox(height: AppSpacing.sm),
+              const SizedBox(width: AppSpacing.sm),
               _ActionCell(blocked: blocked, isUpdating: isUpdating, onToggleActive: onToggleActive),
             ],
           ),

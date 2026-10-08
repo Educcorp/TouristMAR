@@ -207,97 +207,12 @@ class _InicioContentState extends State<_InicioContent> {
 class _Hero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final now = DateTime.now();
-    return SizedBox(
-      height: 170,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(AppRadius.hero),
-        child: Stack(
-          children: [
-            Positioned.fill(
-              child: Image.asset('assets/images/admin-hero-bahia.webp', fit: BoxFit.cover),
-            ),
-            Positioned.fill(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.centerLeft,
-                    end: Alignment.centerRight,
-                    colors: [
-                      AppColors.scrimDark.withValues(alpha: 0.92),
-                      AppColors.scrimDark.withValues(alpha: 0.55),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            Positioned.fill(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [AppColors.scrimDark.withValues(alpha: 0.3), Colors.transparent],
-                  ),
-                ),
-              ),
-            ),
-            Positioned.fill(
-              child: Padding(
-                padding: const EdgeInsets.all(AppSpacing.lg),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(width: 16, height: 1, color: const Color(0xFFA78BFA)),
-                        const SizedBox(width: AppSpacing.sm),
-                        const Text('PANEL DE ADMINISTRACIÓN',
-                            style: TextStyle(
-                                color: Color(0xFFA78BFA), fontSize: 11, fontWeight: FontWeight.w500, letterSpacing: 2)),
-                      ],
-                    ),
-                    const SizedBox(height: AppSpacing.xs),
-                    Text('TouristMAR — Admin', style: AppTypography.h1.copyWith(fontSize: 24, color: Colors.white)),
-                    const SizedBox(height: 2),
-                    const Text('Gestión central del sistema turístico',
-                        style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.4)),
-                    const SizedBox(height: AppSpacing.sm),
-                    Wrap(
-                      spacing: AppSpacing.lg,
-                      runSpacing: 4,
-                      children: [
-                        const _MetaChip(icon: Icons.location_on_outlined, text: 'Manzanillo, Colima'),
-                        _MetaChip(icon: Icons.calendar_today_outlined, text: formatDateEs(now)),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _MetaChip extends StatelessWidget {
-  final IconData icon;
-  final String text;
-  const _MetaChip({required this.icon, required this.text});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 13, color: Colors.white.withValues(alpha: 0.8)),
-        const SizedBox(width: 6),
-        Text(text, style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: 12, fontWeight: FontWeight.w500)),
+        Text('Panel de administración', style: AppTypography.h1),
+        const SizedBox(height: 4),
+        Text('Manzanillo, Colima · ${formatDateEs(DateTime.now())}', style: AppTypography.body),
       ],
     );
   }
@@ -310,10 +225,10 @@ class _StatsGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final items = [
-      (Icons.groups_outlined, stats.turistas, 'Visitantes registrados', AppColors.brandTeal),
-      (Icons.apartment, stats.negociosActivos, 'Negocios activos', AppColors.businessOrange),
-      (Icons.report_gmailerrorred_outlined, stats.negociosPendientes, 'Solicitudes pendientes', AppColors.amber),
-      (Icons.store_outlined, stats.negociosTotal, 'Negocios totales', AppColors.emerald),
+      (Icons.groups_outlined, stats.turistas, 'Visitantes registrados', AppColors.turquesa),
+      (Icons.apartment, stats.negociosActivos, 'Negocios activos', AppColors.turquesa),
+      (Icons.report_gmailerrorred_outlined, stats.negociosPendientes, 'Solicitudes pendientes', AppColors.amarillo),
+      (Icons.store_outlined, stats.negociosTotal, 'Negocios totales', AppColors.turquesa),
     ];
 
     return LayoutBuilder(
@@ -325,10 +240,12 @@ class _StatsGrid extends StatelessWidget {
           physics: const NeverScrollableScrollPhysics(),
           mainAxisSpacing: AppSpacing.md,
           crossAxisSpacing: AppSpacing.md,
-          childAspectRatio: compact ? 0.95 : 1.15,
+          childAspectRatio: compact ? 1.05 : 1.35,
           children: items.map((s) {
             final (icon, value, label, color) = s;
-            return DsStatCard(icon: icon, value: value, label: label, accent: color);
+            // Solo las solicitudes pendientes piden atención (cuando hay).
+            final alerta = icon == Icons.report_gmailerrorred_outlined && value > 0;
+            return DsStatCard(icon: icon, value: value, label: label, accent: color, alerta: alerta);
           }).toList(),
         );
       },

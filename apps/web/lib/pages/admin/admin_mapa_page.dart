@@ -572,7 +572,7 @@ class _Leyenda extends StatelessWidget {
               children: [
                 Container(width: 10, height: 10, decoration: BoxDecoration(color: c.color, shape: BoxShape.circle)),
                 const SizedBox(width: 6),
-                Text(c.etiqueta, style: TextStyle(color: AppColors.textPrimary, fontSize: 11)),
+                Text(c.etiqueta, style: TextStyle(color: AppColors.textPrimary, fontSize: 12)),
               ],
             ),
         ],
@@ -633,7 +633,6 @@ class _ParametrosCardState extends State<_ParametrosCard> {
             min: 20,
             max: 300,
             divisions: 28,
-            activeColor: AppColors.adminViolet,
             onChanged: editable ? (v) => setState(() => _config = _config.copyWith(radioDesbloqueoDefault: v)) : null,
           ),
           _SwitchFila(
@@ -684,7 +683,7 @@ class _SwitchFila extends StatelessWidget {
               ],
             ),
           ),
-          Switch(value: valor, onChanged: onChanged, activeTrackColor: AppColors.adminViolet),
+          Switch(value: valor, onChanged: onChanged),
         ],
       ),
     );

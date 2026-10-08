@@ -223,7 +223,7 @@ class _NumeroPunto extends StatelessWidget {
     return Container(
       alignment: Alignment.center,
       decoration: BoxDecoration(color: color, shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 2)),
-      child: Text('$numero', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w800)),
+      child: Text('$numero', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w800)),
     );
   }
 }
@@ -291,7 +291,7 @@ class _FilaPunto extends StatelessWidget {
             else ...[
               Tooltip(
                 message: punto.activo ? 'Visible para los visitantes' : 'Oculto',
-                child: Switch(value: punto.activo, activeThumbColor: color, onChanged: onActivo),
+                child: Switch(value: punto.activo, onChanged: onActivo),
               ),
               IconButton(tooltip: 'Editar', onPressed: onEditar, icon: Icon(Icons.edit_outlined, size: 18, color: AppColors.slate300)),
               IconButton(tooltip: 'Borrar', onPressed: onBorrar, icon: Icon(Icons.delete_outline, size: 18, color: AppColors.errorRed)),
@@ -406,7 +406,6 @@ class _DialogoPuntoState extends State<_DialogoPunto> {
           min: min,
           max: max,
           divisions: (max - min).round(),
-          activeColor: _color,
           onChanged: _guardando ? null : onChanged,
         ),
         Text(ayuda, style: AppTypography.caption),

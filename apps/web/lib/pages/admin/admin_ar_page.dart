@@ -391,7 +391,7 @@ class _MarcadorFormState extends State<_MarcadorForm> {
           children: [
             Text(
               _isEdit ? 'EDITAR MARCADOR' : 'NUEVO MARCADOR',
-              style: AppTypography.caption.copyWith(color: AppColors.adminViolet, letterSpacing: 1.5),
+              style: AppTypography.h3,
             ),
             const SizedBox(height: AppSpacing.md),
             LayoutBuilder(
@@ -696,7 +696,6 @@ class _MarcadorRow extends StatelessWidget {
                     message: marcador.activo ? 'Visible en la app' : 'Oculto en la app',
                     child: Switch(
                       value: marcador.activo,
-                      activeThumbColor: AppColors.adminViolet,
                       onChanged: onToggle,
                     ),
                   ),

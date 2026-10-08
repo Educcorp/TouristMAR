@@ -197,13 +197,14 @@ class _ChartShell extends StatelessWidget {
   }
 }
 
-final _chartPalette = [
-  AppColors.adminViolet,
-  AppColors.brandTeal,
-  AppColors.businessOrange,
-  AppColors.emerald,
-  AppColors.amber,
-  AppColors.oceanBlue,
+/// Los esmaltes de las pangas, más la tinta y un gris marino para la cola.
+const _chartPalette = [
+  AppColors.turquesa,
+  AppColors.amarillo,
+  AppColors.azul,
+  AppColors.rojo,
+  AppColors.riel,
+  Color(0xFF7FA7B5),
 ];
 
 class _CategoryDonutCard extends StatelessWidget {
@@ -315,9 +316,13 @@ class _Legend extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    // Con muchas categorías la leyenda no cabe en los 200 px de la tarjeta:
+    // se desplaza dentro de ella en vez de salirse.
+    return Center(
+      child: SingleChildScrollView(
+        child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisAlignment: MainAxisAlignment.center,
+      mainAxisSize: MainAxisSize.min,
       children: [
         for (var i = 0; i < entries.length; i++)
           Padding(
@@ -345,6 +350,8 @@ class _Legend extends StatelessWidget {
             ),
           ),
       ],
+        ),
+      ),
     );
   }
 }
@@ -452,7 +459,7 @@ class _RangeSelector extends StatelessWidget {
               e.value,
               style: TextStyle(
                 color: selected ? AppColors.adminViolet : AppColors.slate400,
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: FontWeight.w600,
               ),
             ),

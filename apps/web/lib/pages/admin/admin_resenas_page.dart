@@ -73,7 +73,7 @@ class _AdminResenasPageState extends State<AdminResenasPage> {
           ),
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Eliminar', style: TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.w600)),
+            child: const Text('Eliminar', style: TextStyle(color: AppColors.rojo, fontWeight: FontWeight.w600)),
           ),
         ],
       ),

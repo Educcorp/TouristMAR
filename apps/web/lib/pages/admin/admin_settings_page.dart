@@ -99,7 +99,7 @@ class _SettingsSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title.toUpperCase(), style: AppTypography.caption.copyWith(letterSpacing: 1.2)),
+        Text(title, style: AppTypography.h3),
         const SizedBox(height: AppSpacing.sm),
         child,
       ],

@@ -78,14 +78,21 @@ class _AdminBusinessesPageState extends State<AdminBusinessesPage> {
     if (resultado.editado || resultado.aprobado != null) _load();
   }
 
-  List<String> get _categorias =>
-      _negocios.map((n) => n.categoria).whereType<String>().toSet().toList()..sort();
+  /// Categorías sin repetir: "Club de Playa" y "Club de playa" son la misma
+  /// (la categoría es texto libre); se muestra la primera forma que aparece.
+  List<String> get _categorias {
+    final porClave = <String, String>{};
+    for (final c in _negocios.map((n) => n.categoria?.trim()).whereType<String>()) {
+      if (c.isNotEmpty) porClave.putIfAbsent(c.toLowerCase(), () => c);
+    }
+    return porClave.values.toList()..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+  }
 
   List<NegocioSummary> get _filtered {
     final query = _searchController.text.trim().toLowerCase();
     return _negocios.where((n) {
       if (_estadoFiltro != 'Todos' && n.estado != _estadoFiltro) return false;
-      if (_categoriaFiltro != null && n.categoria != _categoriaFiltro) return false;
+      if (_categoriaFiltro != null && n.categoria?.trim().toLowerCase() != _categoriaFiltro!.toLowerCase()) return false;
       if (query.isNotEmpty && !n.nombre.toLowerCase().contains(query)) return false;
       return true;
     }).toList();
@@ -332,7 +339,7 @@ class _AssetDot extends StatelessWidget {
           borderRadius: BorderRadius.circular(6),
           border: Border.all(color: active ? color.withValues(alpha: 0.4) : AppColors.overlay(0.1)),
         ),
-        child: Text(label, style: TextStyle(color: color, fontSize: 9, fontWeight: FontWeight.w700)),
+        child: Text(label, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w700)),
       ),
     );
   }

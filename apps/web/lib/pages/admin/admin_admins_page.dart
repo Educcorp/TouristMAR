@@ -133,18 +133,22 @@ class _AdminAdminsPageState extends State<AdminAdminsPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              // Título y botón en una sola fila solo si caben; en el teléfono
+              // el botón baja (antes partía "Administradores" a media palabra).
+              Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.end,
+                spacing: AppSpacing.lg,
+                runSpacing: AppSpacing.md,
                 children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Administradores', style: AppTypography.h1),
-                        const SizedBox(height: 4),
-                        Text('Configuración y control de administradores.', style: AppTypography.body),
-                      ],
-                    ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text('Administradores', style: AppTypography.h1),
+                      const SizedBox(height: 4),
+                      Text('Configuración y control de administradores.', style: AppTypography.body),
+                    ],
                   ),
                   if (_canManage && !_showForm)
                     DsButton(
@@ -177,7 +181,7 @@ class _AdminAdminsPageState extends State<AdminAdminsPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('NUEVO ADMINISTRADOR', style: AppTypography.caption.copyWith(color: AppColors.adminViolet, letterSpacing: 1.5)),
+            Text('Nuevo administrador', style: AppTypography.h3),
             const SizedBox(height: AppSpacing.md),
             AppTextField(
               label: 'Nombre',
@@ -279,7 +283,7 @@ class _AdminRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(admin.name, style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 13)),
-                Text(admin.email, style: AppTypography.bodySmall),
+                Text(admin.email, maxLines: 1, overflow: TextOverflow.ellipsis, style: AppTypography.bodySmall),
               ],
             ),
           ),

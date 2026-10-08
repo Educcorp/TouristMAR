@@ -497,7 +497,7 @@ class _MarcadoresLugarSectionState extends State<MarcadoresLugarSection> {
                     ),
                     Tooltip(
                       message: m.activo ? 'Visible en la app' : 'Oculto',
-                      child: Switch(value: m.activo, activeThumbColor: color, onChanged: _ocupado ? null : (v) => _activar(m, v)),
+                      child: Switch(value: m.activo, onChanged: _ocupado ? null : (v) => _activar(m, v)),
                     ),
                     IconButton(
                       tooltip: 'Eliminar',
@@ -516,7 +516,7 @@ class _MarcadoresLugarSectionState extends State<MarcadoresLugarSection> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text('NUEVO MARCADOR', style: AppTypography.caption.copyWith(color: color, letterSpacing: 1.5)),
+                  Text('Nuevo marcador', style: AppTypography.h3),
                   const SizedBox(height: AppSpacing.md),
                   InkWell(
                     onTap: _ocupado ? null : _elegirImagen,

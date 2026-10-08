@@ -389,7 +389,7 @@ class _RecorridoFormState extends State<_RecorridoForm> {
           children: [
             Text(
               _isEdit ? 'EDITAR RECORRIDO' : 'NUEVO RECORRIDO 360°',
-              style: AppTypography.caption.copyWith(color: AppColors.adminViolet, letterSpacing: 1.5),
+              style: AppTypography.h3,
             ),
             const SizedBox(height: AppSpacing.md),
             AppTextField(
@@ -572,7 +572,7 @@ class _RecorridoRow extends StatelessWidget {
                 children: [
                   Tooltip(
                     message: r.activo ? 'Visible en la app' : 'Oculto en la app',
-                    child: Switch(value: r.activo, activeThumbColor: AppColors.adminViolet, onChanged: onToggle),
+                    child: Switch(value: r.activo, onChanged: onToggle),
                   ),
                   Row(
                     mainAxisSize: MainAxisSize.min,
@@ -1315,7 +1315,7 @@ class _TarjetaEscenario extends StatelessWidget {
                       ),
                       child: Text(
                         entrada ? '${escena.posicion} · Entrada' : '${escena.posicion}',
-                        style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700),
+                        style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700),
                       ),
                     ),
                   ),
