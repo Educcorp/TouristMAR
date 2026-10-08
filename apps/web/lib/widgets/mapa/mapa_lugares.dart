@@ -97,8 +97,9 @@ class PinLugar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = lugar.categoria.color;
-    final size = seleccionado ? 42.0 : 34.0;
+    final color = lugar.categoria.esmalte;
+    final sobre = color.computeLuminance() < 0.3 ? Colors.white : AppColors.riel;
+    final size = seleccionado ? 44.0 : 36.0;
     return SizedBox(
       width: ancho,
       height: alto,
@@ -124,7 +125,7 @@ class PinLugar extends StatelessWidget {
                   BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 8, offset: const Offset(0, 3)),
                 ],
               ),
-              child: Icon(lugar.categoria.icon, size: size * 0.5, color: Colors.white),
+              child: Icon(lugar.categoria.icon, size: size * 0.5, color: sobre),
             ),
           ),
           if (lugar.tieneExperiencias)
@@ -138,7 +139,7 @@ class PinLugar extends StatelessWidget {
                   borderRadius: BorderRadius.circular(6),
                   border: Border.all(color: Colors.white, width: 1.2),
                 ),
-                child: const Text('RA', style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w800)),
+                child: const Text('RA', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w800)),
               ),
             ),
         ],

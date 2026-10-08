@@ -205,10 +205,23 @@ class _ExplorarMapaPageState extends State<ExplorarMapaPage> {
         if (widget.service.usaDatosDemo)
           Positioned(
             left: 12,
-            bottom: compacto && seleccionado != null ? 200 : _margenInferior,
+            bottom: compacto ? (seleccionado != null ? 200 : _margenInferior + 64) : _margenInferior,
             child: const _AvisoDemo(),
           ),
         if (_cargando) const Center(child: CircularProgressIndicator()),
+        if (compacto && seleccionado == null && !_cargando)
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: _margenInferior + 8,
+            child: Center(
+              child: FilledButton.icon(
+                onPressed: _abrirLista,
+                icon: const Icon(Icons.view_list_rounded),
+                label: Text('Ver lista (${filtrados.length})'),
+              ),
+            ),
+          ),
         if (seleccionado != null)
           Positioned(
             left: 12,
@@ -265,64 +278,102 @@ class _ExplorarMapaPageState extends State<ExplorarMapaPage> {
               padding: const EdgeInsets.fromLTRB(12, 0, 12, 20),
               itemCount: filtrados.length,
               separatorBuilder: (_, __) => const SizedBox(height: 4),
-              itemBuilder: (context, i) {
-                final l = filtrados[i];
-                final activo = l.id == _seleccionadoId;
-                return Material(
-                  color: activo ? AppColors.brandTeal.withValues(alpha: 0.1) : Colors.transparent,
-                  borderRadius: BorderRadius.circular(AppRadius.buttonLg),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(AppRadius.buttonLg),
-                    onTap: () => _seleccionar(l),
-                    onDoubleTap: () => _abrirFicha(l),
-                    child: Padding(
-                      padding: const EdgeInsets.all(AppSpacing.sm),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 36,
-                            height: 36,
-                            decoration: BoxDecoration(color: l.categoria.color, shape: BoxShape.circle),
-                            child: Icon(l.categoria.icon, size: 18, color: Colors.white),
-                          ),
-                          const SizedBox(width: AppSpacing.md),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(l.nombre,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                        color: activo ? AppColors.brandTeal : AppColors.textPrimary,
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 13)),
-                                const SizedBox(height: 2),
-                                Text(
-                                  l.tieneExperiencias
-                                      ? '${l.categoria.etiqueta} · ${l.totalExperiencias} experiencia${l.totalExperiencias == 1 ? '' : 's'}'
-                                      : l.categoria.etiqueta,
-                                  style: AppTypography.bodySmall,
-                                ),
-                              ],
-                            ),
-                          ),
-                          const Icon(Icons.star, size: 12, color: Colors.amber),
-                          const SizedBox(width: 2),
-                          Text(l.rating.toStringAsFixed(1),
-                              style: const TextStyle(color: Colors.amber, fontSize: 12, fontWeight: FontWeight.w600)),
-                          const SizedBox(width: 4),
-                          FavoritoButton(lugar: l, sobreFoto: false, size: 18),
-                        ],
-                      ),
-                    ),
-                  ),
-                );
-              },
+              itemBuilder: (context, i) => _filaLugar(filtrados[i]),
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _filaLugar(Lugar l, {VoidCallback? alElegir}) {
+    final activo = l.id == _seleccionadoId;
+    final cat = l.categoria;
+    return Material(
+      color: activo ? AppColors.surfaceAlt : Colors.transparent,
+      borderRadius: BorderRadius.circular(AppRadius.buttonLg),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppRadius.buttonLg),
+        onTap: () {
+          alElegir?.call();
+          _seleccionar(l);
+        },
+        onDoubleTap: () => _abrirFicha(l),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 10),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(color: cat.esmalte, borderRadius: BorderRadius.circular(8)),
+                child: Icon(cat.icon, size: 22, color: cat.esmalte.computeLuminance() < 0.3 ? Colors.white : AppColors.riel),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(l.nombre,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700, fontSize: 16)),
+                    const SizedBox(height: 2),
+                    Text(
+                      l.tieneExperiencias
+                          ? '${cat.etiqueta} · ${l.totalExperiencias} experiencia${l.totalExperiencias == 1 ? '' : 's'}'
+                          : cat.etiqueta,
+                      style: AppTypography.bodySmall,
+                    ),
+                  ],
+                ),
+              ),
+              if (l.totalResenas > 0) ...[
+                const Icon(Icons.star_rounded, size: 18, color: AppColors.amarillo),
+                const SizedBox(width: 2),
+                Text(l.rating.toStringAsFixed(1),
+                    style: TextStyle(color: AppColors.tinta, fontSize: 14, fontWeight: FontWeight.w700)),
+                const SizedBox(width: 4),
+              ],
+              if (l.esFavoritable) FavoritoButton(lugar: l, sobreFoto: false, size: 20),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// En móvil la lista vive en una hoja que sube desde abajo.
+  void _abrirLista() {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (hoja) {
+        final filtrados = _filtrados;
+        return DraggableScrollableSheet(
+          expand: false,
+          initialChildSize: 0.6,
+          maxChildSize: 0.92,
+          builder: (context, scroll) => Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+                child: Text('${filtrados.length} lugares', style: AppTypography.h2),
+              ),
+              Expanded(
+                child: ListView.separated(
+                  controller: scroll,
+                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 24),
+                  itemCount: filtrados.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 4),
+                  itemBuilder: (context, i) => _filaLugar(filtrados[i], alElegir: () => Navigator.of(hoja).pop()),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -331,7 +382,7 @@ class _ExplorarMapaPageState extends State<ExplorarMapaPage> {
       _ChipFiltro(
         label: 'Con RA / 360°',
         icon: Icons.view_in_ar_outlined,
-        color: AppColors.brandTeal,
+        color: AppColors.riel,
         activo: _soloConRa,
         onTap: () => setState(() => _soloConRa = !_soloConRa),
       ),
@@ -339,7 +390,7 @@ class _ExplorarMapaPageState extends State<ExplorarMapaPage> {
         _ChipFiltro(
           label: c.etiqueta,
           icon: c.icon,
-          color: c.color,
+          color: c.esmalte,
           activo: _categorias.contains(c),
           onTap: () => setState(() => _categorias.contains(c) ? _categorias.remove(c) : _categorias.add(c)),
         ),
@@ -386,6 +437,9 @@ class _CampoBusqueda extends StatelessWidget {
               style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
               decoration: InputDecoration(
                 border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                filled: false,
                 isDense: true,
                 contentPadding: const EdgeInsets.symmetric(vertical: 13),
                 hintText: 'Buscar playas, restaurantes, miradores…',
@@ -419,6 +473,9 @@ class _ChipFiltro extends StatelessWidget {
     required this.onTap,
   });
 
+  /// Texto sobre el esmalte: blanco en los oscuros, tinta en los claros.
+  Color get _sobre => color.computeLuminance() < 0.3 ? Colors.white : AppColors.riel;
+
   @override
   Widget build(BuildContext context) {
     return Material(
@@ -428,7 +485,7 @@ class _ChipFiltro extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(999),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(999),
             border: Border.all(color: activo ? color : AppColors.overlay(0.12)),
@@ -436,11 +493,10 @@ class _ChipFiltro extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 14, color: activo ? Colors.white : color),
-              const SizedBox(width: 5),
+              Icon(icon, size: 18, color: activo ? _sobre : AppColors.tinta),
+              const SizedBox(width: 6),
               Text(label,
-                  style: TextStyle(
-                      color: activo ? Colors.white : AppColors.textPrimary, fontSize: 12, fontWeight: FontWeight.w600)),
+                  style: TextStyle(color: activo ? _sobre : AppColors.textPrimary, fontSize: 14, fontWeight: FontWeight.w600)),
             ],
           ),
         ),
@@ -459,19 +515,11 @@ class _AvisoDemo extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
-          color: AppColors.amber,
-          borderRadius: BorderRadius.circular(999),
+          color: AppColors.amarillo,
+          borderRadius: BorderRadius.circular(4),
           boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 8)],
         ),
-        child: const Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.science_outlined, size: 13, color: AppColors.scrimDark),
-            SizedBox(width: 4),
-            Text('Datos de ejemplo',
-                style: TextStyle(color: AppColors.scrimDark, fontSize: 11, fontWeight: FontWeight.w700)),
-          ],
-        ),
+        child: Text('DATOS DE EJEMPLO', style: AppTypography.matricula(size: 14, color: AppColors.riel)),
       ),
     );
   }

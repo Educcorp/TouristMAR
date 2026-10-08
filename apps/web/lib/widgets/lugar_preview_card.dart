@@ -72,7 +72,7 @@ class LugarPreviewCard extends StatelessWidget {
               child: Text(
                 lugar.categoriaTexto.isEmpty ? cat.etiqueta : lugar.categoriaTexto,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(color: cat.color, fontSize: 11, fontWeight: FontWeight.w600),
+                style: TextStyle(color: cat.color, fontSize: 12, fontWeight: FontWeight.w600),
               ),
             ),
           ],
@@ -83,15 +83,18 @@ class LugarPreviewCard extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: TextStyle(color: AppColors.textPrimary, fontSize: 15, fontWeight: FontWeight.w600)),
         const SizedBox(height: 4),
-        Row(
-          children: [
-            const Icon(Icons.star, size: 13, color: Colors.amber),
-            const SizedBox(width: 3),
-            Text(lugar.rating.toStringAsFixed(1),
-                style: const TextStyle(color: Colors.amber, fontSize: 12, fontWeight: FontWeight.w600)),
-            Text(' (${lugar.totalResenas})', style: AppTypography.bodySmall),
-          ],
-        ),
+        if (lugar.totalResenas > 0)
+          Row(
+            children: [
+              const Icon(Icons.star_rounded, size: 18, color: AppColors.amarillo),
+              const SizedBox(width: 3),
+              Text(lugar.rating.toStringAsFixed(1),
+                  style: TextStyle(color: AppColors.tinta, fontSize: 14, fontWeight: FontWeight.w700)),
+              Text(' (${lugar.totalResenas})', style: AppTypography.bodySmall),
+            ],
+          )
+        else
+          Text(lugar.esEjemplo ? 'Lugar de ejemplo' : 'Sin reseñas todavía', style: AppTypography.bodySmall),
         const SizedBox(height: AppSpacing.sm),
         ExperienciasMiniBadges(lugar: lugar),
       ],
@@ -170,8 +173,8 @@ class LugarPreviewCard extends StatelessWidget {
                       icon: const Icon(Icons.directions, size: 18),
                       label: const Text('Cómo llegar', style: TextStyle(fontWeight: FontWeight.w700)),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.brandTeal,
-                        side: BorderSide(color: AppColors.brandTeal),
+                        foregroundColor: AppColors.tinta,
+                        side: BorderSide(color: AppColors.tinta, width: 1.5),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.button)),
                       ),
                     ),
@@ -182,8 +185,8 @@ class LugarPreviewCard extends StatelessWidget {
                     child: FilledButton(
                       onPressed: onVerFicha,
                       style: FilledButton.styleFrom(
-                        backgroundColor: AppColors.brandTeal,
-                        foregroundColor: AppColors.panelNavy,
+                        backgroundColor: AppColors.tinta,
+                        foregroundColor: AppColors.casco,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.button)),
                       ),
                       child: Text(onComoLlegar != null ? 'Ver ficha' : 'Ver ficha del lugar',
@@ -284,7 +287,7 @@ class ExperienciasMiniBadges extends StatelessWidget {
                     Icon(info.icon, size: 11, color: color),
                     const SizedBox(width: 3),
                     Text(info.tituloCorto,
-                        style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w600,
+                        style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600,
                             decoration: activa ? null : TextDecoration.lineThrough)),
                   ],
                 ),
