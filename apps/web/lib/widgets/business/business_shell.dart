@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../app_shell.dart' show RolInsignia;
+
 import '../../models/business_profile.dart';
 import '../../navegacion/rutas.dart';
 import '../../services/auth_service.dart';
@@ -197,18 +199,7 @@ class _BusinessTopBar extends StatelessWidget {
               style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, letterSpacing: 2, fontSize: 13),
             ),
             const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: AppColors.businessOrange.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(4),
-                border: Border.all(color: AppColors.businessOrange.withValues(alpha: 0.3)),
-              ),
-              child: Text(
-                'EMPRESA',
-                style: TextStyle(color: AppColors.businessOrange, fontWeight: FontWeight.w700, fontSize: 9, letterSpacing: 1),
-              ),
-            ),
+            const RolInsignia('EMPRESA'),
             const Spacer(),
             NotificationBell(accentColor: AppColors.businessOrange, onNotificationTap: onNotificationTap),
             const SizedBox(width: 20),
@@ -312,7 +303,7 @@ class _BusinessSidebarContent extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               ...negocios.map((n) => Material(
-                    color: n.id == selected.id ? AppColors.businessOrange.withValues(alpha: 0.1) : Colors.transparent,
+                    color: n.id == selected.id ? AppColors.surfaceAlt : Colors.transparent,
                     borderRadius: BorderRadius.circular(10),
                     child: InkWell(
                       borderRadius: BorderRadius.circular(10),
@@ -342,7 +333,7 @@ class _BusinessSidebarContent extends StatelessWidget {
                               ),
                               child: Text(
                                 _estadoLabel(n.estado),
-                                style: TextStyle(color: _estadoColor(n.estado), fontSize: 10, fontWeight: FontWeight.w700),
+                                style: TextStyle(color: _estadoColor(n.estado), fontSize: 12, fontWeight: FontWeight.w700),
                               ),
                             ),
                           ],
@@ -412,17 +403,7 @@ class _BusinessSidebarContent extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 6),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                decoration: BoxDecoration(
-                  color: AppColors.businessOrange.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  'EMPRESA',
-                  style: TextStyle(color: AppColors.businessOrange, fontSize: 9, fontWeight: FontWeight.w700),
-                ),
-              ),
+              const RolInsignia('EMPRESA'),
               const Spacer(),
               if (showCloseButton)
                 IconButton(
@@ -492,11 +473,11 @@ class _BusinessSidebarContent extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
             children: _businessNavItems.map((item) {
               final active = item.section != null && item.section == section;
-              final color = active ? AppColors.businessOrange : AppColors.slate300;
+              final color = active ? AppColors.casco : AppColors.slate300;
               return Padding(
                 padding: const EdgeInsets.only(bottom: 4),
                 child: Material(
-                  color: active ? AppColors.businessOrange.withValues(alpha: 0.1) : Colors.transparent,
+                  color: active ? AppColors.tinta : Colors.transparent,
                   borderRadius: BorderRadius.circular(12),
                   child: InkWell(
                     borderRadius: BorderRadius.circular(12),
@@ -513,7 +494,7 @@ class _BusinessSidebarContent extends StatelessWidget {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
-                                color: active ? color : AppColors.overlay(0.85),
+                                color: active ? color : AppColors.tinta,
                                 fontSize: 14,
                                 fontWeight: active ? FontWeight.w600 : FontWeight.w500,
                               ),

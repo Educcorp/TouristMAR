@@ -18,11 +18,20 @@ class NavItem {
   final VoidCallback onTap;
   final bool highlight;
 
+  /// Pestaña de la barra inferior en móvil (las demás opciones viven en el
+  /// menú que abre el avatar).
+  final bool tab;
+
+  /// Etiqueta corta para la barra inferior ("Mapa" en vez de "Explorar mapa").
+  final String? tabLabel;
+
   const NavItem({
     required this.icon,
     required this.label,
     required this.onTap,
     this.highlight = false,
+    this.tab = false,
+    this.tabLabel,
   });
 }
 
@@ -60,24 +69,31 @@ List<NavItem> visitorNavItems(
     NavItem(
       icon: Icons.home_outlined,
       label: 'Inicio',
+      tab: true,
       highlight: current == VisitorSection.home,
       onTap: () => context.go('/inicio'),
     ),
     NavItem(
       icon: Icons.map_outlined,
       label: 'Explorar mapa',
+      tabLabel: 'Mapa',
+      tab: true,
       highlight: current == VisitorSection.mapa,
       onTap: () => openVisitorMap(context, profile, from: current),
     ),
     NavItem(
       icon: Icons.favorite_border,
       label: 'Mis favoritos',
+      tabLabel: 'Favoritos',
+      tab: true,
       highlight: current == VisitorSection.favoritos,
       onTap: () => openVisitorFavoritos(context, profile, from: current),
     ),
     NavItem(
       icon: Icons.person_outline,
       label: 'Mi perfil',
+      tabLabel: 'Perfil',
+      tab: true,
       highlight: current == VisitorSection.profile,
       onTap: () => context.go('/perfil'),
     ),
@@ -102,7 +118,7 @@ class _DrawerStat extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(value, style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700, fontSize: 16)),
-        Text(label, style: TextStyle(color: AppColors.slate400, fontSize: 10)),
+        Text(label, style: TextStyle(color: AppColors.slate400, fontSize: 12)),
       ],
     );
   }
@@ -252,6 +268,7 @@ class AppShell extends StatelessWidget {
               Expanded(child: body),
             ],
           ),
+          bottomNavigationBar: _BarraPestanas(items: navItems.where((i) => i.tab).toList()),
         );
       },
     );
@@ -324,18 +341,7 @@ class _TopBar extends StatelessWidget {
             ),
             if (badgeText != null) ...[
               const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: accentColor.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(4),
-                  border: Border.all(color: accentColor.withValues(alpha: 0.3)),
-                ),
-                child: Text(
-                  badgeText!,
-                  style: TextStyle(color: accentColor, fontWeight: FontWeight.w700, fontSize: 9, letterSpacing: 1),
-                ),
-              ),
+              RolInsignia(badgeText!),
             ],
             const Spacer(),
             NotificationBell(accentColor: accentColor),
@@ -437,17 +443,7 @@ class _SidebarContent extends StatelessWidget {
               ),
               if (badgeText != null) ...[
                 const SizedBox(width: 6),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                  decoration: BoxDecoration(
-                    color: accentColor.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    badgeText!,
-                    style: TextStyle(color: accentColor, fontSize: 9, fontWeight: FontWeight.w700),
-                  ),
-                ),
+                RolInsignia(badgeText!),
               ],
               const Spacer(),
               if (showCloseButton)
@@ -470,11 +466,11 @@ class _SidebarContent extends StatelessWidget {
           child: ListView(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
             children: navItems.map((item) {
-              final color = item.highlight ? accentColor : AppColors.slate300;
+              final color = item.highlight ? AppColors.casco : AppColors.slate300;
               return Padding(
                 padding: const EdgeInsets.only(bottom: 4),
                 child: Material(
-                  color: item.highlight ? accentColor.withValues(alpha: 0.1) : Colors.transparent,
+                  color: item.highlight ? AppColors.tinta : Colors.transparent,
                   borderRadius: BorderRadius.circular(12),
                   child: InkWell(
                     borderRadius: BorderRadius.circular(12),
@@ -483,7 +479,7 @@ class _SidebarContent extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                       child: Row(
                         children: [
-                          Icon(item.icon, size: 18, color: color),
+                          Icon(item.icon, size: 20, color: color),
                           const SizedBox(width: 12),
                           // Flexible + ellipsis: una etiqueta larga (o la letra
                           // agrandada por accesibilidad) no debe desbordar el menú.
@@ -493,8 +489,8 @@ class _SidebarContent extends StatelessWidget {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
-                                color: item.highlight ? color : AppColors.overlay(0.85),
-                                fontSize: 14,
+                                color: item.highlight ? color : AppColors.tinta,
+                                fontSize: 15,
                                 fontWeight: item.highlight ? FontWeight.w600 : FontWeight.w500,
                               ),
                             ),
@@ -536,6 +532,49 @@ class _SidebarContent extends StatelessWidget {
             ),
           ),
         ),
+      ],
+    );
+  }
+}
+
+/// Insignia del rol (EMPRESA, ADMIN) pintada como matrícula: esmalte amarillo
+/// con letra de plantilla. Es lo único que distingue el panel de cada rol.
+class RolInsignia extends StatelessWidget {
+  final String texto;
+
+  const RolInsignia(this.texto, {super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+      decoration: BoxDecoration(color: AppColors.amarillo, borderRadius: BorderRadius.circular(3)),
+      child: Text(texto, style: AppTypography.matricula(size: 13, color: AppColors.riel)),
+    );
+  }
+}
+
+/// Barra inferior del visitante en móvil: el riel de tinta marina, al alcance
+/// del pulgar. La pestaña activa se marca con esmalte turquesa.
+class _BarraPestanas extends StatelessWidget {
+  final List<NavItem> items;
+
+  const _BarraPestanas({required this.items});
+
+  @override
+  Widget build(BuildContext context) {
+    if (items.length < 2) return const SizedBox.shrink();
+    final activa = items.indexWhere((i) => i.highlight);
+    return NavigationBar(
+      selectedIndex: activa < 0 ? 0 : activa,
+      labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+      onDestinationSelected: (i) {
+        hideKeyboard();
+        if (i != activa) items[i].onTap();
+      },
+      destinations: [
+        for (final item in items)
+          NavigationDestination(icon: Icon(item.icon), label: item.tabLabel ?? item.label, tooltip: item.label),
       ],
     );
   }

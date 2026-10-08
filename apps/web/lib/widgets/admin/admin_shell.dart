@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../app_shell.dart' show RolInsignia;
+
 import '../../navegacion/rutas.dart';
 import '../../services/auth_service.dart';
 import '../../theme/app_theme.dart';
@@ -57,8 +59,8 @@ const _adminNavItems = [
   _AdminNavLeaf(AdminSection.usuarios, Icons.group_outlined, 'Usuarios'),
   _AdminNavLeaf(AdminSection.negocios, Icons.apartment_outlined, 'Negocios'),
   _AdminNavLeaf(AdminSection.resenas, Icons.forum_outlined, 'Reseñas'),
-  _AdminNavLeaf(AdminSection.mapa, Icons.view_in_ar_outlined, 'Mapa y RA'),
-  _AdminNavLeaf(AdminSection.realidadAumentada, Icons.view_in_ar_outlined, 'Realidad aumentada'),
+  _AdminNavLeaf(AdminSection.mapa, Icons.map_outlined, 'Mapa y RA'),
+  _AdminNavLeaf(AdminSection.realidadAumentada, Icons.qr_code_scanner, 'Marcadores de RA'),
   _AdminNavLeaf(AdminSection.admins, Icons.shield_outlined, 'Admins'),
   _AdminNavLeaf(AdminSection.reportes, Icons.bar_chart_outlined, 'Reportes'),
   _AdminNavLeaf(AdminSection.configuracion, Icons.settings_outlined, 'Configuración'),
@@ -96,6 +98,12 @@ class AdminShell extends StatelessWidget {
           child: AnimatedSwitcher(
             duration: const Duration(milliseconds: 200),
             switchInCurve: Curves.easeOut,
+            // Arriba, no al centro: el Stack por defecto centraba las
+            // secciones cortas y dejaba un hueco grande sobre el título.
+            layoutBuilder: (actual, anteriores) => Stack(
+              alignment: Alignment.topCenter,
+              children: [...anteriores, if (actual != null) actual],
+            ),
             child: KeyedSubtree(key: ValueKey(selected), child: body),
           ),
         );
@@ -226,18 +234,7 @@ class _AdminTopBar extends StatelessWidget {
               style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, letterSpacing: 2, fontSize: 13),
             ),
             const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: AppColors.adminViolet.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(4),
-                border: Border.all(color: AppColors.adminViolet.withValues(alpha: 0.3)),
-              ),
-              child: Text(
-                'ADMIN',
-                style: TextStyle(color: AppColors.adminViolet, fontWeight: FontWeight.w700, fontSize: 9, letterSpacing: 1),
-              ),
-            ),
+            const RolInsignia('ADMIN'),
             const Spacer(),
             NotificationBell(accentColor: AppColors.adminViolet, onNotificationTap: onNotificationTap),
             const SizedBox(width: 20),
@@ -311,17 +308,7 @@ class _AdminSidebarContent extends StatelessWidget {
                 style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700, fontSize: 12, letterSpacing: 1.5),
               ),
               const SizedBox(width: 6),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                decoration: BoxDecoration(
-                  color: AppColors.adminViolet.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  'ADMIN',
-                  style: TextStyle(color: AppColors.adminViolet, fontSize: 9, fontWeight: FontWeight.w700),
-                ),
-              ),
+              const RolInsignia('ADMIN'),
               const Spacer(),
               if (showCloseButton)
                 IconButton(
@@ -375,11 +362,11 @@ class _AdminSidebarContent extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
             children: _adminNavItems.map((item) {
               final active = selected == item.section;
-              final color = active ? AppColors.adminViolet : AppColors.slate300;
+              final color = active ? AppColors.casco : AppColors.slate300;
               return Padding(
                 padding: const EdgeInsets.only(bottom: 4),
                 child: Material(
-                  color: active ? AppColors.adminViolet.withValues(alpha: 0.1) : Colors.transparent,
+                  color: active ? AppColors.tinta : Colors.transparent,
                   borderRadius: BorderRadius.circular(12),
                   child: InkWell(
                     borderRadius: BorderRadius.circular(12),
@@ -398,7 +385,7 @@ class _AdminSidebarContent extends StatelessWidget {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
-                                color: active ? color : AppColors.overlay(0.85),
+                                color: active ? color : AppColors.tinta,
                                 fontSize: 14,
                                 fontWeight: active ? FontWeight.w600 : FontWeight.w500,
                               ),
