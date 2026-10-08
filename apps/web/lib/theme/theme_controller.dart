@@ -25,6 +25,6 @@ class ThemeController {
 
   static ThemeMode _readSaved() {
     final saved = PlatformServices.store.read(_themeStorageKey);
-    return saved == 'light' ? ThemeMode.light : ThemeMode.dark;
+    return saved == 'dark' ? ThemeMode.dark : ThemeMode.light;
   }
 }

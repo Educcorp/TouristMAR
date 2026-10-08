@@ -3,65 +3,90 @@ import 'package:google_fonts/google_fonts.dart';
 
 import 'theme_controller.dart';
 
-/// Todos los colores de la app viven aquí como getters (no `const`) que
-/// resuelven al valor claro u oscuro según [ThemeController.isDark]. Se leen
-/// igual que antes (`AppColors.panelNavy`, sin pasar `context`), pero ahora
-/// responden al toggle de tema porque `main.dart` reconstruye la app entera
-/// cuando `ThemeController.mode` cambia.
+/// Paleta "Pangas pintadas": las lanchas de pescadores de Manzanillo. Casco
+/// claro, tinta marina, y cuatro esmaltes planos que pintan la franja de
+/// flotación según el tipo de lugar. Seis tintas y ninguna más: nada de
+/// degradados, vidrio ni sombras difusas.
+///
+/// Los colores son getters (no `const`) que resuelven al valor claro u oscuro
+/// según [ThemeController.isDark]. El modo claro es el de diario: el turista
+/// usa la app en la calle, al sol. Los nombres viejos (`panelNavy`,
+/// `brandTeal`…) se conservan para no tocar cada pantalla: ahora apuntan a
+/// las tintas del casco.
 class AppColors {
   static bool get _dark => ThemeController.isDark;
 
-  static Color get brandTeal => _dark ? const Color(0xFF22D3EE) : const Color(0xFF0E7490);
-  static const brandTealDark = Color(0xFF0E9AAD);
+  // ── Tintas base ──────────────────────────────────────────────────────────
+  /// Casco: el fondo de la app.
+  static Color get casco => _dark ? const Color(0xFF071C26) : const Color(0xFFF4F7F6);
 
-  static Color get panelNavy => _dark ? const Color(0xFF0B1220) : const Color(0xFFF7F8FA);
-  static Color get panelNavySoft => _dark ? const Color(0xFF131D30) : const Color(0xFFEBEFF4);
+  /// Cubierta: superficies elevadas (tarjetas, hojas, menús).
+  static Color get cubierta => _dark ? const Color(0xFF0D2A37) : const Color(0xFFFFFFFF);
 
-  static Color get slate300 => _dark ? const Color(0xFFCBD5E1) : const Color(0xFF475569);
-  static Color get slate400 => _dark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
-  static Color get slate500 => _dark ? const Color(0xFF64748B) : const Color(0xFF94A3B8);
+  /// Tinta marina: texto principal y el riel de navegación.
+  static Color get tinta => _dark ? const Color(0xFFEAF1EF) : const Color(0xFF0B2A3A);
 
-  static Color get errorRed => _dark ? const Color(0xFFF87171) : const Color(0xFFDC2626);
-  static Color get orange => _dark ? const Color(0xFFFB923C) : const Color(0xFFC2410C);
-  static Color get amber => _dark ? const Color(0xFFFBBF24) : const Color(0xFFB45309);
+  /// Riel de navegación (barra inferior, menú lateral): siempre tinta marina.
+  static const riel = Color(0xFF0B2A3A);
+  static const sobreRiel = Color(0xFFF4F7F6);
+  static const sobreRielSuave = Color(0xFFA9C0C7);
 
-  // Segundo perfil de marca: panel de empresa (naranja en vez de teal).
-  static Color get businessOrange => _dark ? const Color(0xFFF97316) : const Color(0xFFC2410C);
-  static const businessOrangeDark = Color(0xFFC2410C);
+  // ── Esmaltes (franjas de categoría) ─────────────────────────────────────
+  // El esmalte puro se usa como relleno (franjas, pins, fichas) con texto en
+  // tinta encima; para texto o iconos sobre el casco se usa la versión
+  // `*Texto`, que pasa contraste 4.5:1.
+  static const turquesa = Color(0xFF00A6A6);
+  static const amarillo = Color(0xFFF2B705);
+  static const azul = Color(0xFF1F6FB2);
+  static const rojo = Color(0xFFC8432B);
 
-  // Tercer perfil de marca: panel de administración (violeta).
-  static Color get adminViolet => _dark ? const Color(0xFFA78BFA) : const Color(0xFF7C3AED);
-  static const adminVioletDark = Color(0xFF7C3AED);
+  static Color get turquesaTexto => _dark ? const Color(0xFF3CCFCB) : const Color(0xFF00706F);
+  static Color get amarilloTexto => _dark ? const Color(0xFFF2C94C) : const Color(0xFF805C00);
+  static Color get azulTexto => _dark ? const Color(0xFF7DB3E6) : const Color(0xFF1A5E98);
+  static Color get rojoTexto => _dark ? const Color(0xFFF08A73) : const Color(0xFFAE3520);
 
-  // Tokens del panel admin. bgDeep siempre igual al fondo general; surface y
-  // borderSubtle son overlays translúcidos sobre ese fondo (blanco en
-  // oscuro, negro en claro) para que las tarjetas se vean parte del mismo
-  // sistema que el resto de la app en ambos modos.
-  static Color get bgDeep => panelNavy;
-  static Color get surface => _dark ? const Color(0x08FFFFFF) : const Color(0x08000000);
-  static Color get surfaceAlt => _dark ? const Color(0x0DFFFFFF) : const Color(0x0D000000);
-  static Color get borderSubtle => _dark ? const Color(0x14FFFFFF) : const Color(0x14000000);
+  // ── Nombres heredados (mapean al sistema nuevo) ─────────────────────────
+  static Color get brandTeal => turquesaTexto;
+  static const brandTealDark = Color(0xFF00706F);
 
-  static Color get oceanBlue => _dark ? const Color(0xFF3B82F6) : const Color(0xFF1D4ED8);
-  static Color get emerald => _dark ? const Color(0xFF34D399) : const Color(0xFF059669);
+  static Color get panelNavy => casco;
+  static Color get panelNavySoft => cubierta;
 
-  /// Scrim fijo (no cambia con el tema) para degradados sobre fotos: una
-  /// foto necesita oscurecerse igual para que el texto en blanco encima se
-  /// lea, sin importar si el resto de la app está en modo claro u oscuro.
-  static const scrimDark = Color(0xFF0B1220);
+  static Color get slate300 => _dark ? const Color(0xFFC3D3D8) : const Color(0xFF2E4B59);
+  static Color get slate400 => _dark ? const Color(0xFF9DB4BC) : const Color(0xFF46636F);
+  static Color get slate500 => _dark ? const Color(0xFF86A0A9) : const Color(0xFF587480);
 
-  /// Equivalente theme-aware de usar `Colors.white`/`Colors.white70` suelto
-  /// para texto o íconos que van directo sobre el fondo del panel (no sobre
-  /// un color de acento sólido, que mantiene su propio contraste).
-  static Color get textPrimary => _dark ? Colors.white : const Color(0xFF0F172A);
-  static Color get textSecondary => _dark ? Colors.white70 : const Color(0xFF334155);
+  static Color get errorRed => rojoTexto;
+  static Color get orange => rojoTexto;
+  static Color get amber => amarilloTexto;
 
-  /// Equivalente theme-aware de `Colors.white.withValues(alpha: x)` para bordes,
-  /// fondos sutiles y estados hover sobre el fondo del panel.
-  static Color overlay(double opacity) => _dark ? Colors.white.withValues(alpha: opacity) : Colors.black.withValues(alpha: opacity);
+  // Un solo producto, tres roles: empresa y admin ya no tienen su propio
+  // color de acento; el rol se marca con su insignia, no con otra paleta.
+  static Color get businessOrange => turquesaTexto;
+  static const businessOrangeDark = Color(0xFF00706F);
+  static Color get adminViolet => turquesaTexto;
+  static const adminVioletDark = Color(0xFF00706F);
+
+  static Color get bgDeep => casco;
+  static Color get surface => cubierta;
+  static Color get surfaceAlt => _dark ? const Color(0xFF123444) : const Color(0xFFE9F0EE);
+  static Color get borderSubtle => _dark ? const Color(0xFF1F4656) : const Color(0xFFD2DDDA);
+
+  static Color get oceanBlue => azulTexto;
+  static Color get emerald => _dark ? const Color(0xFF5BD39A) : const Color(0xFF1B7A4B);
+
+  /// Scrim fijo para texto blanco sobre fotos (no cambia con el tema).
+  static const scrimDark = Color(0xFF0B2A3A);
+
+  static Color get textPrimary => tinta;
+  static Color get textSecondary => slate300;
+
+  /// Bordes, fondos sutiles y hover sobre el casco.
+  static Color overlay(double opacity) =>
+      _dark ? Colors.white.withValues(alpha: opacity) : const Color(0xFF0B2A3A).withValues(alpha: opacity);
 }
 
-/// Escala de espaciado 4/8/12/16/24/32/48/64 compartida por el panel admin.
+/// Escala de espaciado 4/8/12/16/24/32/48/64.
 class AppSpacing {
   AppSpacing._();
 
@@ -75,101 +100,274 @@ class AppSpacing {
   static const huge = 64.0;
 }
 
-/// Radios de borde consistentes: nunca elegir un valor fuera de esta lista.
+/// Radios: el casco de una panga es redondeado pero firme; nada de píldoras
+/// blandas salvo en chips y botones de filtro.
 class AppRadius {
   AppRadius._();
 
-  static const button = 8.0;
+  static const button = 10.0;
   static const buttonLg = 12.0;
-  static const card = 16.0;
-  static const cardLg = 20.0;
-  static const hero = 24.0;
+  static const card = 14.0;
+  static const cardLg = 18.0;
+  static const hero = 20.0;
 }
 
-/// Jerarquía tipográfica del panel admin: serif editorial para lo destacado,
-/// sans-serif (Inter) para el resto de la interfaz.
+/// Alto de la franja de flotación que separa la foto de los datos.
+const kFranja = 6.0;
+
+/// Jerarquía tipográfica: Barlow (grotesca de señalética, legible al sol) para
+/// toda la interfaz, Barlow Semi Condensed para títulos, y la plantilla de la
+/// matrícula (Big Shoulders Stencil) solo para códigos y cifras cortas.
 class AppTypography {
   AppTypography._();
 
-  static TextStyle get display => GoogleFonts.playfairDisplay(
-        fontSize: 44,
+  static TextStyle get display => GoogleFonts.barlowSemiCondensed(
+        fontSize: 40,
+        fontWeight: FontWeight.w700,
+        color: AppColors.textPrimary,
+        height: 1.05,
+        letterSpacing: -0.4,
+      );
+
+  static TextStyle get h1 => GoogleFonts.barlowSemiCondensed(
+        fontSize: 30,
         fontWeight: FontWeight.w700,
         color: AppColors.textPrimary,
         height: 1.1,
+        letterSpacing: -0.2,
       );
 
-  static TextStyle get h1 => GoogleFonts.playfairDisplay(
-        fontSize: 30,
-        fontWeight: FontWeight.w600,
+  static TextStyle get h2 => GoogleFonts.barlowSemiCondensed(
+        fontSize: 22,
+        fontWeight: FontWeight.w700,
         color: AppColors.textPrimary,
         height: 1.15,
       );
 
-  static TextStyle get h2 => GoogleFonts.playfairDisplay(
-        fontSize: 22,
+  static TextStyle get h3 => GoogleFonts.barlow(
+        fontSize: 17,
         fontWeight: FontWeight.w600,
         color: AppColors.textPrimary,
       );
 
-  static TextStyle get h3 => GoogleFonts.inter(
+  static TextStyle get body => GoogleFonts.barlow(
         fontSize: 16,
-        fontWeight: FontWeight.w600,
-        color: AppColors.textPrimary,
-      );
-
-  static TextStyle get body => GoogleFonts.inter(
-        fontSize: 14,
         fontWeight: FontWeight.w400,
         color: AppColors.slate300,
-        height: 1.4,
+        height: 1.45,
       );
 
-  static TextStyle get bodySmall => GoogleFonts.inter(
-        fontSize: 12,
+  static TextStyle get bodySmall => GoogleFonts.barlow(
+        fontSize: 14,
         fontWeight: FontWeight.w500,
         color: AppColors.slate400,
       );
 
-  static TextStyle get caption => GoogleFonts.inter(
-        fontSize: 11,
+  static TextStyle get caption => GoogleFonts.barlow(
+        fontSize: 13,
         fontWeight: FontWeight.w500,
         color: AppColors.slate500,
-        letterSpacing: 0.4,
+      );
+
+  /// Cifras de tablero (métricas, distancias): condensada, gruesa y con
+  /// números tabulares para que las columnas no bailen.
+  static TextStyle cifra({double size = 28, Color? color}) => GoogleFonts.barlowSemiCondensed(
+        fontSize: size,
+        fontWeight: FontWeight.w700,
+        height: 1.05,
+        color: color ?? AppColors.textPrimary,
+        fontFeatures: const [FontFeature.tabularFigures()],
+      );
+
+  /// Matrícula pintada con plantilla: solo códigos ("MZ-014") e insignias.
+  /// No para cifras sueltas: el 0 en plantilla se lee como "()".
+  static TextStyle matricula({double size = 15, Color? color}) => GoogleFonts.bigShouldersStencilText(
+        fontSize: size,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 0.6,
+        color: color ?? AppColors.textPrimary,
+        fontFeatures: const [FontFeature.tabularFigures()],
       );
 }
 
 class AppTheme {
-  /// El `ThemeData` que corresponde al modo actual de [ThemeController]. No
-  /// hay un `AppTheme.light`/`AppTheme.dark` independientes porque todos los
-  /// colores de [AppColors] leen el mismo estado global — construir "el
-  /// tema claro" mientras el modo activo es oscuro devolvería colores
-  /// oscuros con un `Brightness.light` engañoso. `main.dart` reconstruye
-  /// este getter cada vez que [ThemeController.mode] cambia.
+  /// El `ThemeData` del modo actual de [ThemeController]. `main.dart` lo
+  /// reconstruye cada vez que cambia el modo.
   static ThemeData get current {
-    final brightness = ThemeController.isDark ? Brightness.dark : Brightness.light;
-    final base = ThemeData(
-      useMaterial3: true,
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: AppColors.brandTeal,
-        brightness: brightness,
-      ),
-      scaffoldBackgroundColor: AppColors.panelNavy,
+    final dark = ThemeController.isDark;
+    final scheme = ColorScheme(
+      brightness: dark ? Brightness.dark : Brightness.light,
+      primary: AppColors.tinta,
+      onPrimary: AppColors.casco,
+      secondary: AppColors.turquesaTexto,
+      onSecondary: AppColors.casco,
+      tertiary: AppColors.amarillo,
+      onTertiary: AppColors.riel,
+      error: AppColors.rojoTexto,
+      onError: Colors.white,
+      surface: AppColors.cubierta,
+      onSurface: AppColors.tinta,
+      onSurfaceVariant: AppColors.slate400,
+      outline: AppColors.borderSubtle,
+      outlineVariant: AppColors.borderSubtle,
+      surfaceContainerHighest: AppColors.surfaceAlt,
+      inverseSurface: AppColors.riel,
+      onInverseSurface: AppColors.sobreRiel,
     );
+    final base = ThemeData(useMaterial3: true, colorScheme: scheme, scaffoldBackgroundColor: AppColors.casco);
+    final textTheme = GoogleFonts.barlowTextTheme(base.textTheme).apply(
+      bodyColor: AppColors.tinta,
+      displayColor: AppColors.tinta,
+    );
+    final redondeo = RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.button));
+    const botonPadding = EdgeInsets.symmetric(horizontal: 20, vertical: 14);
+    final botonTexto = GoogleFonts.barlow(fontSize: 16, fontWeight: FontWeight.w600);
 
     return base.copyWith(
-      textTheme: GoogleFonts.interTextTheme(base.textTheme).copyWith(
-        headlineLarge: GoogleFonts.playfairDisplay(
-          fontSize: 44,
-          fontWeight: FontWeight.w700,
-          color: AppColors.textPrimary,
-          height: 1.1,
-        ),
-        headlineMedium: GoogleFonts.playfairDisplay(
-          fontSize: 30,
-          fontWeight: FontWeight.w600,
-          color: AppColors.textPrimary,
+      textTheme: textTheme.copyWith(
+        headlineLarge: AppTypography.display,
+        headlineMedium: AppTypography.h1,
+        headlineSmall: AppTypography.h2,
+        titleLarge: AppTypography.h2,
+        titleMedium: AppTypography.h3,
+        bodyLarge: AppTypography.body.copyWith(color: AppColors.tinta),
+        bodyMedium: GoogleFonts.barlow(fontSize: 15, color: AppColors.tinta, height: 1.4),
+        bodySmall: AppTypography.bodySmall,
+        labelLarge: botonTexto,
+      ),
+      textSelectionTheme: TextSelectionThemeData(
+        cursorColor: AppColors.tinta,
+        selectionColor: AppColors.turquesa.withValues(alpha: 0.35),
+        selectionHandleColor: AppColors.turquesa,
+      ),
+      iconTheme: IconThemeData(color: AppColors.tinta, size: 22),
+      dividerTheme: DividerThemeData(color: AppColors.borderSubtle, thickness: 1, space: 1),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: AppColors.tinta,
+          foregroundColor: AppColors.casco,
+          minimumSize: const Size(48, 48),
+          padding: botonPadding,
+          textStyle: botonTexto,
+          shape: redondeo,
         ),
       ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.tinta,
+          foregroundColor: AppColors.casco,
+          elevation: 0,
+          minimumSize: const Size(48, 48),
+          padding: botonPadding,
+          textStyle: botonTexto,
+          shape: redondeo,
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppColors.tinta,
+          side: BorderSide(color: AppColors.tinta, width: 1.5),
+          minimumSize: const Size(48, 48),
+          padding: botonPadding,
+          textStyle: botonTexto,
+          shape: redondeo,
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: AppColors.turquesaTexto,
+          minimumSize: const Size(48, 44),
+          textStyle: botonTexto,
+          shape: redondeo,
+        ),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: AppColors.cubierta,
+        hintStyle: GoogleFonts.barlow(fontSize: 16, color: AppColors.slate500),
+        labelStyle: GoogleFonts.barlow(fontSize: 15, color: AppColors.slate400),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppRadius.button),
+          borderSide: BorderSide(color: AppColors.borderSubtle),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppRadius.button),
+          borderSide: BorderSide(color: AppColors.borderSubtle),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppRadius.button),
+          borderSide: BorderSide(color: AppColors.tinta, width: 2),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppRadius.button),
+          borderSide: BorderSide(color: AppColors.rojoTexto, width: 1.5),
+        ),
+      ),
+      chipTheme: ChipThemeData(
+        backgroundColor: AppColors.cubierta,
+        selectedColor: AppColors.tinta,
+        labelStyle: GoogleFonts.barlow(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.tinta),
+        secondaryLabelStyle: GoogleFonts.barlow(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.casco),
+        side: BorderSide(color: AppColors.borderSubtle),
+        shape: const StadiumBorder(),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      ),
+      cardTheme: CardThemeData(
+        color: AppColors.cubierta,
+        elevation: 0,
+        margin: EdgeInsets.zero,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.card),
+          side: BorderSide(color: AppColors.borderSubtle),
+        ),
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: AppColors.cubierta,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.cardLg)),
+        titleTextStyle: AppTypography.h2,
+        contentTextStyle: AppTypography.body,
+      ),
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: AppColors.cubierta,
+        showDragHandle: true,
+        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.cardLg))),
+      ),
+      snackBarTheme: SnackBarThemeData(
+        backgroundColor: AppColors.riel,
+        contentTextStyle: GoogleFonts.barlow(fontSize: 15, color: AppColors.sobreRiel),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.button)),
+      ),
+      tooltipTheme: TooltipThemeData(
+        decoration: BoxDecoration(color: AppColors.riel, borderRadius: BorderRadius.circular(6)),
+        textStyle: GoogleFonts.barlow(fontSize: 13, color: AppColors.sobreRiel),
+      ),
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: AppColors.riel,
+        indicatorColor: AppColors.turquesa,
+        height: 68,
+        labelTextStyle: WidgetStateProperty.resolveWith(
+          (s) => GoogleFonts.barlow(
+            fontSize: 13,
+            fontWeight: s.contains(WidgetState.selected) ? FontWeight.w700 : FontWeight.w500,
+            color: s.contains(WidgetState.selected) ? AppColors.sobreRiel : AppColors.sobreRielSuave,
+          ),
+        ),
+        iconTheme: WidgetStateProperty.resolveWith(
+          (s) => IconThemeData(
+            size: 24,
+            color: s.contains(WidgetState.selected) ? AppColors.riel : AppColors.sobreRielSuave,
+          ),
+        ),
+      ),
+      progressIndicatorTheme: ProgressIndicatorThemeData(color: AppColors.tinta, linearTrackColor: AppColors.surfaceAlt),
+      switchTheme: SwitchThemeData(
+        thumbColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected) ? AppColors.casco : AppColors.slate400),
+        trackColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected) ? AppColors.turquesaTexto : AppColors.surfaceAlt),
+      ),
+      focusColor: AppColors.turquesa.withValues(alpha: 0.25),
+      splashFactory: InkRipple.splashFactory,
     );
   }
 }

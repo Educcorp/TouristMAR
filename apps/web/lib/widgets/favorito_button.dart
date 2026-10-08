@@ -5,7 +5,7 @@ import '../services/favoritos_service.dart';
 import '../theme/app_theme.dart';
 
 /// Rojo del corazón de un lugar que ya está en "Mis favoritos".
-const Color colorFavorito = Color(0xFFEF4444);
+const Color colorFavorito = AppColors.rojo;
 
 /// Corazón para marcar o desmarcar [lugar] en "Mis favoritos": vacío si no
 /// está guardado y relleno en rojo si sí. Escucha [FavoritosService.ids], así

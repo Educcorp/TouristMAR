@@ -66,7 +66,7 @@ class AppButton extends StatelessWidget {
       case AppButtonVariant.google:
         return _ButtonColors(
           background: Colors.white,
-          foreground: const Color(0xFF1E293B),
+          foreground: AppColors.riel,
         );
       case AppButtonVariant.ghost:
         return _ButtonColors(
