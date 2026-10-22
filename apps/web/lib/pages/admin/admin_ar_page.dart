@@ -12,6 +12,7 @@ import '../../widgets/admin/ds_button.dart';
 import '../../widgets/admin/ds_card.dart';
 import '../../widgets/admin/ds_states.dart';
 import '../../widgets/app_text_field.dart';
+import '../../widgets/aviso.dart';
 
 /// Contenido de la sección "Realidad aumentada" embebido en [AdminShell]:
 /// alta, edición y baja de los marcadores que reconoce la cámara de la app
@@ -161,7 +162,7 @@ class _AdminArPageState extends State<AdminArPage> {
 
   void _snack(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context).showSnackBar(aviso(message));
   }
 
   @override
@@ -187,13 +188,18 @@ class _AdminArPageState extends State<AdminArPage> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Realidad aumentada', style: AppTypography.h1),
+                      Text('Marcadores de RA', style: AppTypography.h1),
                       const SizedBox(height: 4),
                       Text(
                         _loading
                             ? 'Imágenes que reconoce la cámara de la app.'
-                            : '${_marcadores.length} marcadores · $activos activos en la app',
+                            : '${_marcadores.length} marcadores · $activos visibles en la app',
                         style: AppTypography.body,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Usa el interruptor de cada marcador para mostrarlo u ocultarlo en la app.',
+                        style: AppTypography.bodySmall,
                       ),
                     ],
                   ),
@@ -293,6 +299,27 @@ class _MarcadorFormState extends State<_MarcadorForm> {
 
   bool get _isEdit => widget.marcador != null;
 
+  /// En un marcador nuevo, el identificador sigue al título hasta que el
+  /// admin lo cambie a mano en "Opciones avanzadas".
+  late bool _nombreAutomatico = !_isEdit;
+
+  @override
+  void initState() {
+    super.initState();
+    _titulo.addListener(_alCambiarTitulo);
+    _texto.addListener(_refrescar);
+    _nombre.addListener(() {
+      if (_nombre.text != _slug(_titulo.text)) _nombreAutomatico = false;
+    });
+  }
+
+  void _alCambiarTitulo() {
+    if (_nombreAutomatico) _nombre.text = _slug(_titulo.text);
+    _refrescar();
+  }
+
+  void _refrescar() => setState(() {});
+
   static String _formatCm(double cm) => cm == cm.roundToDouble() ? cm.toInt().toString() : cm.toStringAsFixed(1);
 
   @override
@@ -333,9 +360,10 @@ class _MarcadorFormState extends State<_MarcadorForm> {
   }
 
   Future<void> _save() async {
+    if (_nombre.text.trim().isEmpty) _nombre.text = _slug(_titulo.text);
     if (!(_formKey.currentState?.validate() ?? false)) return;
     if (!_isEdit && _imagen == null) {
-      setState(() => _error = 'Selecciona la imagen del marcador');
+      setState(() => _error = 'Falta el paso 1: elige la imagen que reconocerá la cámara');
       return;
     }
     final token = SessionStorage.token;
@@ -389,34 +417,76 @@ class _MarcadorFormState extends State<_MarcadorForm> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-              _isEdit ? 'EDITAR MARCADOR' : 'NUEVO MARCADOR',
-              style: AppTypography.h3,
+            Row(
+              children: [
+                Icon(_isEdit ? Icons.edit_outlined : Icons.add_photo_alternate_outlined, color: AppColors.adminViolet),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(child: Text(_isEdit ? 'Editar marcador' : 'Nuevo marcador', style: AppTypography.h2)),
+                IconButton(
+                  tooltip: 'Cerrar sin guardar',
+                  onPressed: _saving ? null : widget.onCancel,
+                  icon: Icon(Icons.close, color: AppColors.slate400),
+                ),
+              ],
             ),
-            const SizedBox(height: AppSpacing.md),
+            const SizedBox(height: 4),
+            Text(
+              'Cuando un visitante apunte la cámara de la app a esta imagen, verá encima el título y la información.',
+              style: AppTypography.bodySmall,
+            ),
+            const SizedBox(height: AppSpacing.xl),
             LayoutBuilder(
               builder: (context, constraints) {
-                final wide = constraints.maxWidth >= 620;
-                final imagePicker = _buildImagePicker();
-                final fields = _buildFields();
+                final wide = constraints.maxWidth >= 700;
+                final pasos = Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _Paso(
+                      numero: 1,
+                      titulo: 'Imagen que reconocerá la cámara',
+                      ayuda: 'Una foto o ilustración con detalles y buen contraste. Evita fondos lisos o repetitivos.',
+                      child: _buildImagePicker(),
+                    ),
+                    const SizedBox(height: AppSpacing.xl),
+                    _Paso(
+                      numero: 2,
+                      titulo: 'Lo que verá el visitante',
+                      child: _buildContenido(),
+                    ),
+                    const SizedBox(height: AppSpacing.xl),
+                    _Paso(
+                      numero: 3,
+                      titulo: 'Dónde se usa',
+                      child: _buildUbicacion(),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    _buildAvanzado(),
+                  ],
+                );
+                final vista = _VistaPreviaMarcador(
+                  imagen: _imagen,
+                  imagenUrl: widget.marcador?.imagenUrl,
+                  titulo: _titulo.text.trim(),
+                  texto: _texto.text.trim(),
+                );
                 if (!wide) {
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [imagePicker, const SizedBox(height: AppSpacing.lg), fields],
+                    children: [pasos, const SizedBox(height: AppSpacing.xl), vista],
                   );
                 }
                 return Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    SizedBox(width: 220, child: imagePicker),
+                    Expanded(child: pasos),
                     const SizedBox(width: AppSpacing.xl),
-                    Expanded(child: fields),
+                    SizedBox(width: 260, child: vista),
                   ],
                 );
               },
             ),
             if (_error != null) ...[
-              const SizedBox(height: AppSpacing.sm),
+              const SizedBox(height: AppSpacing.md),
               Text(_error!, style: TextStyle(color: AppColors.errorRed, fontSize: 13)),
             ],
             const SizedBox(height: AppSpacing.lg),
@@ -428,6 +498,7 @@ class _MarcadorFormState extends State<_MarcadorForm> {
                 DsButton(label: 'Cancelar', variant: DsButtonVariant.ghost, onPressed: _saving ? null : widget.onCancel),
                 DsButton(
                   label: _saving ? 'Guardando...' : (_isEdit ? 'Guardar cambios' : 'Crear marcador'),
+                  icon: Icons.check,
                   variant: DsButtonVariant.primary,
                   accent: AppColors.adminViolet,
                   onPressed: _saving ? null : _save,
@@ -441,77 +512,49 @@ class _MarcadorFormState extends State<_MarcadorForm> {
   }
 
   Widget _buildImagePicker() {
-    final Widget preview;
-    if (_imagen != null) {
-      preview = Image.memory(_imagen!, fit: BoxFit.contain);
-    } else if (widget.marcador != null) {
-      preview = Image.network(widget.marcador!.imagenUrl, fit: BoxFit.contain);
-    } else {
-      preview = Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.add_photo_alternate_outlined, size: 32, color: AppColors.slate400),
-          const SizedBox(height: AppSpacing.sm),
-          Text('PNG o JPG, máx. 5 MB', style: AppTypography.bodySmall),
-        ],
-      );
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    final tieneImagen = _imagen != null || widget.marcador != null;
+    return Row(
       children: [
-        Text('Imagen del marcador', style: TextStyle(color: AppColors.slate300, fontSize: 14)),
-        const SizedBox(height: 8),
-        AspectRatio(
-          aspectRatio: 1,
-          child: Material(
+        ClipRRect(
+          borderRadius: BorderRadius.circular(AppRadius.button),
+          child: Container(
+            width: 72,
+            height: 72,
             color: AppColors.panelNavySoft,
-            borderRadius: BorderRadius.circular(AppRadius.button),
-            clipBehavior: Clip.antiAlias,
-            child: InkWell(
-              onTap: _saving ? null : _pickImage,
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(AppRadius.button),
-                  border: Border.all(color: AppColors.overlay(0.1)),
-                ),
-                child: preview,
-              ),
-            ),
+            child: _imagen != null
+                ? Image.memory(_imagen!, fit: BoxFit.cover)
+                : (widget.marcador != null
+                    ? Image.network(widget.marcador!.imagenUrl, fit: BoxFit.cover)
+                    : Icon(Icons.image_outlined, color: AppColors.slate500)),
           ),
         ),
-        const SizedBox(height: AppSpacing.sm),
-        DsButton(
-          label: _imagen != null || _isEdit ? 'Cambiar imagen' : 'Elegir imagen',
-          icon: Icons.upload_outlined,
-          size: DsButtonSize.sm,
-          onPressed: _saving ? null : _pickImage,
+        const SizedBox(width: AppSpacing.md),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              DsButton(
+                label: tieneImagen ? 'Cambiar imagen' : 'Elegir imagen',
+                icon: Icons.upload_outlined,
+                variant: tieneImagen ? DsButtonVariant.secondary : DsButtonVariant.primary,
+                accent: AppColors.adminViolet,
+                onPressed: _saving ? null : _pickImage,
+              ),
+              const SizedBox(height: 4),
+              Text(_imagenNombre ?? 'PNG o JPG, máx. 5 MB', style: AppTypography.caption),
+            ],
+          ),
         ),
       ],
     );
   }
 
-  Widget _buildFields() {
+  Widget _buildContenido() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         AppTextField(
-          label: 'Identificador del marcador',
-          icon: Icons.label_outline,
-          controller: _nombre,
-          hintText: 'Ej. gaviota_01',
-          accentColor: AppColors.adminViolet,
-          validator: _validarNombre,
-        ),
-        const SizedBox(height: 4),
-        Text(
-          'Único. Es el "nombre" con el que la app de RA reconoce esta imagen: '
-          'solo minúsculas, números, _ o -.',
-          style: AppTypography.caption,
-        ),
-        const SizedBox(height: AppSpacing.md),
-        AppTextField(
-          label: 'Título que verá el turista',
+          label: 'Título',
           icon: Icons.title,
           controller: _titulo,
           hintText: 'Ej. Gaviota patiamarilla',
@@ -524,33 +567,19 @@ class _MarcadorFormState extends State<_MarcadorForm> {
           icon: Icons.notes,
           controller: _texto,
           maxLines: 4,
-          hintText: 'Texto que aparece flotando sobre la imagen (máx. 500 caracteres)',
+          hintText: 'Lo que el visitante leerá sobre la imagen (máx. 500 caracteres)',
           accentColor: AppColors.adminViolet,
           validator: (v) => _required(v, 500),
         ),
-        const SizedBox(height: 4),
-        Text(
-          'En la cámara se muestra el título y, debajo, esta información.',
-          style: AppTypography.caption,
-        ),
-        const SizedBox(height: AppSpacing.md),
-        AppTextField(
-          label: 'Ancho real impreso (cm, opcional)',
-          icon: Icons.straighten,
-          controller: _anchoCm,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          hintText: 'Ej. 30',
-          accentColor: AppColors.adminViolet,
-          validator: (v) {
-            final raw = (v ?? '').trim().replaceAll(',', '.');
-            if (raw.isEmpty) return null;
-            final cm = double.tryParse(raw);
-            if (cm == null || cm <= 0 || cm > 2000) return 'Ingresa un número entre 1 y 2000';
-            return null;
-          },
-        ),
-        const SizedBox(height: AppSpacing.md),
-        Text('Negocio (opcional)', style: TextStyle(color: AppColors.slate300, fontSize: 14)),
+      ],
+    );
+  }
+
+  Widget _buildUbicacion() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text('Lugar al que pertenece', style: TextStyle(color: AppColors.slate300, fontSize: 14)),
         const SizedBox(height: 8),
         DropdownButtonFormField<String?>(
           initialValue: widget.negocios.any((n) => n.id == _negocioId) ? _negocioId : null,
@@ -572,15 +601,77 @@ class _MarcadorFormState extends State<_MarcadorForm> {
             ),
           ),
           items: [
-            const DropdownMenuItem<String?>(value: null, child: Text('General del destino (sin negocio)')),
+            const DropdownMenuItem<String?>(value: null, child: Text('General de Manzanillo (sin lugar)')),
             ...widget.negocios.map(
               (n) => DropdownMenuItem<String?>(value: n.id, child: Text(n.nombre, overflow: TextOverflow.ellipsis)),
             ),
           ],
           onChanged: _saving ? null : (v) => setState(() => _negocioId = v),
         ),
+        const SizedBox(height: 4),
+        Text(
+          'Si lo ligas a un lugar, aparece en su ficha como experiencia de RA con marcador.',
+          style: AppTypography.caption,
+        ),
+        const SizedBox(height: AppSpacing.md),
+        AppTextField(
+          label: 'Tamaño impreso en centímetros (opcional)',
+          icon: Icons.straighten,
+          controller: _anchoCm,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          hintText: 'Ej. 30 — el ancho del letrero o cartel',
+          accentColor: AppColors.adminViolet,
+          validator: (v) {
+            final raw = (v ?? '').trim().replaceAll(',', '.');
+            if (raw.isEmpty) return null;
+            final cm = double.tryParse(raw);
+            if (cm == null || cm <= 0 || cm > 2000) return 'Ingresa un número entre 1 y 2000';
+            return null;
+          },
+        ),
       ],
     );
+  }
+
+  /// El identificador técnico (lo usa Unity) se arma solo a partir del
+  /// título; aquí se puede cambiar si hace falta.
+  Widget _buildAvanzado() {
+    return Theme(
+      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+      child: ExpansionTile(
+        tilePadding: EdgeInsets.zero,
+        childrenPadding: const EdgeInsets.only(bottom: AppSpacing.sm),
+        title: Text('Opciones avanzadas', style: AppTypography.bodySmall.copyWith(color: AppColors.slate300)),
+        children: [
+          AppTextField(
+            label: 'Identificador técnico',
+            icon: Icons.label_outline,
+            controller: _nombre,
+            hintText: 'Se genera solo a partir del título',
+            accentColor: AppColors.adminViolet,
+            validator: _validarNombre,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Nombre único con el que la app de RA reconoce la imagen: minúsculas, números, _ o -.',
+            style: AppTypography.caption,
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// "Gaviota Patiamarilla" → "gaviota_patiamarilla".
+  static String _slug(String texto) {
+    const conAcento = 'áéíóúüñ';
+    const sinAcento = 'aeiouun';
+    final buffer = StringBuffer();
+    for (final ch in texto.toLowerCase().split('')) {
+      final i = conAcento.indexOf(ch);
+      buffer.write(i >= 0 ? sinAcento[i] : ch);
+    }
+    final slug = buffer.toString().replaceAll(RegExp(r'[^a-z0-9]+'), '_').replaceAll(RegExp(r'^_+|_+$'), '');
+    return slug.length > 60 ? slug.substring(0, 60) : slug;
   }
 
   // Mismo formato que valida el backend (nombreSchema en ar.controller.ts).
@@ -588,7 +679,7 @@ class _MarcadorFormState extends State<_MarcadorForm> {
 
   String? _validarNombre(String? v) {
     final text = v?.trim().toLowerCase() ?? '';
-    if (text.isEmpty) return 'Campo requerido';
+    if (text.isEmpty) return 'Escribe un título para generar el identificador';
     if (text.length > 60) return 'Máximo 60 caracteres';
     if (!_nombreValido.hasMatch(text)) return 'Solo minúsculas, números, _ o - (ej. gaviota_01)';
     return null;
@@ -692,12 +783,19 @@ class _MarcadorRow extends StatelessWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Tooltip(
-                    message: marcador.activo ? 'Visible en la app' : 'Oculto en la app',
-                    child: Switch(
-                      value: marcador.activo,
-                      onChanged: onToggle,
-                    ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        marcador.activo ? 'Visible' : 'Oculto',
+                        style: AppTypography.caption.copyWith(
+                          color: marcador.activo ? AppColors.emerald : AppColors.slate400,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Switch(value: marcador.activo, onChanged: onToggle),
+                    ],
                   ),
                   Row(
                     mainAxisSize: MainAxisSize.min,
@@ -719,6 +817,123 @@ class _MarcadorRow extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Un paso numerado del formulario de marcador.
+class _Paso extends StatelessWidget {
+  final int numero;
+  final String titulo;
+  final String? ayuda;
+  final Widget child;
+
+  const _Paso({required this.numero, required this.titulo, this.ayuda, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Container(
+              width: 26,
+              height: 26,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(color: AppColors.adminViolet, shape: BoxShape.circle),
+              child: Text('$numero', style: TextStyle(color: AppColors.casco, fontWeight: FontWeight.w700, fontSize: 13)),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(child: Text(titulo, style: AppTypography.h3)),
+          ],
+        ),
+        if (ayuda != null) ...[
+          const SizedBox(height: 4),
+          Padding(
+            padding: const EdgeInsets.only(left: 34),
+            child: Text(ayuda!, style: AppTypography.caption.copyWith(color: AppColors.slate400)),
+          ),
+        ],
+        const SizedBox(height: AppSpacing.md),
+        child,
+      ],
+    );
+  }
+}
+
+/// Cómo se verá en la cámara: la imagen reconocida y, encima, la ventana
+/// flotante con el título y la información (se actualiza mientras se escribe).
+class _VistaPreviaMarcador extends StatelessWidget {
+  final Uint8List? imagen;
+  final String? imagenUrl;
+  final String titulo;
+  final String texto;
+
+  const _VistaPreviaMarcador({required this.imagen, required this.imagenUrl, required this.titulo, required this.texto});
+
+  @override
+  Widget build(BuildContext context) {
+    final Widget fondo = imagen != null
+        ? Image.memory(imagen!, fit: BoxFit.cover)
+        : (imagenUrl != null
+            ? Image.network(imagenUrl!, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const SizedBox.shrink())
+            : Center(child: Icon(Icons.photo_camera_outlined, size: 40, color: Colors.white.withValues(alpha: 0.5))));
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text('Vista previa en la cámara', style: AppTypography.bodySmall.copyWith(color: AppColors.slate300)),
+        const SizedBox(height: 8),
+        AspectRatio(
+          aspectRatio: 3 / 4,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(AppRadius.card),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                const ColoredBox(color: Color(0xFF1B2B33)),
+                Opacity(opacity: 0.85, child: fondo),
+                Positioned(
+                  left: 12,
+                  right: 12,
+                  bottom: 12,
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.94),
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.25), blurRadius: 12)],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          titulo.isEmpty ? 'Título del marcador' : titulo,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: titulo.isEmpty ? Colors.black38 : const Color(0xFF0B2A3A),
+                            fontWeight: FontWeight.w700,
+                            fontSize: 15,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          texto.isEmpty ? 'Aquí aparecerá la información.' : texto,
+                          maxLines: 5,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(color: texto.isEmpty ? Colors.black38 : Colors.black87, fontSize: 12.5, height: 1.3),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
