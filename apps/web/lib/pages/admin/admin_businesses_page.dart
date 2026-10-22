@@ -12,7 +12,6 @@ import '../../widgets/admin/ds_icon_badge.dart';
 import '../../widgets/admin/ds_states.dart';
 import 'admin_negocio_detalle_page.dart';
 
-const _estadoFiltros = ['Todos', 'aprobado', 'pendiente', 'rechazado'];
 const _estadoLabels = {'aprobado': 'Activo', 'pendiente': 'Pendiente', 'rechazado': 'Rechazado'};
 
 /// Contenido de la sección "Negocios" embebido en [AdminShell].
@@ -30,8 +29,6 @@ class _AdminBusinessesPageState extends State<AdminBusinessesPage> {
   List<NegocioSummary> _negocios = [];
   bool _loading = true;
   String? _error;
-  String _estadoFiltro = 'Todos';
-  String? _categoriaFiltro;
 
   @override
   void initState() {
@@ -78,22 +75,14 @@ class _AdminBusinessesPageState extends State<AdminBusinessesPage> {
     if (resultado.editado || resultado.aprobado != null) _load();
   }
 
-  /// Categorías sin repetir: "Club de Playa" y "Club de playa" son la misma
-  /// (la categoría es texto libre); se muestra la primera forma que aparece.
-  List<String> get _categorias {
-    final porClave = <String, String>{};
-    for (final c in _negocios.map((n) => n.categoria?.trim()).whereType<String>()) {
-      if (c.isNotEmpty) porClave.putIfAbsent(c.toLowerCase(), () => c);
-    }
-    return porClave.values.toList()..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
-  }
-
   List<NegocioSummary> get _filtered {
     final query = _searchController.text.trim().toLowerCase();
     return _negocios.where((n) {
-      if (_estadoFiltro != 'Todos' && n.estado != _estadoFiltro) return false;
-      if (_categoriaFiltro != null && n.categoria?.trim().toLowerCase() != _categoriaFiltro!.toLowerCase()) return false;
-      if (query.isNotEmpty && !n.nombre.toLowerCase().contains(query)) return false;
+      if (query.isNotEmpty &&
+          !n.nombre.toLowerCase().contains(query) &&
+          !(n.categoria ?? '').toLowerCase().contains(query)) {
+        return false;
+      }
       return true;
     }).toList();
   }
@@ -138,7 +127,7 @@ class _AdminBusinessesPageState extends State<AdminBusinessesPage> {
             controller: _searchController,
             style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
             decoration: InputDecoration(
-              hintText: 'Buscar negocio…',
+              hintText: 'Buscar negocio por nombre o categoría…',
               hintStyle: AppTypography.bodySmall,
               prefixIcon: Icon(Icons.search, size: 18, color: AppColors.slate500),
               filled: true,
@@ -159,28 +148,6 @@ class _AdminBusinessesPageState extends State<AdminBusinessesPage> {
             ),
           ),
         ),
-        const SizedBox(height: AppSpacing.md),
-        Wrap(
-          spacing: AppSpacing.sm,
-          runSpacing: AppSpacing.sm,
-          children: [
-            for (final e in _estadoFiltros)
-              _FilterChip(
-                label: e == 'Todos' ? 'Todos' : (_estadoLabels[e] ?? e),
-                selected: _estadoFiltro == e,
-                onTap: () => setState(() => _estadoFiltro = e),
-              ),
-            if (_categorias.isNotEmpty) ...[
-              const SizedBox(width: AppSpacing.sm, height: 1),
-              for (final c in _categorias)
-                _FilterChip(
-                  label: c,
-                  selected: _categoriaFiltro == c,
-                  onTap: () => setState(() => _categoriaFiltro = _categoriaFiltro == c ? null : c),
-                ),
-            ],
-          ],
-        ),
       ],
     );
   }
@@ -193,7 +160,7 @@ class _AdminBusinessesPageState extends State<AdminBusinessesPage> {
       return const DsEmptyState(
         icon: Icons.storefront_outlined,
         title: 'Sin negocios que coincidan',
-        subtitle: 'Ajusta los filtros o espera nuevos registros.',
+        subtitle: 'Prueba con otra búsqueda o espera nuevos registros.',
       );
     }
     return LayoutBuilder(
@@ -208,43 +175,6 @@ class _AdminBusinessesPageState extends State<AdminBusinessesPage> {
           }).toList(),
         );
       },
-    );
-  }
-}
-
-class _FilterChip extends StatelessWidget {
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  const _FilterChip({required this.label, required this.selected, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      borderRadius: BorderRadius.circular(999),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(999),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-          decoration: BoxDecoration(
-            color: selected ? AppColors.adminViolet.withValues(alpha: 0.16) : AppColors.surface,
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(color: selected ? AppColors.adminViolet.withValues(alpha: 0.4) : AppColors.borderSubtle),
-          ),
-          child: Text(
-            label,
-            style: TextStyle(
-              color: selected ? AppColors.adminViolet : AppColors.slate300,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-      ),
     );
   }
 }
