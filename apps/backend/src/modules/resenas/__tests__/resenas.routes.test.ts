@@ -146,6 +146,13 @@ describe('PUT /api/resenas/lugar/:negocioId', () => {
     expect(resenaUpsert).not.toHaveBeenCalled()
   })
 
+  it('un admin no puede reseñar', async () => {
+    negocioFindFirst.mockResolvedValue({ userId: DUENO } as any)
+    const res = await put({ estrellas: 5 }, ADMIN)
+    expect(res.status).toBe(403)
+    expect(resenaUpsert).not.toHaveBeenCalled()
+  })
+
   it('el dueño no puede reseñar su propio negocio', async () => {
     negocioFindFirst.mockResolvedValue({ userId: DUENO } as any)
     const res = await put({ estrellas: 5 }, DUENO)

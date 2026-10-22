@@ -17,7 +17,8 @@ export const resenasRouter = Router()
 
 resenasRouter.get('/lugar/:negocioId', optionalAuth, listDeLugar)
 resenasRouter.get('/mias', requireAuth, listMias)
-resenasRouter.put('/lugar/:negocioId', requireAuth, guardar)
+// Los admins moderan, no opinan.
+resenasRouter.put('/lugar/:negocioId', requireAuth, requireRole('turista', 'negocio'), guardar)
 resenasRouter.delete('/lugar/:negocioId', requireAuth, borrar)
 resenasRouter.put('/:id/respuesta', requireAuth, responder)
 resenasRouter.delete('/:id/respuesta', requireAuth, quitarRespuesta)

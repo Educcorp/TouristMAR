@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 
 import '../../models/lugar.dart';
+import '../../navegacion/sesion.dart';
 import '../../services/resenas_service.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/keyboard.dart';
 import 'resenas_widgets.dart';
+import '../aviso.dart';
 
 /// "Valoraciones y comentarios" de la ficha de un lugar: resumen de
 /// calificaciones, formulario para dejar (o editar) la propia reseña y la
@@ -49,6 +51,10 @@ class _ResenasLugarSectionState extends State<ResenasLugarSection> {
   int _estrellas = 0;
   bool _editando = false;
   bool _guardando = false;
+
+  /// Los admins moderan las reseñas, no opinan; tampoco hay formulario en
+  /// la vista previa del negocio.
+  bool get _puedeOpinar => !widget.vistaPrevia && !(Sesion.usuario.value?.isAdmin ?? false);
 
   @override
   void initState() {
@@ -102,7 +108,7 @@ class _ResenasLugarSectionState extends State<ResenasLugarSection> {
   }
 
   void _aviso(String texto) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(texto)));
+    ScaffoldMessenger.of(context).showSnackBar(aviso(texto));
   }
 
   Future<void> _publicar() async {
@@ -196,17 +202,20 @@ class _ResenasLugarSectionState extends State<ResenasLugarSection> {
       children: [
         ResumenResenasCard(resumen: datos.resumen),
         const SizedBox(height: AppSpacing.lg),
-        if (!widget.vistaPrevia && (_editando || mia == null)) ...[
+        if (_puedeOpinar && (_editando || mia == null)) ...[
           _formulario(mia),
           const SizedBox(height: AppSpacing.lg),
         ],
         if (datos.resenas.isEmpty)
-          const _Aviso(icon: Icons.forum_outlined, texto: 'Todavía no hay reseñas. ¡Sé el primero en opinar!')
+          _Aviso(
+            icon: Icons.forum_outlined,
+            texto: _puedeOpinar ? 'Todavía no hay reseñas. ¡Sé el primero en opinar!' : 'Todavía no hay reseñas.',
+          )
         else
           ...datos.resenas.map(
             (r) => ResenaTile(
               resena: r,
-              acciones: r.mia && !widget.vistaPrevia && !_editando
+              acciones: r.mia && _puedeOpinar && !_editando
                   ? Row(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
