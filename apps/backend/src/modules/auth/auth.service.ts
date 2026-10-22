@@ -446,6 +446,7 @@ export async function reviewNegocio(negocioId: string, decision: 'aprobado' | 'r
 }
 
 export class CannotModifyAdminError extends Error {}
+export class EmailInUseError extends Error {}
 export class SuperAdminAlreadyExistsError extends Error {}
 
 export async function getAdminStats() {
@@ -480,6 +481,25 @@ export async function setUserActive(userId: string, activo: boolean) {
       throw new CannotModifyAdminError('No puedes bloquear a un administrador')
     }
     return prisma.user.update({ where: { id: userId }, data: { activo }, include: { negocios: true } })
+  })
+}
+
+/// Corrige el nombre o el correo de una cuenta de visitante o de empresa.
+/// Las cuentas admin no se tocan desde aquí (igual que el bloqueo).
+export async function updateUserAdmin(userId: string, data: { nombres?: string; email?: string }) {
+  return withDbGuard(async () => {
+    const user = await prisma.user.findUnique({ where: { id: userId } })
+    if (!user) {
+      throw new Error('Usuario no encontrado')
+    }
+    if (user.rol === 'admin' || user.rol === 'super_admin') {
+      throw new CannotModifyAdminError('No puedes editar a un administrador')
+    }
+    if (data.email && data.email !== user.email) {
+      const otro = await prisma.user.findUnique({ where: { email: data.email } })
+      if (otro) throw new EmailInUseError('Ese correo ya lo usa otra cuenta')
+    }
+    return prisma.user.update({ where: { id: userId }, data, include: { negocios: true } })
   })
 }
 

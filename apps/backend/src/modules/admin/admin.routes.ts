@@ -12,6 +12,7 @@ import {
   deleteLugar,
   listUsers,
   updateUserActive,
+  updateUser,
   listAdminAccounts,
   createAdminAccount,
   deleteAdminAccount,
@@ -51,6 +52,7 @@ adminRouter.delete('/negocios/:negocioId', deleteLugar)
 adminRouter.post('/lugares', createLugar)
 
 adminRouter.get('/users', listUsers)
+adminRouter.patch('/users/:userId', updateUser)
 adminRouter.patch('/users/:userId/activo', updateUserActive)
 
 adminRouter.get('/admins', listAdminAccounts)

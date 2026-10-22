@@ -603,6 +603,15 @@ class AuthService {
     return AuthUser.fromJson(data['user'] as Map<String, dynamic>);
   }
 
+  /// Corrige nombre y/o correo de una cuenta de visitante o empresa.
+  Future<AuthUser> adminUpdateUser(String token, String userId, {String? nombres, String? email}) async {
+    final data = await _patch('/admin/users/$userId', token, {
+      if (nombres != null) 'nombres': nombres,
+      if (email != null) 'email': email,
+    });
+    return AuthUser.fromJson(data['user'] as Map<String, dynamic>);
+  }
+
   Future<List<NegocioSummary>> adminListNegocios(String token) async {
     final data = await _get('/admin/negocios', token);
     return (data['negocios'] as List).map((n) => NegocioSummary.fromJson(n as Map<String, dynamic>)).toList();

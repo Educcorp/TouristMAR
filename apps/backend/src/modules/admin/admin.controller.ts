@@ -7,6 +7,8 @@ import {
   getAdminStats,
   listGestionableUsers,
   setUserActive,
+  updateUserAdmin,
+  EmailInUseError,
   listNegociosAll,
   listAdmins,
   createAdmin,
@@ -305,6 +307,36 @@ export async function listUsers(_req: AuthedRequest, res: Response) {
 }
 
 const setActiveSchema = z.object({ activo: z.boolean() })
+
+const updateUserSchema = z
+  .object({
+    nombres: z.string().trim().min(1).max(120).optional(),
+    email: z.string().trim().email().optional(),
+  })
+  .refine((d) => d.nombres !== undefined || d.email !== undefined)
+
+export async function updateUser(req: AuthedRequest, res: Response) {
+  const parsed = updateUserSchema.safeParse(req.body)
+  if (!parsed.success) {
+    return res.status(400).json({ error: 'Datos inválidos' })
+  }
+
+  try {
+    const user = await updateUserAdmin(req.params.userId, parsed.data)
+    return res.json({ user: toPublicUser(user) })
+  } catch (err) {
+    if (err instanceof DatabaseNotReadyError) {
+      return res.status(503).json({ error: err.message })
+    }
+    if (err instanceof CannotModifyAdminError) {
+      return res.status(403).json({ error: err.message })
+    }
+    if (err instanceof EmailInUseError) {
+      return res.status(409).json({ error: err.message })
+    }
+    return res.status(404).json({ error: (err as Error).message })
+  }
+}
 
 export async function updateUserActive(req: AuthedRequest, res: Response) {
   const parsed = setActiveSchema.safeParse(req.body)

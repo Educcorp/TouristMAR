@@ -5,11 +5,12 @@ import '../../services/session_storage.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/breakpoints.dart';
 import '../../widgets/admin/ds_badge.dart';
-import '../../widgets/admin/ds_button.dart';
 import '../../widgets/admin/ds_card.dart';
 import '../../widgets/admin/ds_states.dart';
 import '../../widgets/admin/ds_table.dart';
+import '../../widgets/app_text_field.dart';
 import '../../widgets/user_avatar.dart';
+import '../../widgets/aviso.dart';
 
 /// Contenido de la sección "Usuarios" embebido en [AdminShell].
 class AdminUsersPage extends StatefulWidget {
@@ -74,11 +75,24 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
     } catch (err) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(err is AuthError ? err.message : 'No se pudo actualizar el usuario')),
+        aviso(err is AuthError ? err.message : 'No se pudo actualizar el usuario', tipo: AvisoTipo.error),
       );
     } finally {
       if (mounted) setState(() => _updating.remove(user.id));
     }
+  }
+
+  Future<void> _editar(AuthUser user) async {
+    final actualizado = await showDialog<AuthUser>(
+      context: context,
+      builder: (_) => _EditarUsuarioDialog(user: user, authService: widget.authService),
+    );
+    if (actualizado == null || !mounted) return;
+    setState(() {
+      final idx = _users.indexWhere((u) => u.id == user.id);
+      if (idx != -1) _users[idx] = actualizado;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(aviso('Usuario actualizado'));
   }
 
   List<AuthUser> get _filtered {
@@ -138,10 +152,10 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
         if (constraints.maxWidth >= Breakpoints.compact) {
           return DsTable(
             headers: const ['Usuario', 'Rol', 'Estado', 'Acciones'],
-            columnFlex: const [4, 2, 2, 2],
+            columnFlex: const [4, 2, 2, 3],
             rows: filtered
                 .map((u) => DsTableRow(
-                      columnFlex: const [4, 2, 2, 2],
+                      columnFlex: const [4, 2, 2, 3],
                       cells: [
                         _IdentityCell(user: u),
                         DsBadge(
@@ -156,6 +170,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                           blocked: !u.activo,
                           isUpdating: _updating.contains(u.id),
                           onToggleActive: () => _toggleActive(u),
+                          onEdit: () => _editar(u),
                         ),
                       ],
                     ))
@@ -171,6 +186,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                       user: u,
                       isUpdating: _updating.contains(u.id),
                       onToggleActive: () => _toggleActive(u),
+                      onEdit: () => _editar(u),
                     ),
                   ))
               .toList(),
@@ -241,26 +257,43 @@ class _IdentityCell extends StatelessWidget {
   }
 }
 
+/// Acciones de una fila: editar los datos y un interruptor para activar o
+/// bloquear la cuenta.
 class _ActionCell extends StatelessWidget {
   final bool blocked;
   final bool isUpdating;
   final VoidCallback onToggleActive;
+  final VoidCallback onEdit;
 
-  const _ActionCell({required this.blocked, required this.isUpdating, required this.onToggleActive});
+  const _ActionCell({required this.blocked, required this.isUpdating, required this.onToggleActive, required this.onEdit});
 
   @override
   Widget build(BuildContext context) {
-    if (isUpdating) {
-      return SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.slate400));
-    }
-    return DsButton(
-      label: blocked ? 'Desbloquear' : 'Bloquear',
-      // Contorno, no rojo sólido: bloquear es la excepción, no debe gritar
-      // en cada fila de la lista.
-      variant: DsButtonVariant.secondary,
-      accent: blocked ? AppColors.emerald : AppColors.rojoTexto,
-      size: DsButtonSize.sm,
-      onPressed: onToggleActive,
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        IconButton(
+          tooltip: 'Editar usuario',
+          onPressed: isUpdating ? null : onEdit,
+          icon: Icon(Icons.edit_outlined, size: 20, color: AppColors.slate300),
+        ),
+        const SizedBox(width: 4),
+        if (isUpdating)
+          SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.slate400))
+        else
+          Tooltip(
+            message: blocked ? 'Cuenta bloqueada: actívala' : 'Cuenta activa: bloquéala',
+            child: Switch(
+              value: !blocked,
+              onChanged: (_) => onToggleActive(),
+              activeThumbColor: Colors.white,
+              activeTrackColor: AppColors.emerald,
+              inactiveThumbColor: Colors.white,
+              inactiveTrackColor: AppColors.rojoTexto.withValues(alpha: 0.7),
+              trackOutlineColor: const WidgetStatePropertyAll(Colors.transparent),
+            ),
+          ),
+      ],
     );
   }
 }
@@ -269,8 +302,9 @@ class _UserCard extends StatelessWidget {
   final AuthUser user;
   final bool isUpdating;
   final VoidCallback onToggleActive;
+  final VoidCallback onEdit;
 
-  const _UserCard({required this.user, required this.isUpdating, required this.onToggleActive});
+  const _UserCard({required this.user, required this.isUpdating, required this.onToggleActive, required this.onEdit});
 
   @override
   Widget build(BuildContext context) {
@@ -294,11 +328,122 @@ class _UserCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),
-              _ActionCell(blocked: blocked, isUpdating: isUpdating, onToggleActive: onToggleActive),
+              _ActionCell(blocked: blocked, isUpdating: isUpdating, onToggleActive: onToggleActive, onEdit: onEdit),
             ],
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Formulario para corregir el nombre y el correo de una cuenta.
+class _EditarUsuarioDialog extends StatefulWidget {
+  final AuthUser user;
+  final AuthService authService;
+
+  const _EditarUsuarioDialog({required this.user, required this.authService});
+
+  @override
+  State<_EditarUsuarioDialog> createState() => _EditarUsuarioDialogState();
+}
+
+class _EditarUsuarioDialogState extends State<_EditarUsuarioDialog> {
+  final _formKey = GlobalKey<FormState>();
+  late final _nombre = TextEditingController(text: widget.user.name);
+  late final _correo = TextEditingController(text: widget.user.email);
+  bool _guardando = false;
+  String? _error;
+
+  static final _formatoCorreo = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+
+  @override
+  void dispose() {
+    _nombre.dispose();
+    _correo.dispose();
+    super.dispose();
+  }
+
+  Future<void> _guardar() async {
+    if (!_formKey.currentState!.validate()) return;
+    final token = SessionStorage.token;
+    if (token == null) return;
+    final nombre = _nombre.text.trim();
+    final correo = _correo.text.trim();
+    if (nombre == widget.user.name && correo == widget.user.email) {
+      Navigator.of(context).pop();
+      return;
+    }
+    setState(() {
+      _guardando = true;
+      _error = null;
+    });
+    try {
+      final actualizado = await widget.authService.adminUpdateUser(
+        token,
+        widget.user.id,
+        nombres: nombre == widget.user.name ? null : nombre,
+        email: correo == widget.user.email ? null : correo,
+      );
+      if (mounted) Navigator.of(context).pop(actualizado);
+    } catch (err) {
+      if (!mounted) return;
+      setState(() {
+        _guardando = false;
+        _error = err is AuthError ? err.message : 'No se pudo guardar';
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: AppColors.panelNavySoft,
+      title: Text('Editar usuario', style: TextStyle(color: AppColors.textPrimary)),
+      content: SizedBox(
+        width: 380,
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              AppTextField(
+                label: 'Nombre',
+                icon: Icons.person_outline,
+                controller: _nombre,
+                accentColor: AppColors.adminViolet,
+                validator: (v) => (v ?? '').trim().isEmpty ? 'Escribe un nombre' : null,
+              ),
+              const SizedBox(height: AppSpacing.md),
+              AppTextField(
+                label: 'Correo',
+                icon: Icons.mail_outline,
+                controller: _correo,
+                keyboardType: TextInputType.emailAddress,
+                accentColor: AppColors.adminViolet,
+                validator: (v) => _formatoCorreo.hasMatch((v ?? '').trim()) ? null : 'Correo no válido',
+              ),
+              if (_error != null) ...[
+                const SizedBox(height: AppSpacing.md),
+                Text(_error!, style: TextStyle(color: AppColors.errorRed, fontSize: 13)),
+              ],
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _guardando ? null : () => Navigator.of(context).pop(),
+          child: Text('Cancelar', style: TextStyle(color: AppColors.slate400)),
+        ),
+        FilledButton(
+          onPressed: _guardando ? null : _guardar,
+          child: _guardando
+              ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+              : const Text('Guardar'),
+        ),
+      ],
     );
   }
 }
