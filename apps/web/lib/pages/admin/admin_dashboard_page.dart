@@ -10,7 +10,9 @@ import '../../utils/date_format_es.dart';
 import '../../widgets/admin/admin_shell.dart';
 import '../../widgets/admin/ds_states.dart';
 import '../../widgets/admin/ds_section_card.dart';
+import '../../widgets/admin/ds_card.dart';
 import '../../widgets/admin/ds_stat_card.dart';
+import '../../widgets/notification_bell.dart';
 import '../../widgets/themed_builder.dart';
 import 'admin_admins_page.dart';
 import 'admin_ar_page.dart';
@@ -99,7 +101,12 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
   Widget _buildBody() {
     switch (_selected) {
       case AdminSection.inicio:
-        return _InicioContent(admin: widget.admin, authService: widget.authService, onNavigate: _ir);
+        return _InicioContent(
+          admin: widget.admin,
+          authService: widget.authService,
+          onNavigate: _ir,
+          onNotificationTap: _handleNotificationTap,
+        );
       case AdminSection.solicitudes:
         return AdminRequestsPage(key: ValueKey(_versionSolicitudes), authService: widget.authService);
       case AdminSection.usuarios:
@@ -124,8 +131,14 @@ class _InicioContent extends StatefulWidget {
   final AuthUser admin;
   final AuthService authService;
   final ValueChanged<AdminSection> onNavigate;
+  final ValueChanged<AppNotification> onNotificationTap;
 
-  const _InicioContent({required this.admin, required this.authService, required this.onNavigate});
+  const _InicioContent({
+    required this.admin,
+    required this.authService,
+    required this.onNavigate,
+    required this.onNotificationTap,
+  });
 
   @override
   State<_InicioContent> createState() => _InicioContentState();
@@ -135,6 +148,9 @@ class _InicioContentState extends State<_InicioContent> {
   AdminStats? _stats;
   String? _error;
   bool _loading = true;
+
+  /// Las más recientes, para la tarjeta de vista previa; `null` mientras cargan.
+  List<AppNotification>? _notificaciones;
 
   @override
   void initState() {
@@ -149,6 +165,7 @@ class _InicioContentState extends State<_InicioContent> {
       _loading = true;
       _error = null;
     });
+    _cargarNotificaciones(token);
     try {
       final stats = await widget.authService.adminGetStats(token);
       if (!mounted) return;
@@ -159,6 +176,31 @@ class _InicioContentState extends State<_InicioContent> {
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  Future<void> _cargarNotificaciones(String token) async {
+    try {
+      final lista = await widget.authService.listNotifications(token);
+      if (mounted) setState(() => _notificaciones = lista);
+    } catch (_) {
+      if (mounted) setState(() => _notificaciones = const []);
+    }
+  }
+
+  Future<void> _abrirNotificacion(AppNotification n) async {
+    final token = SessionStorage.token;
+    if (!n.leida && token != null) {
+      setState(() => _notificaciones = [for (final x in _notificaciones ?? const <AppNotification>[]) x.id == n.id ? x.copyWith(leida: true) : x]);
+      widget.authService.markNotificationRead(token, n.id).catchError((_) {});
+    }
+    widget.onNotificationTap(n);
+  }
+
+  Future<void> _verTodas() async {
+    final tocada = await showNotificationsDialog(context, AppColors.adminViolet);
+    final token = SessionStorage.token;
+    if (token != null) _cargarNotificaciones(token);
+    if (tocada != null) widget.onNotificationTap(tocada);
   }
 
   @override
@@ -185,6 +227,12 @@ class _InicioContentState extends State<_InicioContent> {
                   else if (_stats != null)
                     _StatsGrid(stats: _stats!),
                   const SizedBox(height: AppSpacing.xl),
+                  _NotificacionesCard(
+                    notificaciones: _notificaciones,
+                    onTap: _abrirNotificacion,
+                    onVerTodas: _verTodas,
+                  ),
+                  const SizedBox(height: AppSpacing.xl),
                   Text('Atajos del sistema', style: AppTypography.h3),
                   const SizedBox(height: AppSpacing.sm),
                   _SectionsGrid(onNavigate: widget.onNavigate),
@@ -193,6 +241,62 @@ class _InicioContentState extends State<_InicioContent> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Vista previa de las últimas notificaciones en el inicio del admin, con
+/// acceso a la lista completa (el mismo panel que abre la campana).
+class _NotificacionesCard extends StatelessWidget {
+  final List<AppNotification>? notificaciones;
+  final ValueChanged<AppNotification> onTap;
+  final VoidCallback onVerTodas;
+
+  const _NotificacionesCard({required this.notificaciones, required this.onTap, required this.onVerTodas});
+
+  static const _maximo = 4;
+
+  @override
+  Widget build(BuildContext context) {
+    final lista = notificaciones;
+    final sinLeer = lista?.where((n) => !n.leida).length ?? 0;
+    return DsCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.notifications_outlined, size: 20, color: AppColors.tinta),
+              const SizedBox(width: 8),
+              Text('Notificaciones', style: AppTypography.h3),
+              if (sinLeer > 0) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(color: AppColors.amarillo, borderRadius: BorderRadius.circular(999)),
+                  child: Text('$sinLeer sin leer',
+                      style: const TextStyle(color: AppColors.riel, fontSize: 12, fontWeight: FontWeight.w700)),
+                ),
+              ],
+              const Spacer(),
+              TextButton(onPressed: onVerTodas, child: const Text('Ver todas')),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          if (lista == null)
+            DsLoadingState()
+          else if (lista.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+              child: Text('Sin notificaciones por ahora.', textAlign: TextAlign.center, style: AppTypography.bodySmall),
+            )
+          else
+            for (final n in lista.take(_maximo)) ...[
+              NotificacionTile(notification: n, compacta: true, onTap: () => onTap(n)),
+              const SizedBox(height: 8),
+            ],
+        ],
       ),
     );
   }

@@ -250,10 +250,9 @@ class _NotificationsDialogState extends State<_NotificationsDialog> {
       child: ListView.separated(
         shrinkWrap: true,
         itemCount: _notifications.length,
-        separatorBuilder: (_, __) => Divider(color: AppColors.overlay(0.08), height: 16),
-        itemBuilder: (context, i) => _NotificationTile(
+        separatorBuilder: (_, __) => const SizedBox(height: 8),
+        itemBuilder: (context, i) => NotificacionTile(
           notification: _notifications[i],
-          accentColor: widget.accentColor,
           onTap: () => _handleTileTap(_notifications[i]),
         ),
       ),
@@ -261,94 +260,117 @@ class _NotificationsDialogState extends State<_NotificationsDialog> {
   }
 }
 
-class _NotificationTile extends StatelessWidget {
+/// Color, icono y etiqueta de cada tipo de notificación, para distinguirlas
+/// de un vistazo. Lo comparten la campana y la tarjeta del inicio del admin.
+class EstiloNotificacion {
+  final IconData icon;
+  final Color color;
+  final String etiqueta;
+
+  const EstiloNotificacion._(this.icon, this.color, this.etiqueta);
+
+  static const _violeta = Color(0xFF8E6BD6);
+
+  static EstiloNotificacion of(String tipo) => switch (tipo) {
+        'negocio_pendiente' => EstiloNotificacion._(Icons.hourglass_top_rounded, AppColors.amarilloTexto, 'Solicitud pendiente'),
+        'negocio_sugerido' => EstiloNotificacion._(Icons.add_business_outlined, AppColors.azulTexto, 'Lugar sugerido'),
+        'negocio_aprobado' => EstiloNotificacion._(Icons.check_circle_rounded, AppColors.emerald, 'Aprobado'),
+        'negocio_rechazado' => EstiloNotificacion._(Icons.cancel_rounded, AppColors.rojoTexto, 'Rechazado'),
+        'usuario_nuevo' => EstiloNotificacion._(Icons.person_add_alt_1_rounded, AppColors.turquesaTexto, 'Usuario nuevo'),
+        'recorrido_solicitado' => const EstiloNotificacion._(Icons.threesixty_rounded, _violeta, 'Recorrido 360° solicitado'),
+        'recorrido_listo' => EstiloNotificacion._(Icons.threesixty_rounded, AppColors.emerald, 'Recorrido 360° listo'),
+        'recorrido_rechazado' => EstiloNotificacion._(Icons.threesixty_rounded, AppColors.rojoTexto, 'Recorrido 360° rechazado'),
+        _ => EstiloNotificacion._(Icons.notifications_outlined, AppColors.slate400, 'Aviso'),
+      };
+}
+
+/// Una notificación: franja e icono del color de su tipo, etiqueta del tipo,
+/// título, cuerpo y fecha. Las no leídas llevan fondo tintado y punto.
+class NotificacionTile extends StatelessWidget {
   final AppNotification notification;
-  final Color accentColor;
   final VoidCallback onTap;
 
-  const _NotificationTile({required this.notification, required this.accentColor, required this.onTap});
+  /// Una sola línea de cuerpo (vista previa del inicio del admin).
+  final bool compacta;
 
-  IconData get _icon {
-    switch (notification.tipo) {
-      case 'negocio_aprobado':
-        return Icons.check_circle_outline;
-      case 'negocio_rechazado':
-        return Icons.cancel_outlined;
-      case 'negocio_sugerido':
-        return Icons.add_business_outlined;
-      case 'usuario_nuevo':
-        return Icons.person_add_alt_outlined;
-      case 'recorrido_solicitado':
-        return Icons.threesixty;
-      case 'recorrido_listo':
-        return Icons.check_circle_outline;
-      case 'recorrido_rechazado':
-        return Icons.cancel_outlined;
-      default:
-        return Icons.apartment_outlined;
-    }
-  }
-
-  Color get _color {
-    switch (notification.tipo) {
-      case 'negocio_aprobado':
-      case 'recorrido_listo':
-        return AppColors.brandTeal;
-      case 'negocio_rechazado':
-      case 'recorrido_rechazado':
-        return AppColors.errorRed;
-      default:
-        return accentColor;
-    }
-  }
+  const NotificacionTile({super.key, required this.notification, required this.onTap, this.compacta = false});
 
   @override
   Widget build(BuildContext context) {
+    final estilo = EstiloNotificacion.of(notification.tipo);
+    final color = estilo.color;
     return Material(
-      color: notification.leida ? Colors.transparent : accentColor.withValues(alpha: 0.06),
-      borderRadius: BorderRadius.circular(10),
+      color: notification.leida ? AppColors.overlay(0.02) : color.withValues(alpha: 0.08),
+      borderRadius: BorderRadius.circular(12),
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
-        borderRadius: BorderRadius.circular(10),
         onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+        child: IntrinsicHeight(
           child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Container(
-                width: 34,
-                height: 34,
-                decoration: BoxDecoration(color: _color.withValues(alpha: 0.12), shape: BoxShape.circle),
-                child: Icon(_icon, size: 16, color: _color),
-              ),
-              const SizedBox(width: 12),
+              Container(width: 4, color: notification.leida ? color.withValues(alpha: 0.35) : color),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            notification.titulo,
-                            style: TextStyle(
-                              color: AppColors.textPrimary,
-                              fontSize: 13,
-                              fontWeight: notification.leida ? FontWeight.w500 : FontWeight.w700,
-                            ),
-                          ),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 38,
+                        height: 38,
+                        decoration: BoxDecoration(
+                          color: color.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(10),
                         ),
-                        if (!notification.leida) ...[
-                          const SizedBox(width: 6),
-                          Container(width: 7, height: 7, decoration: BoxDecoration(color: accentColor, shape: BoxShape.circle)),
-                        ],
-                      ],
-                    ),
-                    const SizedBox(height: 3),
-                    Text(notification.cuerpo, style: TextStyle(color: AppColors.textSecondary, fontSize: 12.5, height: 1.35)),
-                    const SizedBox(height: 4),
-                    Text(formatDateEs(notification.createdAt), style: TextStyle(color: AppColors.slate500, fontSize: 12)),
-                  ],
+                        child: Icon(estilo.icon, size: 20, color: color),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    estilo.etiqueta.toUpperCase(),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.6),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(formatDateEs(notification.createdAt), style: TextStyle(color: AppColors.slate500, fontSize: 12)),
+                                if (!notification.leida) ...[
+                                  const Spacer(),
+                                  Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+                                ],
+                              ],
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              notification.titulo,
+                              maxLines: compacta ? 1 : null,
+                              overflow: compacta ? TextOverflow.ellipsis : null,
+                              style: TextStyle(
+                                color: AppColors.textPrimary,
+                                fontSize: 13.5,
+                                fontWeight: notification.leida ? FontWeight.w500 : FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              notification.cuerpo,
+                              maxLines: compacta ? 1 : null,
+                              overflow: compacta ? TextOverflow.ellipsis : null,
+                              style: TextStyle(color: AppColors.textSecondary, fontSize: 12.5, height: 1.35),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],
