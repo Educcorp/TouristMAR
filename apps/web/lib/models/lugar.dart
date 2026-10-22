@@ -206,16 +206,6 @@ class Lugar {
   /// Lugar de ejemplo (no viene de la base de datos): su foto es ilustrativa.
   bool get esEjemplo => !idEsReal(id);
 
-  /// Matrícula pintada del lugar, como la de una panga: "MZ-014". Es estable
-  /// para cada lugar (se deriva de su id) y solo sirve para reconocerlo.
-  String get matricula {
-    var h = 0;
-    for (final c in id.codeUnits) {
-      h = (h * 31 + c) & 0x7fffffff;
-    }
-    return 'MZ-${(h % 900 + 100)}';
-  }
-
   CategoriaLugar get categoria => CategoriaLugarDetector.detectar(categoriaTexto);
 
   bool tiene(ExperienciaTipo tipo) => switch (tipo) {

@@ -173,7 +173,6 @@ class _Hero extends StatelessWidget {
                           style: AppTypography.bodySmall.copyWith(color: AppColors.slate300, fontSize: 15),
                         ),
                       ),
-                      Text(lugar.matricula, style: AppTypography.matricula(size: 18, color: AppColors.slate400)),
                     ],
                   ),
                   const SizedBox(height: 6),

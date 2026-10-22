@@ -6,8 +6,8 @@ import 'cover_image.dart';
 import 'favorito_button.dart';
 
 /// Un lugar pintado como panga: la foto va arriba de la línea de flotación,
-/// la franja de esmalte dice qué tipo de lugar es, y debajo van el nombre, la
-/// distancia y la matrícula. Es la pieza con la que se arman el inicio, los
+/// la franja de esmalte dice qué tipo de lugar es, y debajo van el nombre y
+/// la distancia. Es la pieza con la que se arman el inicio, los
 /// favoritos y las listas del mapa.
 class CascoLugar extends StatelessWidget {
   final Lugar lugar;
@@ -63,20 +63,11 @@ class CascoLugar extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            lugar.nombre,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: AppTypography.h3.copyWith(fontSize: 18, fontWeight: FontWeight.w700, height: 1.2),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Text(lugar.matricula, style: AppTypography.matricula(size: 15, color: AppColors.slate400)),
-                      ],
+                    Text(
+                      lugar.nombre,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.h3.copyWith(fontSize: 18, fontWeight: FontWeight.w700, height: 1.2),
                     ),
                     const SizedBox(height: 6),
                     Row(

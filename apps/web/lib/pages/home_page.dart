@@ -13,8 +13,8 @@ import '../services/experiencias_launcher.dart';
 import '../widgets/casco_lugar.dart';
 import '../widgets/register_place_banner.dart';
 import '../widgets/themed_builder.dart';
-import '../utils/keyboard.dart';
 import '../widgets/user_avatar.dart';
+import '../widgets/aviso.dart';
 
 class HomePage extends StatefulWidget {
   final AuthUser user;
@@ -48,36 +48,11 @@ class _HomePageState extends State<HomePage> {
     _cargarLugares();
   }
 
-  /// Error 1: el banner "¿Te gustaría registrar un lugar nuevo?" (y la acción
-  /// rápida "Proponer lugar") no hacían nada. El backend solo deja registrar
-  /// lugares a cuentas de negocio, así que se le explica al visitante y, si
-  /// acepta, se cierra su sesión y se abre directo el registro de negocio.
+  /// Banner "¿Te gustaría registrar un lugar nuevo?": abre la guía (fondo
+  /// borroso) y, si el visitante sigue, cierra su sesión y lo lleva directo
+  /// al registro de empresa — solo las cuentas de negocio dan de alta lugares.
   Future<void> _proposePlace() async {
-    final go = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: AppColors.panelNavySoft,
-        title: Text('Registrar un lugar nuevo', style: TextStyle(color: AppColors.textPrimary)),
-        content: Text(
-          'Para proponer tu negocio o sitio turístico necesitas una cuenta de negocio. '
-          'Al continuar se cerrará tu sesión de visitante y te llevaremos al registro de negocio. '
-          'Un administrador revisará la solicitud antes de que aparezca en el mapa.',
-          style: TextStyle(color: AppColors.textSecondary, height: 1.4),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: Text('Cancelar', style: TextStyle(color: AppColors.slate400)),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: Text('Continuar', style: TextStyle(color: AppColors.brandTeal, fontWeight: FontWeight.w600)),
-          ),
-        ],
-      ),
-    );
-    if (go != true || !mounted) return;
-
+    if (!await mostrarGuiaRegistrarLugar(context, cierraSesion: true) || !mounted) return;
     cerrarSesion(context, registroNegocio: true);
   }
 
@@ -89,15 +64,7 @@ class _HomePageState extends State<HomePage> {
   Coordenadas? _yo;
   bool _pidiendoUbicacion = false;
 
-  String _busqueda = '';
   CategoriaLugar? _filtro;
-  final _buscador = TextEditingController();
-
-  @override
-  void dispose() {
-    _buscador.dispose();
-    super.dispose();
-  }
 
   Future<void> _cargarLugares() async {
     final lugares = await const LugaresService().listarPublicos();
@@ -114,21 +81,17 @@ class _HomePageState extends State<HomePage> {
     });
     if (yo == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No pudimos leer tu ubicación. Revisa el permiso del navegador o del teléfono.')),
+        aviso('No pudimos leer tu ubicación. Revisa el permiso del navegador o del teléfono.'),
       );
     }
   }
 
   double? _distancia(Lugar l) => (_yo == null || l.ubicacion == null) ? null : distanciaMetros(_yo!, l.ubicacion!);
 
-  /// Filtrados por búsqueda y franja; con ubicación, del más cercano al más
-  /// lejano (los que no tienen pin van al final).
+  /// Filtrados por categoría; con ubicación, del más cercano al más lejano
+  /// (los que no tienen pin van al final).
   List<Lugar> get _visibles {
-    final q = _busqueda.trim().toLowerCase();
-    final lista = (_lugares ?? const <Lugar>[])
-        .where((l) => _filtro == null || l.categoria == _filtro)
-        .where((l) => q.isEmpty || l.nombre.toLowerCase().contains(q) || l.categoria.etiqueta.toLowerCase().contains(q))
-        .toList();
+    final lista = (_lugares ?? const <Lugar>[]).where((l) => _filtro == null || l.categoria == _filtro).toList();
     if (_yo != null) {
       lista.sort((a, b) => (_distancia(a) ?? double.infinity).compareTo(_distancia(b) ?? double.infinity));
     }
@@ -174,8 +137,6 @@ class _HomePageState extends State<HomePage> {
                     const SizedBox(height: 4),
                     Text('¿A dónde vas hoy en Manzanillo?', style: AppTypography.body),
                     const SizedBox(height: 16),
-                    _buildSearchBar(),
-                    const SizedBox(height: 14),
                   ],
                 ),
               ),
@@ -212,6 +173,7 @@ class _HomePageState extends State<HomePage> {
       CategoriaLugar.recreacion,
       CategoriaLugar.cultura,
       CategoriaLugar.hotel,
+      CategoriaLugar.otro,
     ];
     return SizedBox(
       height: 48,
@@ -241,14 +203,7 @@ class _HomePageState extends State<HomePage> {
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Row(
                     children: [
-                      Container(
-                        width: 16,
-                        height: kFranja,
-                        decoration: BoxDecoration(
-                          color: activa ? colorTexto : c.esmalte,
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
+                      Icon(c.icon, size: 18, color: activa ? colorTexto : c.color),
                       const SizedBox(width: 8),
                       Text(c.etiqueta, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: colorTexto)),
                     ],
@@ -288,14 +243,10 @@ class _HomePageState extends State<HomePage> {
           children: [
             Icon(Icons.travel_explore, size: 40, color: AppColors.slate400),
             const SizedBox(height: 12),
-            Text('Nada coincide con tu búsqueda', style: AppTypography.h3),
+            Text('No hay lugares en esta categoría', style: AppTypography.h3),
             const SizedBox(height: 4),
             TextButton(
-              onPressed: () => setState(() {
-                _busqueda = '';
-                _filtro = null;
-                _buscador.clear();
-              }),
+              onPressed: () => setState(() => _filtro = null),
               child: const Text('Ver todos los lugares'),
             ),
           ],
@@ -323,32 +274,6 @@ class _HomePageState extends State<HomePage> {
                   ],
           );
         },
-      ),
-    );
-  }
-
-  Widget _buildSearchBar() {
-    return TextField(
-      controller: _buscador,
-      // Tocar fuera de la barra cierra el teclado (en Android, por defecto,
-      // un toque fuera no le quita el foco al campo).
-      onTapOutside: (_) => hideKeyboard(),
-      onChanged: (v) => setState(() => _busqueda = v),
-      textInputAction: TextInputAction.search,
-      style: TextStyle(color: AppColors.textPrimary, fontSize: 16),
-      decoration: InputDecoration(
-        hintText: 'Buscar playas, mariscos, miradores…',
-        prefixIcon: Icon(Icons.search, color: AppColors.slate400),
-        suffixIcon: _busqueda.isEmpty
-            ? null
-            : IconButton(
-                tooltip: 'Borrar búsqueda',
-                icon: const Icon(Icons.close),
-                onPressed: () => setState(() {
-                  _busqueda = '';
-                  _buscador.clear();
-                }),
-              ),
       ),
     );
   }

@@ -576,7 +576,16 @@ class _LoginFormState extends State<LoginForm> {
                 ),
                 if (!_isBusiness) ...[
                   const SizedBox(height: 24),
-                  RegisterPlaceBanner(onTap: () {}),
+                  RegisterPlaceBanner(
+                    onTap: () async {
+                      if (!await mostrarGuiaRegistrarLugar(context) || !mounted) return;
+                      setState(() {
+                        _error = null;
+                        _loginType = _LoginType.business;
+                        _mode = _Mode.register;
+                      });
+                    },
+                  ),
                 ],
               ],
             ),

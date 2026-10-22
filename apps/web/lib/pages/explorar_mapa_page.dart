@@ -9,7 +9,6 @@ import '../services/favoritos_service.dart';
 import '../services/lugares_service.dart';
 import '../services/recorridos_service.dart';
 import '../theme/app_theme.dart';
-import '../utils/keyboard.dart';
 import '../widgets/app_shell.dart';
 import '../widgets/favorito_button.dart';
 import '../widgets/lugar_preview_card.dart';
@@ -17,9 +16,10 @@ import '../widgets/mapa/mapa_lugares.dart';
 import '../widgets/themed_builder.dart';
 import '../widgets/user_avatar.dart';
 import 'ruta_lugar_page.dart';
+import '../widgets/aviso.dart';
 
 /// "Explorar mapa" del visitante: todos los lugares aprobados como pines por
-/// categoría, con búsqueda, filtros y una tarjeta de resumen al tocar uno.
+/// categoría, con filtros y una tarjeta de resumen al tocar uno.
 class ExplorarMapaPage extends StatefulWidget {
   final VisitorProfile profile;
   final LugaresService service;
@@ -32,7 +32,6 @@ class ExplorarMapaPage extends StatefulWidget {
 
 class _ExplorarMapaPageState extends State<ExplorarMapaPage> {
   final _mapController = MapController();
-  final _busqueda = TextEditingController();
   List<Lugar> _lugares = [];
   /// Recorridos 360° publicados (para el acceso "Ver en 360°" de la tarjeta).
   List<RecorridoPublico> _recorridos = const [];
@@ -44,7 +43,6 @@ class _ExplorarMapaPageState extends State<ExplorarMapaPage> {
   @override
   void initState() {
     super.initState();
-    _busqueda.addListener(() => setState(() {}));
     _cargar();
     // Para que los corazones salgan bien aunque se entre directo a /mapa.
     FavoritosService.instance.cargarIds();
@@ -52,7 +50,6 @@ class _ExplorarMapaPageState extends State<ExplorarMapaPage> {
 
   @override
   void dispose() {
-    _busqueda.dispose();
     _mapController.dispose();
     super.dispose();
   }
@@ -99,17 +96,13 @@ class _ExplorarMapaPageState extends State<ExplorarMapaPage> {
 
   void _aviso(String texto) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(texto)));
+    ScaffoldMessenger.of(context).showSnackBar(aviso(texto));
   }
 
   List<Lugar> get _filtrados {
-    final q = _busqueda.text.trim().toLowerCase();
     return _lugares.where((l) {
       if (_categorias.isNotEmpty && !_categorias.contains(l.categoria)) return false;
       if (_soloConRa && !l.tieneExperiencias) return false;
-      if (q.isNotEmpty && !l.nombre.toLowerCase().contains(q) && !l.categoriaTexto.toLowerCase().contains(q)) {
-        return false;
-      }
       return true;
     }).toList();
   }
@@ -188,8 +181,6 @@ class _ExplorarMapaPageState extends State<ExplorarMapaPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _CampoBusqueda(controller: _busqueda, flotante: true),
-                const SizedBox(height: AppSpacing.sm),
                 SizedBox(height: 36, child: _filtros(scroll: true)),
               ],
             ),
@@ -262,8 +253,6 @@ class _ExplorarMapaPageState extends State<ExplorarMapaPage> {
                 const SizedBox(height: 4),
                 Text('Toca un punto para ver su ficha y experiencias.', style: AppTypography.bodySmall),
                 const SizedBox(height: AppSpacing.lg),
-                _CampoBusqueda(controller: _busqueda),
-                const SizedBox(height: AppSpacing.md),
                 _filtros(scroll: false),
               ],
             ),
@@ -386,7 +375,7 @@ class _ExplorarMapaPageState extends State<ExplorarMapaPage> {
         activo: _soloConRa,
         onTap: () => setState(() => _soloConRa = !_soloConRa),
       ),
-      for (final c in CategoriaLugar.values.where((c) => _lugares.any((l) => l.categoria == c)))
+      for (final c in CategoriaLugar.values)
         _ChipFiltro(
           label: c.etiqueta,
           icon: c.icon,
@@ -402,58 +391,6 @@ class _ExplorarMapaPageState extends State<ExplorarMapaPage> {
       itemCount: chips.length,
       separatorBuilder: (_, __) => const SizedBox(width: 6),
       itemBuilder: (_, i) => chips[i],
-    );
-  }
-}
-
-class _CampoBusqueda extends StatelessWidget {
-  final TextEditingController controller;
-  final bool flotante;
-
-  const _CampoBusqueda({required this.controller, this.flotante = false});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14),
-      decoration: BoxDecoration(
-        color: AppColors.panelNavySoft,
-        borderRadius: BorderRadius.circular(AppRadius.buttonLg),
-        border: Border.all(color: AppColors.overlay(0.1)),
-        boxShadow: flotante
-            ? [BoxShadow(color: Colors.black.withValues(alpha: 0.18), blurRadius: 14, offset: const Offset(0, 4))]
-            : null,
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.search, size: 18, color: AppColors.slate500),
-          const SizedBox(width: 10),
-          Expanded(
-            child: TextField(
-              controller: controller,
-              // Tocar fuera de la barra cierra el teclado (en Android, por
-              // defecto, un toque fuera no le quita el foco al campo).
-              onTapOutside: (_) => hideKeyboard(),
-              style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
-              decoration: InputDecoration(
-                border: InputBorder.none,
-                enabledBorder: InputBorder.none,
-                focusedBorder: InputBorder.none,
-                filled: false,
-                isDense: true,
-                contentPadding: const EdgeInsets.symmetric(vertical: 13),
-                hintText: 'Buscar playas, restaurantes, miradores…',
-                hintStyle: TextStyle(color: AppColors.slate500),
-              ),
-            ),
-          ),
-          if (controller.text.isNotEmpty)
-            InkWell(
-              onTap: controller.clear,
-              child: Icon(Icons.close, size: 16, color: AppColors.slate400),
-            ),
-        ],
-      ),
     );
   }
 }

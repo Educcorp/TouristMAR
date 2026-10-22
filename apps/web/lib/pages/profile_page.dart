@@ -123,10 +123,10 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Widget _buildStatsRow(VisitorProfile profile) {
-    final stats = [
-      (Icons.favorite_border, '${FavoritosService.instance.ids.value.length}', 'Favoritos'),
-      (Icons.forum_outlined, '${profile.reviews.length}', 'Reseñas escritas'),
-      (Icons.star_outline, profile.promedioDadas == null ? '—' : profile.promedioDadas!.toStringAsFixed(1), 'Calificación que das'),
+    final stats = <(IconData, String, String, VoidCallback?)>[
+      (Icons.favorite_border, '${FavoritosService.instance.ids.value.length}', 'Favoritos', () => context.go('/favoritos')),
+      (Icons.forum_outlined, '${profile.reviews.length}', 'Reseñas escritas', null),
+      (Icons.star_outline, profile.promedioDadas == null ? '—' : profile.promedioDadas!.toStringAsFixed(1), 'Calificación que das', null),
     ];
 
     return Container(
@@ -137,9 +137,12 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
       child: Row(
         children: stats.map((s) {
-          final (icon, value, label) = s;
+          final (icon, value, label, onTap) = s;
           return Expanded(
-            child: Padding(
+            child: InkWell(
+              onTap: onTap,
+              borderRadius: BorderRadius.circular(16),
+              child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 16),
               child: Column(
                 children: [
@@ -150,10 +153,15 @@ class _ProfilePageState extends State<ProfilePage> {
                   Text(
                     label,
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: AppColors.slate400, fontSize: 13),
+                    style: TextStyle(
+                      color: onTap != null ? AppColors.turquesaTexto : AppColors.slate400,
+                      fontSize: 13,
+                      fontWeight: onTap != null ? FontWeight.w600 : null,
+                    ),
                   ),
                 ],
               ),
+            ),
             ),
           );
         }).toList(),
