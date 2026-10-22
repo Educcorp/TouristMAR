@@ -17,6 +17,7 @@ import '../../widgets/admin/seccion_desplegable.dart';
 import '../../widgets/mapa/mapa_lugares.dart';
 import 'admin_lugar_page.dart';
 import 'admin_lugar_widgets.dart';
+import '../../widgets/aviso.dart';
 
 /// Sección "Mapa y RA" del panel admin (`/admin/mapa`): registrar lugares con
 /// sus coordenadas, verlos en el mapa y, al tocar "Revisar", abrir la página
@@ -104,7 +105,7 @@ class _AdminMapaPageState extends State<AdminMapaPage> {
   void _revisar(NegocioSummary n) => context.go(rutaLugarAdmin(n.id));
 
   void _snack(String texto) {
-    if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(texto)));
+    if (mounted) ScaffoldMessenger.of(context).showSnackBar(aviso(texto));
   }
 
   Future<void> _eliminar(NegocioSummary n) async {
@@ -201,7 +202,12 @@ class _AdminMapaPageState extends State<AdminMapaPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Mapa y RA', style: AppTypography.h1),
+              Text('Lugares y experiencias', style: AppTypography.h1),
+              const SizedBox(height: 4),
+              Text(
+                'Para activar o desactivar la RA y el recorrido 360° de un lugar, entra a "Experiencias" en su fila.',
+                style: AppTypography.body,
+              ),
               const SizedBox(height: AppSpacing.xl),
               SeccionDesplegable(
                 icon: Icons.add_location_alt_outlined,
@@ -229,8 +235,6 @@ class _AdminMapaPageState extends State<AdminMapaPage> {
                   const SizedBox(height: AppSpacing.xl),
                   _buildSinLugar(),
                 ],
-                const SizedBox(height: AppSpacing.xl),
-                _ParametrosCard(editable: widget.admin.isSuperAdmin, service: widget.lugaresService),
               ],
             ],
           ),
@@ -311,7 +315,7 @@ class _AdminMapaPageState extends State<AdminMapaPage> {
                           ),
                           const SizedBox(height: AppSpacing.md),
                           DsButton(
-                            label: 'Revisar',
+                            label: 'Experiencias',
                             icon: Icons.arrow_forward,
                             size: DsButtonSize.sm,
                             variant: DsButtonVariant.primary,
@@ -517,7 +521,8 @@ class _FilaLugar extends StatelessWidget {
                 )
               else ...[
                 DsButton(
-                  label: 'Revisar',
+                  label: 'Experiencias',
+                  icon: Icons.view_in_ar_outlined,
                   size: DsButtonSize.sm,
                   variant: DsButtonVariant.primary,
                   accent: AppColors.adminViolet,
@@ -575,115 +580,6 @@ class _Leyenda extends StatelessWidget {
                 Text(c.etiqueta, style: TextStyle(color: AppColors.textPrimary, fontSize: 12)),
               ],
             ),
-        ],
-      ),
-    );
-  }
-}
-
-
-/// Parámetros globales de las experiencias. Todos los admins los ven; solo
-/// el super admin los edita.
-class _ParametrosCard extends StatefulWidget {
-  final bool editable;
-  final LugaresService service;
-
-  const _ParametrosCard({required this.editable, required this.service});
-
-  @override
-  State<_ParametrosCard> createState() => _ParametrosCardState();
-}
-
-class _ParametrosCardState extends State<_ParametrosCard> {
-  ConfigExperiencias _config = const ConfigExperiencias();
-
-  Future<void> _guardar() async {
-    try {
-      await widget.service.guardarConfigExperiencias(_config);
-    } on PendienteBackend catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final editable = widget.editable;
-    return DsCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.tune, color: AppColors.adminViolet),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(child: Text('Parámetros de experiencias', style: AppTypography.h3)),
-              if (!editable) const DsBadge(text: 'Solo super admin', tone: BadgeTone.neutral, icon: Icons.lock_outline),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          Row(
-            children: [
-              Expanded(child: Text('Radio de desbloqueo por defecto', style: AppTypography.body)),
-              Text('${_config.radioDesbloqueoDefault.round()} m',
-                  style: TextStyle(color: AppColors.adminViolet, fontWeight: FontWeight.w700)),
-            ],
-          ),
-          Slider(
-            value: _config.radioDesbloqueoDefault,
-            min: 20,
-            max: 300,
-            divisions: 28,
-            onChanged: editable ? (v) => setState(() => _config = _config.copyWith(radioDesbloqueoDefault: v)) : null,
-          ),
-          _SwitchFila(
-            titulo: 'Revisar recursos antes de publicarlos',
-            detalle: 'Un admin aprueba cada archivo nuevo antes de que lo vean los visitantes.',
-            valor: _config.revisionObligatoria,
-            onChanged: editable ? (v) => setState(() => _config = _config.copyWith(revisionObligatoria: v)) : null,
-          ),
-          _SwitchFila(
-            titulo: 'Mostrar en el mapa negocios sin experiencias',
-            detalle: 'Si se apaga, solo aparecen los lugares con RA o recorrido 360°.',
-            valor: _config.mostrarSinExperiencias,
-            onChanged: editable ? (v) => setState(() => _config = _config.copyWith(mostrarSinExperiencias: v)) : null,
-          ),
-          if (editable) ...[
-            const SizedBox(height: AppSpacing.md),
-            Align(
-              alignment: Alignment.centerRight,
-              child: DsButton(label: 'Guardar parámetros', icon: Icons.check, variant: DsButtonVariant.primary, onPressed: _guardar),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _SwitchFila extends StatelessWidget {
-  final String titulo;
-  final String detalle;
-  final bool valor;
-  final ValueChanged<bool>? onChanged;
-
-  const _SwitchFila({required this.titulo, required this.detalle, required this.valor, this.onChanged});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(titulo, style: AppTypography.body.copyWith(color: AppColors.textPrimary)),
-                Text(detalle, style: AppTypography.bodySmall),
-              ],
-            ),
-          ),
-          Switch(value: valor, onChanged: onChanged),
         ],
       ),
     );

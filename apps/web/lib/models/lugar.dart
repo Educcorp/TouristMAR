@@ -19,11 +19,6 @@ enum ExperienciaEstado {
   disponible,
 }
 
-/// Estado del recurso visto desde el negocio/admin (quién lo subió y si ya
-/// se revisó). Todavía no existe en el backend: hoy solo se sabe si la URL
-/// está o no (ver [Lugar.fromNegocioInfo]).
-enum RecursoEstado { sinArchivo, enRevision, publicado, rechazado }
-
 class ExperienciaInfo {
   final ExperienciaTipo tipo;
   final String titulo;

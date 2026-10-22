@@ -13,6 +13,7 @@ import '../widgets/admin/ds_card.dart';
 import '../widgets/experiencias/experiencia_viewport.dart';
 import '../widgets/experiencias/experiencias_lugar.dart';
 import '../widgets/mapa/mapa_lugares.dart';
+import '../widgets/aviso.dart';
 
 /// Sección "Mapa y experiencias" del panel de empresa: el negocio fija su
 /// punto en el mapa, sube los recursos de sus tres experiencias y ve cómo
@@ -35,7 +36,6 @@ class BusinessExperienciasContent extends StatefulWidget {
 
 class _BusinessExperienciasContentState extends State<BusinessExperienciasContent> {
   Coordenadas? _ubicacion;
-  double _radio = 50;
   bool _guardando = false;
 
   /// Recorridos 360° publicados para este negocio (los sube un admin en
@@ -78,15 +78,12 @@ class _BusinessExperienciasContentState extends State<BusinessExperienciasConten
         archivo360: (_recorridos?.isNotEmpty ?? false) ? _recorridos!.first.urlPortada : null,
         arMarcador: _b.arMarcador,
         arGeo: _b.arGeo,
-        radioDesbloqueo: _radio,
       );
 
   Future<void> _ejecutar(Future<void> Function() accion) async {
     setState(() => _guardando = true);
     try {
       await accion();
-    } on PendienteBackend catch (e) {
-      if (mounted) _aviso(e.toString());
     } on AuthError catch (e) {
       if (mounted) _aviso(e.message);
     } finally {
@@ -94,12 +91,8 @@ class _BusinessExperienciasContentState extends State<BusinessExperienciasConten
     }
   }
 
-  void _aviso(String texto) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(texto)));
+  void _aviso(String texto) => ScaffoldMessenger.of(context).showSnackBar(aviso(texto));
 
-  RecursoEstado _estado(ExperienciaTipo tipo) {
-    if (!_lugar.tiene(tipo)) return RecursoEstado.sinArchivo;
-    return _b.verified ? RecursoEstado.publicado : RecursoEstado.enRevision;
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -132,23 +125,17 @@ class _BusinessExperienciasContentState extends State<BusinessExperienciasConten
                 Text('Experiencias inmersivas', style: AppTypography.h2),
                 const SizedBox(height: 4),
                 Text(
-                  'Cada experiencia es opcional. Las que no subas aparecerán como "no disponible". '
-                  'Los marcadores de RA y los recorridos 360° los gestiona la administración de TouristMAR.',
+                  'Las experiencias las activa la administración de TouristMAR. Aquí ves cuáles '
+                  'tiene tu negocio; las que no estén activas aparecen como "no disponible" para los visitantes.',
                   style: AppTypography.bodySmall,
                 ),
                 const SizedBox(height: AppSpacing.md),
                 for (final tipo in ExperienciaTipo.values) ...[
                   _RecursoCard(
                     tipo: tipo,
-                    estado: _estado(tipo),
-                    ocupado: _guardando,
-                    onSubir: () => _ejecutar(() => widget.service.subirRecurso(_b.id, tipo)),
-                    onQuitar: () => _ejecutar(() => widget.service.quitarRecurso(_b.id, tipo)),
-                    extra: switch (tipo) {
-                      ExperienciaTipo.arGeo => _buildRadio(),
-                      ExperienciaTipo.recorrido360 => _buildRecorridos(),
-                      _ => null,
-                    },
+                    activa: _lugar.tiene(tipo),
+                    publicada: _b.verified,
+                    extra: tipo == ExperienciaTipo.recorrido360 ? _buildRecorridos() : null,
                   ),
                   const SizedBox(height: AppSpacing.md),
                 ],
@@ -163,7 +150,6 @@ class _BusinessExperienciasContentState extends State<BusinessExperienciasConten
   }
 
   Widget _buildUbicacion() {
-    final geoColor = ExperienciaInfo.of(ExperienciaTipo.arGeo).color;
     return DsCard(
       padding: EdgeInsets.zero,
       child: Column(
@@ -205,8 +191,6 @@ class _BusinessExperienciasContentState extends State<BusinessExperienciasConten
                     zoom: 13,
                     onTap: (p) => setState(() => _ubicacion = p),
                     children: [
-                      if (_ubicacion != null && _lugar.tiene(ExperienciaTipo.arGeo))
-                        capaRadio(_ubicacion!, _radio, geoColor),
                       if (_ubicacion != null) capaLugares([_lugar], seleccionadoId: _b.id),
                     ],
                   ),
@@ -272,34 +256,6 @@ class _BusinessExperienciasContentState extends State<BusinessExperienciasConten
     );
   }
 
-  Widget _buildRadio() {
-    final color = ExperienciaInfo.of(ExperienciaTipo.arGeo).color;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Text('Radio de desbloqueo', style: AppTypography.bodySmall.copyWith(color: AppColors.textPrimary)),
-            const Spacer(),
-            Text('${_radio.round()} m', style: TextStyle(color: color, fontWeight: FontWeight.w700, fontSize: 13)),
-          ],
-        ),
-        Slider(
-          value: _radio,
-          min: 20,
-          max: 300,
-          divisions: 28,
-          onChanged: (v) => setState(() => _radio = v),
-        ),
-        Text(
-          'El visitante debe estar dentro de esta distancia de tu punto en el mapa. '
-          'Úsalo pequeño para una entrada, grande para una playa o un parque.',
-          style: AppTypography.caption,
-        ),
-      ],
-    );
-  }
-
   Widget _buildRecorridos() {
     final lista = _recorridos;
     if (lista == null) return const SizedBox.shrink();
@@ -357,61 +313,36 @@ class _BusinessExperienciasContentState extends State<BusinessExperienciasConten
   }
 }
 
-/// Tarjeta de gestión de un recurso: estado, qué archivo se necesita y la
-/// zona de carga.
+/// Estado de una experiencia del negocio: si está activa o no y quién la
+/// activa. El negocio no sube archivos: los marcadores, la RA por ubicación y
+/// los recorridos 360° los da de alta la administración.
 class _RecursoCard extends StatelessWidget {
   final ExperienciaTipo tipo;
-  final RecursoEstado estado;
-  final bool ocupado;
-  final VoidCallback onSubir;
-  final VoidCallback onQuitar;
+  final bool activa;
+
+  /// El negocio ya está aprobado (si no, nada se ve todavía en el mapa).
+  final bool publicada;
   final Widget? extra;
 
-  const _RecursoCard({
-    required this.tipo,
-    required this.estado,
-    required this.ocupado,
-    required this.onSubir,
-    required this.onQuitar,
-    this.extra,
-  });
+  const _RecursoCard({required this.tipo, required this.activa, required this.publicada, this.extra});
 
-  /// Los marcadores de RA (imagen + texto que reconoce la cámara) y los
-  /// recorridos 360° solo los da de alta un admin, en las secciones
-  /// "Realidad aumentada" y "Recorridos 360°" del panel. Aquí el negocio solo
-  /// ve la información, sin botones para subir o quitar.
-  static bool gestionadoPorAdmin(ExperienciaTipo tipo) =>
-      tipo == ExperienciaTipo.arMarcador || tipo == ExperienciaTipo.recorrido360;
-
-  static List<String> requisitos(ExperienciaTipo tipo) => switch (tipo) {
-        ExperienciaTipo.arMarcador => [
-            'Los marcadores (la imagen que reconoce la cámara y su información) los da de alta '
-                'la administración de TouristMAR.',
-            'Si quieres uno para tu negocio, solicítalo a un administrador.',
-          ],
-        ExperienciaTipo.arGeo => [
-            'Contenido 3D que aparecerá en el lugar (lo integra el equipo de RA).',
-            'Tu negocio debe tener su punto guardado en el mapa.',
-          ],
-        ExperienciaTipo.recorrido360 => [
-            'Los recorridos 360° (escenarios 360° conectados del lugar) los da de alta '
-                'la administración de TouristMAR.',
-            'Si quieres uno para tu negocio, solicítalo a un administrador.',
-          ],
+  static String comoSeActiva(ExperienciaTipo tipo) => switch (tipo) {
+        ExperienciaTipo.arMarcador =>
+          'La administración da de alta la imagen que reconoce la cámara y la información que aparece encima. '
+              'Si quieres una para tu negocio, pídela a un administrador.',
+        ExperienciaTipo.arGeo =>
+          'La administración coloca los puntos de RA alrededor de tu negocio. Tu negocio necesita tener '
+              'su ubicación guardada en el mapa.',
+        ExperienciaTipo.recorrido360 =>
+          'La administración sube los escenarios 360° de tu negocio. Puedes solicitar uno desde "Mi negocio".',
       };
 
   @override
   Widget build(BuildContext context) {
     final info = ExperienciaInfo.of(tipo);
-    final soloAdmin = gestionadoPorAdmin(tipo);
-    final (badgeText, tone) = soloAdmin
-        ? ('Lo gestiona TouristMAR', BadgeTone.info)
-        : switch (estado) {
-            RecursoEstado.sinArchivo => ('Sin archivo', BadgeTone.neutral),
-            RecursoEstado.enRevision => ('En revisión', BadgeTone.warning),
-            RecursoEstado.publicado => ('Publicado', BadgeTone.success),
-            RecursoEstado.rechazado => ('Rechazado', BadgeTone.danger),
-          };
+    final (badgeText, tone) = !activa
+        ? ('No activa', BadgeTone.neutral)
+        : (publicada ? ('Activa', BadgeTone.success) : ('Activa · en revisión', BadgeTone.warning));
 
     return DsCard(
       child: LayoutBuilder(
@@ -422,9 +353,7 @@ class _RecursoCard extends StatelessWidget {
             child: ExperienciaViewport(
               tipo: tipo,
               aspectRatio: 4 / 3,
-              mensaje: soloAdmin
-                  ? 'Gestionado por administración'
-                  : (estado == RecursoEstado.sinArchivo ? 'Sin contenido' : 'Vista previa del recurso'),
+              mensaje: activa ? 'Disponible para los visitantes' : 'Todavía no activa',
             ),
           );
 
@@ -442,46 +371,17 @@ class _RecursoCard extends StatelessWidget {
               const SizedBox(height: 4),
               Text(info.descripcion, style: AppTypography.bodySmall),
               const SizedBox(height: AppSpacing.md),
-              for (final r in requisitos(tipo))
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 4),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.only(top: 5),
-                        child: Icon(Icons.circle, size: 5, color: AppColors.slate400),
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
-                      Expanded(child: Text(r, style: AppTypography.body.copyWith(fontSize: 12))),
-                    ],
-                  ),
-                ),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.admin_panel_settings_outlined, size: 16, color: AppColors.slate400),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(child: Text(comoSeActiva(tipo), style: AppTypography.body.copyWith(fontSize: 12))),
+                ],
+              ),
               if (extra != null) ...[
                 const SizedBox(height: AppSpacing.md),
                 extra!,
-              ],
-              if (!soloAdmin) ...[
-                const SizedBox(height: AppSpacing.md),
-                Wrap(
-                  spacing: AppSpacing.sm,
-                  runSpacing: AppSpacing.sm,
-                  children: [
-                    DsButton(
-                      label: estado == RecursoEstado.sinArchivo ? 'Subir archivo' : 'Reemplazar archivo',
-                      icon: Icons.upload_file,
-                      accent: info.color,
-                      onPressed: ocupado ? null : onSubir,
-                    ),
-                    if (estado != RecursoEstado.sinArchivo)
-                      DsButton(
-                        label: 'Quitar',
-                        icon: Icons.delete_outline,
-                        variant: DsButtonVariant.danger,
-                        onPressed: ocupado ? null : onQuitar,
-                      ),
-                  ],
-                ),
               ],
             ],
           );

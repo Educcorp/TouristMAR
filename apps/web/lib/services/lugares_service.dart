@@ -4,17 +4,7 @@ import '../models/lugar.dart';
 import 'auth_service.dart' show apiUrl, AuthError, crearClienteHttp;
 import 'session_storage.dart';
 
-/// Lo que todavía no existe en el backend. La interfaz lo atrapa y muestra
-/// un aviso en lugar de fallar en silencio.
-class PendienteBackend implements Exception {
-  final String que;
-  const PendienteBackend(this.que);
-
-  @override
-  String toString() => '$que todavía no está conectado con el servidor.';
-}
-
-/// Fuente de los puntos del mapa y de la configuración de experiencias.
+/// Fuente de los puntos del mapa.
 ///
 /// [listarPublicos] ya trae los negocios aprobados con `latitud`/`longitud`
 /// desde `GET /api/lugares` (hoy son pocos: la mayoría de los negocios
@@ -73,37 +63,6 @@ class LugaresService {
     }
   }
 
-  Future<void> subirRecurso(String negocioId, ExperienciaTipo tipo) async {
-    throw PendienteBackend('Subir ${ExperienciaInfo.of(tipo).tituloCorto}');
-  }
-
-  Future<void> quitarRecurso(String negocioId, ExperienciaTipo tipo) async {
-    throw PendienteBackend('Quitar ${ExperienciaInfo.of(tipo).tituloCorto}');
-  }
-
-  Future<void> guardarConfigExperiencias(ConfigExperiencias config) async {
-    throw const PendienteBackend('Guardar los parámetros de experiencias');
-  }
-}
-
-/// Parámetros globales de las experiencias (los edita solo el super admin).
-class ConfigExperiencias {
-  final double radioDesbloqueoDefault;
-  final bool revisionObligatoria;
-  final bool mostrarSinExperiencias;
-
-  const ConfigExperiencias({
-    this.radioDesbloqueoDefault = 50,
-    this.revisionObligatoria = true,
-    this.mostrarSinExperiencias = true,
-  });
-
-  ConfigExperiencias copyWith({double? radioDesbloqueoDefault, bool? revisionObligatoria, bool? mostrarSinExperiencias}) =>
-      ConfigExperiencias(
-        radioDesbloqueoDefault: radioDesbloqueoDefault ?? this.radioDesbloqueoDefault,
-        revisionObligatoria: revisionObligatoria ?? this.revisionObligatoria,
-        mostrarSinExperiencias: mostrarSinExperiencias ?? this.mostrarSinExperiencias,
-      );
 }
 
 // Coordenadas reales aproximadas de Manzanillo; los recursos son marcadores
