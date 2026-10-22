@@ -13,6 +13,7 @@ import '../../widgets/admin/ds_states.dart';
 import '../../widgets/app_text_field.dart';
 import '../../widgets/mapa/ubicacion_lugar.dart';
 import '../../widgets/recorrido360/visor_360.dart';
+import '../../widgets/aviso.dart';
 
 /// Mismo límite que multer en recorridos.routes.ts.
 const _maxMb = 30;
@@ -184,7 +185,7 @@ class _RecorridosLugarSectionState extends State<RecorridosLugarSection> {
 
   void _snack(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context).showSnackBar(aviso(message));
   }
 
   @override
@@ -685,7 +686,7 @@ class _EscenariosEditorState extends State<_EscenariosEditor> {
 
   void _snack(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context).showSnackBar(aviso(message));
   }
 
   /// Reemplaza (o agrega) un escenario en el recorrido del padre.

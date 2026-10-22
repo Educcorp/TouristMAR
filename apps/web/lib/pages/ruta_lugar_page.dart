@@ -11,6 +11,7 @@ import '../theme/app_theme.dart';
 import '../widgets/experiencias/experiencias_lugar.dart' show ExperienciaSituacion;
 import '../widgets/mapa/mapa_lugares.dart';
 import '../widgets/themed_builder.dart';
+import '../widgets/aviso.dart';
 
 /// "Cómo llegar" dentro de nuestro mapa (antes mandaba a Google Maps): tu
 /// posición en vivo, la ruta a pie hasta [lugar] y, si el lugar tiene RA por
@@ -141,10 +142,10 @@ class _RutaLugarPageState extends State<RutaLugarPage> {
     try {
       await ExperienciasLauncher.current.abrir(context, widget.lugar, ExperienciaTipo.arGeo);
     } on ExperienciaError catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(e.mensaje)));
+      messenger.showSnackBar(aviso(e.mensaje, tipo: AvisoTipo.error));
     } on ExperienciaNoConfigurada {
       messenger.showSnackBar(
-        const SnackBar(content: Text('La RA por geolocalización necesita la cámara de tu teléfono.')),
+        aviso('La RA por geolocalización necesita la cámara de tu teléfono.'),
       );
     }
   }

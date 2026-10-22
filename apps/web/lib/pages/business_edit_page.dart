@@ -17,6 +17,7 @@ import '../widgets/cover_image.dart';
 import '../widgets/horario_field.dart';
 import '../widgets/mapa/ubicacion_lugar.dart';
 import '../widgets/themed_builder.dart';
+import '../widgets/aviso.dart';
 
 class BusinessEditPage extends StatefulWidget {
   final BusinessProfile business;
@@ -217,7 +218,7 @@ class _BusinessEditPageState extends State<BusinessEditPage> {
           final solicitud = await _recorridosService.solicitar(token, business.id);
           if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Cambios guardados y solicitud de recorrido 360° enviada')),
+            aviso('Cambios guardados y solicitud de recorrido 360° enviada'),
           );
           setState(() => _recorrido = EstadoRecorridoNegocio(tieneRecorrido: false, solicitud: solicitud));
         } catch (err) {
@@ -252,7 +253,7 @@ class _BusinessEditPageState extends State<BusinessEditPage> {
     }
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(const SnackBar(content: Text(mensajeCompletarPrimero)));
+      ..showSnackBar(aviso(mensajeCompletarPrimero));
   }
 
   @override

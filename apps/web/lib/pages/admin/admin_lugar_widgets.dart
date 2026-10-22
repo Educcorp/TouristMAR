@@ -10,6 +10,7 @@ import '../../widgets/admin/ds_button.dart';
 import '../../widgets/admin/ds_card.dart';
 import '../../widgets/app_text_field.dart';
 import '../../widgets/mapa/ubicacion_lugar.dart';
+import '../../widgets/aviso.dart';
 
 // Formularios en línea de "Mapa y RA": registrar/editar un lugar, su RA por
 // ubicación (coordenadas) y sus marcadores de RA. Van dentro de
@@ -250,7 +251,7 @@ class _UbicacionLugarSectionState extends State<UbicacionLugarSection> {
       });
       if (!mounted) return;
       widget.onGuardado(n);
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Ubicación guardada')));
+      ScaffoldMessenger.of(context).showSnackBar(aviso('Ubicación guardada'));
     } catch (err) {
       if (mounted) setState(() => _error = _mensaje(err, 'No se pudo guardar la ubicación'));
     } finally {

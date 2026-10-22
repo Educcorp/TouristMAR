@@ -8,6 +8,7 @@ import '../../widgets/admin/ds_button.dart';
 import '../../widgets/admin/ds_card.dart';
 import '../../widgets/admin/ds_states.dart';
 import '../../widgets/app_text_field.dart';
+import '../../widgets/aviso.dart';
 
 /// Contenido de la sección "Admins" embebido en [AdminShell].
 class AdminAdminsPage extends StatefulWidget {
@@ -113,7 +114,7 @@ class _AdminAdminsPageState extends State<AdminAdminsPage> {
     } catch (err) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(err is AuthError ? err.message : 'No se pudo eliminar al administrador')),
+        aviso(err is AuthError ? err.message : 'No se pudo eliminar al administrador', tipo: AvisoTipo.error),
       );
     } finally {
       if (mounted) setState(() => _deleting.remove(admin.id));

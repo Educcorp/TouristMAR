@@ -13,6 +13,7 @@ import '../../widgets/app_text_field.dart';
 import '../../widgets/mapa/mapa_lugares.dart';
 import '../../widgets/mapa/ubicacion_lugar.dart';
 import 'admin_lugar_widgets.dart' show coordenadasDe;
+import '../../widgets/aviso.dart';
 
 // "RA por geolocalización" de un lugar en "Mapa y RA": sus puntos de
 // interés, cada uno con dos radios (marcador flotante y guía completa).
@@ -56,7 +57,7 @@ class _PuntosRaGeoSectionState extends State<PuntosRaGeoSection> {
     }
   }
 
-  void _aviso(String texto) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(texto)));
+  void _aviso(String texto) => ScaffoldMessenger.of(context).showSnackBar(aviso(texto));
 
   Future<void> _editar([PuntoRaGeo? punto]) async {
     final guardado = await showDialog<PuntoRaGeo>(

@@ -11,6 +11,7 @@ import '../services/ra_geo_service.dart';
 import '../services/ubicacion_dispositivo.dart';
 import '../theme/app_theme.dart';
 import '../widgets/cover_image.dart';
+import '../widgets/aviso.dart';
 
 /// RA por geolocalización (Location-based AR) hecha en Flutter, sin Unity:
 /// cámara de fondo + GPS + brújula sobre los puntos de interés del lugar
@@ -211,7 +212,7 @@ class _RaUbicacionPageState extends State<RaUbicacionPage> with WidgetsBindingOb
     final messenger = ScaffoldMessenger.of(context);
     if (!launcher.soporta(ExperienciaTipo.arMarcador)) {
       messenger.showSnackBar(
-        const SnackBar(content: Text('La RA con marcadores se abre desde la app móvil.')),
+        aviso('La RA con marcadores se abre desde la app móvil.'),
       );
       return;
     }
@@ -225,10 +226,10 @@ class _RaUbicacionPageState extends State<RaUbicacionPage> with WidgetsBindingOb
     try {
       await launcher.abrir(context, widget.lugar, ExperienciaTipo.arMarcador);
     } on ExperienciaError catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(e.mensaje)));
+      messenger.showSnackBar(aviso(e.mensaje, tipo: AvisoTipo.error));
       _recuperarCamara();
     } on ExperienciaNoConfigurada {
-      messenger.showSnackBar(const SnackBar(content: Text('La RA con marcadores todavía no está disponible.')));
+      messenger.showSnackBar(aviso('La RA con marcadores todavía no está disponible.'));
       _recuperarCamara();
     }
   }
@@ -590,7 +591,7 @@ class _GuiaCompletaState extends State<_GuiaCompleta> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('No se pudo reproducir la guía de audio.')));
+            .showSnackBar(aviso('No se pudo reproducir la guía de audio.'));
       }
     }
   }

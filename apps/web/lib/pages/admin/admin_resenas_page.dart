@@ -7,6 +7,7 @@ import '../../widgets/admin/ds_button.dart';
 import '../../widgets/admin/ds_card.dart';
 import '../../widgets/admin/ds_states.dart';
 import '../../widgets/resenas/resenas_widgets.dart';
+import '../../widgets/aviso.dart';
 
 /// Contenido de la sección "Reseñas" embebido en [AdminShell]: todas las
 /// reseñas de los lugares, para quitar las que sean ofensivas o spam.
@@ -87,7 +88,7 @@ class _AdminResenasPageState extends State<AdminResenasPage> {
       setState(() => _resenas.removeWhere((r) => r.id == resena.id));
     } on ResenasError catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      ScaffoldMessenger.of(context).showSnackBar(aviso(e.message, tipo: AvisoTipo.error));
     } finally {
       if (mounted) setState(() => _eliminando.remove(resena.id));
     }

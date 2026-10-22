@@ -10,6 +10,7 @@ import '../../theme/theme_controller.dart';
 import '../mapa/mapa_lugares.dart';
 import '../recorrido360/visor_360.dart';
 import 'experiencia_viewport.dart';
+import '../aviso.dart';
 
 /// Estado calculado de una experiencia para un visitante concreto.
 class ExperienciaSituacion {
@@ -105,7 +106,7 @@ class _ExperienciasLugarSectionState extends State<ExperienciasLugarSection> {
     setState(() => _yo = yo);
     if (yo == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No se pudo obtener tu ubicación. Activa la ubicación y permite el acceso.')),
+        aviso('No se pudo obtener tu ubicación. Activa la ubicación y permite el acceso.'),
       );
     }
   }
@@ -420,7 +421,7 @@ class _DetalleExperienciaState extends State<_DetalleExperiencia> {
   }
 
   void _aviso(String texto) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(texto)));
+    ScaffoldMessenger.of(context).showSnackBar(aviso(texto));
   }
 
   @override

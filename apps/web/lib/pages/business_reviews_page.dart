@@ -6,6 +6,7 @@ import '../theme/app_theme.dart';
 import '../utils/keyboard.dart';
 import '../widgets/admin/ds_states.dart';
 import '../widgets/resenas/resenas_widgets.dart';
+import '../widgets/aviso.dart';
 
 /// Contenido de la sección "Reseñas" embebido en [BusinessShell] — sin
 /// Scaffold/AppBar propio, igual que las páginas del panel admin. Muestra las
@@ -51,7 +52,7 @@ class _BusinessReviewsContentState extends State<BusinessReviewsContent> {
   }
 
   void _aviso(String texto) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(texto)));
+    ScaffoldMessenger.of(context).showSnackBar(aviso(texto));
   }
 
   Future<void> _responder(Resena resena) async {

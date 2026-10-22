@@ -14,6 +14,7 @@ import '../../widgets/admin/ds_card.dart';
 import '../../widgets/admin/ds_icon_badge.dart';
 import '../../widgets/admin/ds_states.dart';
 import 'admin_negocio_detalle_page.dart';
+import '../../widgets/aviso.dart';
 
 /// Contenido de la sección "Solicitudes" embebido en [AdminShell] — sin
 /// Scaffold/AppBar propio, ya que el sidebar/topbar los provee el shell.
@@ -93,15 +94,13 @@ class _AdminRequestsPageState extends State<AdminRequestsPage> {
       await widget.recorridosService.atenderSolicitud(token, solicitud.id, decision, nota: nota);
       if (!mounted) return;
       setState(() => _recorridos.removeWhere((s) => s.id == solicitud.id));
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(decision == EstadoSolicitudRecorrido.completada
+      ScaffoldMessenger.of(context).showSnackBar(aviso(decision == EstadoSolicitudRecorrido.completada
             ? 'Solicitud marcada como atendida. Se le avisó al negocio.'
-            : 'Solicitud rechazada. Se le avisó al negocio.'),
-      ));
+            : 'Solicitud rechazada. Se le avisó al negocio.'));
     } catch (err) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(err is AuthError ? err.message : 'No se pudo procesar la solicitud')),
+        aviso(err is AuthError ? err.message : 'No se pudo procesar la solicitud', tipo: AvisoTipo.error),
       );
     } finally {
       if (mounted) setState(() => _deciding.remove(solicitud.id));
@@ -121,12 +120,12 @@ class _AdminRequestsPageState extends State<AdminRequestsPage> {
       if (!mounted) return;
       setState(() => _requests.removeWhere((r) => r.id == negocio.id));
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(approve ? 'Solicitud aprobada. El negocio ya puede acceder a su panel.' : 'Solicitud rechazada.')),
+        aviso(approve ? 'Solicitud aprobada. El negocio ya puede acceder a su panel.' : 'Solicitud rechazada.'),
       );
     } catch (err) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(err is AuthError ? err.message : 'No se pudo procesar la solicitud')),
+        aviso(err is AuthError ? err.message : 'No se pudo procesar la solicitud', tipo: AvisoTipo.error),
       );
     } finally {
       if (mounted) setState(() => _deciding.remove(negocio.id));
@@ -147,11 +146,9 @@ class _AdminRequestsPageState extends State<AdminRequestsPage> {
     if (resultado.aprobado != null) {
       setState(() => _requests.removeWhere((r) => r.id == negocio.id));
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(resultado.aprobado!
+        aviso(resultado.aprobado!
               ? 'Solicitud aprobada. El negocio ya puede acceder a su panel.'
               : 'Solicitud rechazada.'),
-        ),
       );
     } else if (resultado.editado) {
       _load();

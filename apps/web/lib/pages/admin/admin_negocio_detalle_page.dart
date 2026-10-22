@@ -15,6 +15,7 @@ import '../../widgets/app_text_field.dart';
 import '../../widgets/horario_field.dart';
 import '../../widgets/mapa/ubicacion_lugar.dart';
 import '../../widgets/themed_builder.dart';
+import '../../widgets/aviso.dart';
 
 /// Contenido de RA que el admin puede ligar a un negocio desde su solicitud.
 enum ContenidoNegocio { realidadAumentada, recorrido360 }
@@ -242,7 +243,7 @@ class _AdminNegocioDetallePageState extends State<AdminNegocioDetallePage> {
   }
 
   void _aviso(String texto) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(texto)));
+    ScaffoldMessenger.of(context).showSnackBar(aviso(texto));
   }
 
   @override

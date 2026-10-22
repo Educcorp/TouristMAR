@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/horario.dart';
 import '../theme/app_theme.dart';
+import 'aviso.dart';
 
 /// Campo "Horario" del negocio: en vez de texto libre, se despliega la lista
 /// de los 7 días y en cada uno se marca si abre y, si abre, a qué hora abre y
@@ -166,7 +167,7 @@ class _HorarioFieldState extends State<HorarioField> {
                         onCopiar: () {
                           _cambiar(_horario!.copiarATodos(i));
                           ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-                            SnackBar(content: Text('Horario del ${HorarioSemanal.nombres[i].toLowerCase()} copiado a los días abiertos')),
+                            aviso('Horario del ${HorarioSemanal.nombres[i].toLowerCase()} copiado a los días abiertos'),
                           );
                         },
                       ),

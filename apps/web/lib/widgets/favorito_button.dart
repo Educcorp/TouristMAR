@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/lugar.dart';
 import '../services/favoritos_service.dart';
 import '../theme/app_theme.dart';
+import 'aviso.dart';
 
 /// Rojo del corazón de un lugar que ya está en "Mis favoritos".
 const Color colorFavorito = AppColors.rojo;
@@ -24,15 +25,15 @@ class FavoritoButton extends StatelessWidget {
     final messenger = ScaffoldMessenger.of(context);
     if (!lugar.esFavoritable) {
       messenger.showSnackBar(
-        const SnackBar(content: Text('Este lugar es de ejemplo y aún no se puede guardar en favoritos')),
+        aviso('Este lugar es de ejemplo y aún no se puede guardar en favoritos'),
       );
       return;
     }
     try {
       final marcado = await FavoritosService.instance.alternar(lugar.id);
-      messenger.showSnackBar(SnackBar(content: Text(marcado ? 'Agregado a tus favoritos' : 'Quitado de tus favoritos')));
+      messenger.showSnackBar(aviso(marcado ? 'Agregado a tus favoritos' : 'Quitado de tus favoritos'));
     } on FavoritosError catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(e.message)));
+      messenger.showSnackBar(aviso(e.message, tipo: AvisoTipo.error));
     }
   }
 

@@ -11,6 +11,7 @@ import '../widgets/app_text_field.dart';
 import '../widgets/horario_field.dart';
 import '../widgets/mapa/ubicacion_lugar.dart';
 import '../widgets/themed_builder.dart';
+import '../widgets/aviso.dart';
 
 /// Formulario para que una cuenta de negocio ya aprobada sugiera un negocio
 /// adicional — cae en la misma cola de "Solicitudes" del admin que un
@@ -89,7 +90,7 @@ class _BusinessSuggestPageState extends State<BusinessSuggestPage> {
       );
       var user = updated;
       final nuevo = updated.negocios.last;
-      String? aviso;
+      String? avisoImagen;
       // La portada se sube aparte (multipart) una vez que el negocio existe.
       // Si falla, la solicitud ya quedó enviada: se avisa y el admin o la
       // empresa pueden subirla después.
@@ -98,14 +99,14 @@ class _BusinessSuggestPageState extends State<BusinessSuggestPage> {
         try {
           user = await _authService.uploadNegocioPortada(token, nuevo.id, portada.bytes, portada.name);
         } catch (_) {
-          aviso = 'La solicitud se envió, pero no se pudo subir la imagen. Podrás agregarla después.';
+          avisoImagen = 'La solicitud se envió, pero no se pudo subir la imagen. Podrás agregarla después.';
         }
       }
       if (!mounted) return;
       final messenger = ScaffoldMessenger.maybeOf(context);
       final negocio = user.negocios.firstWhere((n) => n.id == nuevo.id, orElse: () => nuevo);
       Navigator.of(context).pop(BusinessProfile.fromNegocioInfo(user, negocio));
-      messenger?.showSnackBar(SnackBar(content: Text(aviso ?? 'Solicitud enviada. Te avisaremos cuando un administrador la revise.')));
+      messenger?.showSnackBar(aviso(avisoImagen ?? 'Solicitud enviada. Te avisaremos cuando un administrador la revise.'));
     } catch (err) {
       if (!mounted) return;
       setState(() => _error = err is AuthError ? err.message : 'No se pudo enviar la sugerencia');
