@@ -6,6 +6,7 @@ import '../../navegacion/rutas.dart';
 import '../../services/auth_service.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/breakpoints.dart';
+import '../boton_atras.dart';
 import '../notification_bell.dart';
 import '../theme_toggle_tile.dart';
 import '../app_logo.dart';
@@ -27,7 +28,7 @@ AdminSection? adminSectionForNotification(String tipo) {
 
 /// Destinos disponibles en el panel admin. Los recorridos 360° viven dentro
 /// de "Mapa y RA" (en cada lugar), ya no son una sección aparte.
-enum AdminSection { inicio, solicitudes, usuarios, negocios, resenas, mapa, realidadAumentada, admins, reportes, configuracion, ayuda }
+enum AdminSection { inicio, solicitudes, usuarios, negocios, resenas, mapa, realidadAumentada, admins, reportes }
 
 /// Nombre de cada sección en la URL (`/admin/<slug>`).
 extension AdminSectionSlug on AdminSection {
@@ -59,12 +60,10 @@ const _adminNavItems = [
   _AdminNavLeaf(AdminSection.usuarios, Icons.group_outlined, 'Usuarios'),
   _AdminNavLeaf(AdminSection.negocios, Icons.apartment_outlined, 'Negocios'),
   _AdminNavLeaf(AdminSection.resenas, Icons.forum_outlined, 'Reseñas'),
-  _AdminNavLeaf(AdminSection.mapa, Icons.map_outlined, 'Mapa y RA'),
+  _AdminNavLeaf(AdminSection.mapa, Icons.map_outlined, 'Lugares y experiencias'),
   _AdminNavLeaf(AdminSection.realidadAumentada, Icons.qr_code_scanner, 'Marcadores de RA'),
   _AdminNavLeaf(AdminSection.admins, Icons.shield_outlined, 'Admins'),
   _AdminNavLeaf(AdminSection.reportes, Icons.bar_chart_outlined, 'Reportes'),
-  _AdminNavLeaf(AdminSection.configuracion, Icons.settings_outlined, 'Configuración'),
-  _AdminNavLeaf(AdminSection.ayuda, Icons.help_outline, 'Ayuda'),
 ];
 
 /// Shell del panel admin: sidebar izquierdo fijo (siempre visible, sin botón
@@ -94,6 +93,7 @@ class AdminShell extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final isWide = Breakpoints.isExpanded(constraints.maxWidth);
+        final onBack = selected == AdminSection.inicio ? null : () => onSelect(AdminSection.inicio);
         final content = ClipRect(
           child: AnimatedSwitcher(
             duration: const Duration(milliseconds: 200),
@@ -134,7 +134,7 @@ class AdminShell extends StatelessWidget {
                 Expanded(
                   child: Column(
                     children: [
-                      _AdminCompactTopBar(onNotificationTap: onNotificationTap),
+                      _AdminCompactTopBar(onNotificationTap: onNotificationTap, onBack: onBack),
                       Expanded(child: content),
                     ],
                   ),
@@ -164,7 +164,7 @@ class AdminShell extends StatelessWidget {
           ),
           body: Column(
             children: [
-              _AdminTopBar(onNotificationTap: onNotificationTap),
+              _AdminTopBar(onNotificationTap: onNotificationTap, onBack: onBack),
               Expanded(child: content),
             ],
           ),
@@ -176,8 +176,9 @@ class AdminShell extends StatelessWidget {
 
 class _AdminCompactTopBar extends StatelessWidget {
   final ValueChanged<AppNotification>? onNotificationTap;
+  final VoidCallback? onBack;
 
-  const _AdminCompactTopBar({this.onNotificationTap});
+  const _AdminCompactTopBar({this.onNotificationTap, this.onBack});
 
   @override
   Widget build(BuildContext context) {
@@ -195,8 +196,9 @@ class _AdminCompactTopBar extends StatelessWidget {
         right: false,
         bottom: false,
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.end,
           children: [
+            if (onBack != null) BotonAtras(onTap: onBack!),
+            const Spacer(),
             NotificationBell(accentColor: AppColors.adminViolet, onNotificationTap: onNotificationTap),
           ],
         ),
@@ -207,8 +209,9 @@ class _AdminCompactTopBar extends StatelessWidget {
 
 class _AdminTopBar extends StatelessWidget {
   final ValueChanged<AppNotification>? onNotificationTap;
+  final VoidCallback? onBack;
 
-  const _AdminTopBar({this.onNotificationTap});
+  const _AdminTopBar({this.onNotificationTap, this.onBack});
 
   @override
   Widget build(BuildContext context) {
@@ -227,12 +230,16 @@ class _AdminTopBar extends StatelessWidget {
         bottom: false,
         child: Row(
           children: [
+            if (onBack != null) BotonAtras(onTap: onBack!),
             AppLogo(size: 32),
-            const SizedBox(width: 8),
-            Text(
-              'TOURISTMAR',
-              style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, letterSpacing: 2, fontSize: 13),
-            ),
+            // Con la flecha no cabe todo en un teléfono angosto: el logo basta.
+            if (onBack == null) ...[
+              const SizedBox(width: 8),
+              Text(
+                'TOURISTMAR',
+                style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, letterSpacing: 2, fontSize: 13),
+              ),
+            ],
             const SizedBox(width: 8),
             const RolInsignia('ADMIN'),
             const Spacer(),

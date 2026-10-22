@@ -7,6 +7,7 @@ import '../../navegacion/rutas.dart';
 import '../../services/auth_service.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/breakpoints.dart';
+import '../boton_atras.dart';
 import '../notification_bell.dart';
 import '../theme_toggle_tile.dart';
 import '../app_logo.dart';
@@ -18,7 +19,7 @@ enum BusinessSection { dashboard, perfil, experiencias, resenas }
 void businessLogout(BuildContext context) => cerrarSesion(context);
 
 class _BusinessNavLeaf {
-  final BusinessSection? section;
+  final BusinessSection section;
   final IconData icon;
   final String label;
   const _BusinessNavLeaf(this.section, this.icon, this.label);
@@ -29,8 +30,6 @@ const _businessNavItems = [
   _BusinessNavLeaf(BusinessSection.perfil, Icons.apartment, 'Mi negocio'),
   _BusinessNavLeaf(BusinessSection.experiencias, Icons.view_in_ar_outlined, 'Mapa y experiencias'),
   _BusinessNavLeaf(BusinessSection.resenas, Icons.forum_outlined, 'Reseñas'),
-  _BusinessNavLeaf(null, Icons.trending_up, 'Estadísticas'),
-  _BusinessNavLeaf(null, Icons.settings_outlined, 'Configuración'),
 ];
 
 /// Shell del panel de empresa: mismo patrón que [AdminShell] (sidebar fijo en
@@ -66,6 +65,7 @@ class BusinessShell extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final isWide = Breakpoints.isExpanded(constraints.maxWidth);
+        final onBack = section == BusinessSection.dashboard ? null : () => onSelectSection(BusinessSection.dashboard);
 
         if (isWide) {
           return Scaffold(
@@ -96,7 +96,7 @@ class BusinessShell extends StatelessWidget {
                 Expanded(
                   child: Column(
                     children: [
-                      _BusinessCompactTopBar(onNotificationTap: onNotificationTap),
+                      _BusinessCompactTopBar(onNotificationTap: onNotificationTap, onBack: onBack),
                       Expanded(child: body),
                     ],
                   ),
@@ -129,7 +129,7 @@ class BusinessShell extends StatelessWidget {
           ),
           body: Column(
             children: [
-              _BusinessTopBar(onNotificationTap: onNotificationTap),
+              _BusinessTopBar(onNotificationTap: onNotificationTap, onBack: onBack),
               Expanded(child: body),
             ],
           ),
@@ -141,8 +141,9 @@ class BusinessShell extends StatelessWidget {
 
 class _BusinessCompactTopBar extends StatelessWidget {
   final ValueChanged<AppNotification>? onNotificationTap;
+  final VoidCallback? onBack;
 
-  const _BusinessCompactTopBar({this.onNotificationTap});
+  const _BusinessCompactTopBar({this.onNotificationTap, this.onBack});
 
   @override
   Widget build(BuildContext context) {
@@ -160,8 +161,9 @@ class _BusinessCompactTopBar extends StatelessWidget {
         right: false,
         bottom: false,
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.end,
           children: [
+            if (onBack != null) BotonAtras(onTap: onBack!),
+            const Spacer(),
             NotificationBell(accentColor: AppColors.businessOrange, onNotificationTap: onNotificationTap),
           ],
         ),
@@ -172,8 +174,9 @@ class _BusinessCompactTopBar extends StatelessWidget {
 
 class _BusinessTopBar extends StatelessWidget {
   final ValueChanged<AppNotification>? onNotificationTap;
+  final VoidCallback? onBack;
 
-  const _BusinessTopBar({this.onNotificationTap});
+  const _BusinessTopBar({this.onNotificationTap, this.onBack});
 
   @override
   Widget build(BuildContext context) {
@@ -192,12 +195,16 @@ class _BusinessTopBar extends StatelessWidget {
         bottom: false,
         child: Row(
           children: [
+            if (onBack != null) BotonAtras(onTap: onBack!),
             AppLogo(size: 32),
-            const SizedBox(width: 8),
-            Text(
-              'TOURISTMAR',
-              style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, letterSpacing: 2, fontSize: 13),
-            ),
+            // Con la flecha no cabe todo en un teléfono angosto: el logo basta.
+            if (onBack == null) ...[
+              const SizedBox(width: 8),
+              Text(
+                'TOURISTMAR',
+                style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, letterSpacing: 2, fontSize: 13),
+              ),
+            ],
             const SizedBox(width: 8),
             const RolInsignia('EMPRESA'),
             const Spacer(),
@@ -278,11 +285,6 @@ class _BusinessSidebarContent extends StatelessWidget {
   void _handleSelectSection(BuildContext context, BusinessSection s) {
     if (closeDrawerOnTap) Navigator.of(context).pop();
     onSelectSection(s);
-  }
-
-  void _handleComingSoon(BuildContext context) {
-    if (closeDrawerOnTap) Navigator.of(context).pop();
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Próximamente')));
   }
 
   void _handleLogout(BuildContext context) {
@@ -472,7 +474,7 @@ class _BusinessSidebarContent extends StatelessWidget {
           child: ListView(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
             children: _businessNavItems.map((item) {
-              final active = item.section != null && item.section == section;
+              final active = item.section == section;
               final color = active ? AppColors.casco : AppColors.slate300;
               return Padding(
                 padding: const EdgeInsets.only(bottom: 4),
@@ -481,7 +483,7 @@ class _BusinessSidebarContent extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                   child: InkWell(
                     borderRadius: BorderRadius.circular(12),
-                    onTap: () => item.section != null ? _handleSelectSection(context, item.section!) : _handleComingSoon(context),
+                    onTap: () => _handleSelectSection(context, item.section),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                       child: Row(

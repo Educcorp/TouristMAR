@@ -7,7 +7,7 @@ import 'ds_icon_badge.dart';
 class DsLoadingState extends StatelessWidget {
   final Color? accent;
   // Sin `const`: el color por default lee AppColors.adminViolet, que depende
-  // de ThemeController — igual que AdminHelpPage/ThemeToggleTile, marcar
+  // de ThemeController — igual que ThemeToggleTile, marcar
   // esto `const` congelaría el color si el tema cambia mientras se muestra.
   // ignore: prefer_const_constructors_in_immutables
   DsLoadingState({super.key, this.accent});

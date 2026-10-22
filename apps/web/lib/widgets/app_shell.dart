@@ -6,6 +6,7 @@ import '../navegacion/rutas.dart';
 import '../services/favoritos_service.dart';
 import '../theme/app_theme.dart';
 import '../theme/breakpoints.dart';
+import 'boton_atras.dart';
 import 'notification_bell.dart';
 import 'theme_toggle_tile.dart';
 import 'user_avatar.dart';
@@ -33,12 +34,6 @@ class NavItem {
     this.tab = false,
     this.tabLabel,
   });
-}
-
-void _comingSoon(BuildContext context) {
-  ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(content: Text('Próximamente')),
-  );
 }
 
 void _logout(BuildContext context) => cerrarSesion(context);
@@ -102,7 +97,6 @@ List<NavItem> visitorNavItems(
       label: 'Notificaciones',
       onTap: () => showNotificationsDialog(context, AppColors.brandTeal),
     ),
-    NavItem(icon: Icons.settings_outlined, label: 'Configuración', onTap: () => _comingSoon(context)),
   ];
 }
 
@@ -215,6 +209,10 @@ class AppShell extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final isWide = Breakpoints.isExpanded(constraints.maxWidth);
+        // El primer ítem es el inicio; desde cualquier otra pestaña la flecha
+        // regresa a él.
+        final enInicio = navItems.isEmpty || navItems.first.highlight;
+        final VoidCallback? onBack = enInicio ? null : navItems.first.onTap;
 
         if (isWide) {
           return Scaffold(
@@ -233,7 +231,7 @@ class AppShell extends StatelessWidget {
                 Expanded(
                   child: Column(
                     children: [
-                      _CompactTopBar(accentColor: accentColor),
+                      _CompactTopBar(accentColor: accentColor, onBack: onBack),
                       Expanded(child: body),
                     ],
                   ),
@@ -264,7 +262,7 @@ class AppShell extends StatelessWidget {
           ),
           body: Column(
             children: [
-              _TopBar(accentColor: accentColor, badgeText: badgeText, avatarIcon: avatarIcon),
+              _TopBar(accentColor: accentColor, badgeText: badgeText, avatarIcon: avatarIcon, onBack: onBack),
               Expanded(child: body),
             ],
           ),
@@ -280,8 +278,9 @@ class AppShell extends StatelessWidget {
 /// de avatar (no hay drawer que abrir).
 class _CompactTopBar extends StatelessWidget {
   final Color accentColor;
+  final VoidCallback? onBack;
 
-  const _CompactTopBar({required this.accentColor});
+  const _CompactTopBar({required this.accentColor, this.onBack});
 
   @override
   Widget build(BuildContext context) {
@@ -299,8 +298,9 @@ class _CompactTopBar extends StatelessWidget {
         right: false,
         bottom: false,
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.end,
           children: [
+            if (onBack != null) BotonAtras(onTap: onBack!),
+            const Spacer(),
             NotificationBell(accentColor: accentColor),
           ],
         ),
@@ -313,8 +313,9 @@ class _TopBar extends StatelessWidget {
   final Color accentColor;
   final String? badgeText;
   final Widget avatarIcon;
+  final VoidCallback? onBack;
 
-  const _TopBar({required this.accentColor, required this.avatarIcon, this.badgeText});
+  const _TopBar({required this.accentColor, required this.avatarIcon, this.badgeText, this.onBack});
 
   @override
   Widget build(BuildContext context) {
@@ -333,12 +334,16 @@ class _TopBar extends StatelessWidget {
         bottom: false,
         child: Row(
           children: [
+            if (onBack != null) BotonAtras(onTap: onBack!),
             AppLogo(size: 32),
-            const SizedBox(width: 8),
-            Text(
-              'TOURISTMAR',
-              style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, letterSpacing: 2, fontSize: 13),
-            ),
+            // Con la flecha no cabe todo en un teléfono angosto: el logo basta.
+            if (onBack == null) ...[
+              const SizedBox(width: 8),
+              Text(
+                'TOURISTMAR',
+                style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, letterSpacing: 2, fontSize: 13),
+              ),
+            ],
             if (badgeText != null) ...[
               const SizedBox(width: 8),
               RolInsignia(badgeText!),

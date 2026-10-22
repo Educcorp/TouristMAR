@@ -15,13 +15,11 @@ import '../../widgets/themed_builder.dart';
 import 'admin_admins_page.dart';
 import 'admin_ar_page.dart';
 import 'admin_businesses_page.dart';
-import 'admin_help_page.dart';
 import 'admin_mapa_page.dart';
 import 'admin_negocio_detalle_page.dart';
 import 'admin_resenas_page.dart';
 import 'admin_reports_page.dart';
 import 'admin_requests_page.dart';
-import 'admin_settings_page.dart';
 import 'admin_users_page.dart';
 
 /// Host del panel admin: aloja [AdminShell] y decide qué contenido mostrar en
@@ -118,10 +116,6 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
         return AdminAdminsPage(currentAdmin: widget.admin, authService: widget.authService);
       case AdminSection.reportes:
         return AdminReportsPage(authService: widget.authService);
-      case AdminSection.configuracion:
-        return AdminSettingsPage(admin: widget.admin);
-      case AdminSection.ayuda:
-        return AdminHelpPage();
     }
   }
 }
