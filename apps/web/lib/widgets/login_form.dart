@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../pages/aviso_privacidad_page.dart';
 import '../navegacion/sesion.dart';
 import '../platform/platform_services.dart';
 import '../services/auth_service.dart';
@@ -553,6 +554,24 @@ class _LoginFormState extends State<LoginForm> {
                             : (_isBusiness ? 'Acceder al panel' : 'Iniciar sesión')),
                   ),
                 ),
+                if (isRegister) ...[
+                  const SizedBox(height: 10),
+                  Center(
+                    child: Wrap(
+                      alignment: WrapAlignment.center,
+                      children: [
+                        Text('Al crear tu cuenta aceptas el ', style: TextStyle(color: AppColors.slate400, fontSize: 13)),
+                        GestureDetector(
+                          key: const ValueKey('ver-aviso-privacidad'),
+                          onTap: () => AvisoPrivacidadPage.abrir(context),
+                          child: Text('aviso de privacidad',
+                              style: TextStyle(
+                                  color: accentColor, fontSize: 13, decoration: TextDecoration.underline)),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 16),
                 Center(
                   child: Wrap(

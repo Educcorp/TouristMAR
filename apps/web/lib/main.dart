@@ -10,6 +10,7 @@ import 'services/ubicacion_dispositivo.dart';
 import 'services/visor_flutter_launcher.dart';
 import 'theme/app_theme.dart';
 import 'theme/theme_controller.dart';
+import 'widgets/aviso_cookies.dart';
 
 void main() {
   // URLs sin "#": el backend en producción ya regresa index.html para
@@ -81,6 +82,10 @@ class _TouristMarAppState extends State<TouristMarApp> {
           debugShowCheckedModeBanner: false,
           theme: AppTheme.current,
           routerConfig: router,
+          builder: (context, child) => AvisoCookies(
+            onVerAviso: () => router.push('/privacidad'),
+            child: child ?? const SizedBox.shrink(),
+          ),
         );
       },
     );
