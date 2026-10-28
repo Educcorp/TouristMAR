@@ -24,6 +24,9 @@ class NegocioInfo {
   final String? telefono;
   final String? sitioWeb;
   final String? horario;
+  /// Opcionales: rango de precio por persona y menú (texto o liga).
+  final String? costoPorPersona;
+  final String? menu;
   final String? portada;
   final List<String> galeria;
   final String? archivo360;
@@ -43,6 +46,8 @@ class NegocioInfo {
     this.telefono,
     this.sitioWeb,
     this.horario,
+    this.costoPorPersona,
+    this.menu,
     this.portada,
     this.galeria = const [],
     this.archivo360,
@@ -67,6 +72,8 @@ class NegocioInfo {
         telefono: json['telefono'] as String?,
         sitioWeb: json['sitioWeb'] as String?,
         horario: json['horario'] as String?,
+        costoPorPersona: json['costoPorPersona'] as String?,
+        menu: json['menu'] as String?,
         portada: json['portada'] as String?,
         galeria: (json['galeria'] as List?)?.cast<String>() ?? const [],
         archivo360: json['archivo360'] as String?,
@@ -240,7 +247,10 @@ class NegocioDetalle {
   final String? telefono;
   final String? sitioWeb;
   final String? horario;
+  final String? costoPorPersona;
+  final String? menu;
   final String? portada;
+  final List<String> galeria;
   final double? latitud;
   final double? longitud;
   final String estado;
@@ -259,7 +269,10 @@ class NegocioDetalle {
     this.telefono,
     this.sitioWeb,
     this.horario,
+    this.costoPorPersona,
+    this.menu,
     this.portada,
+    this.galeria = const [],
     this.latitud,
     this.longitud,
     required this.estado,
@@ -280,10 +293,14 @@ class NegocioDetalle {
         nombre: json['nombre'] as String,
         categoria: json['categoria'] as String?,
         descripcion: json['descripcion'] as String?,
+        direccion: json['direccion'] as String?,
         telefono: json['telefono'] as String?,
         sitioWeb: json['sitioWeb'] as String?,
         horario: json['horario'] as String?,
+        costoPorPersona: json['costoPorPersona'] as String?,
+        menu: json['menu'] as String?,
         portada: json['portada'] as String?,
+        galeria: (json['galeria'] as List?)?.cast<String>() ?? const [],
         latitud: (json['latitud'] as num?)?.toDouble(),
         longitud: (json['longitud'] as num?)?.toDouble(),
         estado: json['estado'] as String? ?? 'pendiente',
@@ -551,6 +568,15 @@ class AuthService {
     return AuthUser.fromJson(data['user'] as Map<String, dynamic>);
   }
 
+  /// Visitas a la ficha en los últimos 30 días y cuántos lo tienen en favoritos.
+  Future<({int visitasMes, int favoritos})> negocioEstadisticas(String token, String negocioId) async {
+    final data = await _get('/auth/profile/negocios/$negocioId/estadisticas', token);
+    return (
+      visitasMes: (data['visitasMes'] as num?)?.toInt() ?? 0,
+      favoritos: (data['favoritos'] as num?)?.toInt() ?? 0,
+    );
+  }
+
   Future<AuthUser> createNegocioSuggestion(
     String token, {
     required String nombre,
@@ -654,6 +680,48 @@ class AuthService {
 
     if (res.statusCode < 200 || res.statusCode >= 300) {
       throw AuthError((data['error'] as String?) ?? 'No se pudo subir la imagen');
+    }
+
+    return NegocioDetalle.fromJson(data['negocio'] as Map<String, dynamic>);
+  }
+
+  /// El admin agrega una foto a la galería de cualquier negocio.
+  Future<NegocioDetalle> adminUploadNegocioGaleria(String token, String negocioId, Uint8List bytes, String filename) async {
+    final ext = filename.contains('.') ? filename.split('.').last.toLowerCase() : 'jpg';
+    final subtype = ext == 'jpg' ? 'jpeg' : ext;
+
+    final request = http.MultipartRequest('POST', Uri.parse('$apiUrl/admin/negocios/$negocioId/galeria'))
+      ..headers['Authorization'] = 'Bearer $token'
+      ..files.add(http.MultipartFile.fromBytes(
+        'file',
+        bytes,
+        filename: filename,
+        contentType: MediaType('image', subtype),
+      ));
+
+    final streamed = await _client.send(request);
+    final res = await http.Response.fromStream(streamed);
+    final data = _decode(res.body);
+
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      throw AuthError((data['error'] as String?) ?? 'No se pudo subir la imagen');
+    }
+
+    return NegocioDetalle.fromJson(data['negocio'] as Map<String, dynamic>);
+  }
+
+  Future<NegocioDetalle> adminDeleteNegocioGaleria(String token, String negocioId, String url) async {
+    final request = http.Request('DELETE', Uri.parse('$apiUrl/admin/negocios/$negocioId/galeria'))
+      ..headers['Authorization'] = 'Bearer $token'
+      ..headers['Content-Type'] = 'application/json'
+      ..body = jsonEncode({'url': url});
+
+    final streamed = await _client.send(request);
+    final res = await http.Response.fromStream(streamed);
+    final data = _decode(res.body);
+
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      throw AuthError((data['error'] as String?) ?? 'No se pudo eliminar la imagen');
     }
 
     return NegocioDetalle.fromJson(data['negocio'] as Map<String, dynamic>);

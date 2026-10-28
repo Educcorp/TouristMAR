@@ -107,8 +107,13 @@ void _pantallaCelular(WidgetTester tester, {double alto = 1600}) {
 /// Simula que el usuario elige [_fotoPng] en el selector de imágenes.
 void _simularFotoElegida() {
   final original = ImagePickerService.pick;
+  final originalVarias = ImagePickerService.pickMany;
   ImagePickerService.pick = () async => PickedImage(_fotoPng, 'nueva.png');
-  addTearDown(() => ImagePickerService.pick = original);
+  ImagePickerService.pickMany = () async => [PickedImage(_fotoPng, 'nueva.png')];
+  addTearDown(() {
+    ImagePickerService.pick = original;
+    ImagePickerService.pickMany = originalVarias;
+  });
 }
 
 /// Pantalla mínima con un botón "Abrir" que empuja [pagina], como hace la

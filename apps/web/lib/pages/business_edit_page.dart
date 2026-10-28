@@ -16,7 +16,10 @@ import '../widgets/business/solicitud_recorrido_card.dart';
 import '../widgets/cover_image.dart';
 import '../widgets/horario_field.dart';
 import '../widgets/mapa/ubicacion_lugar.dart';
+import '../widgets/recortar_imagen.dart';
 import '../widgets/themed_builder.dart';
+import '../widgets/tipo_negocio_field.dart';
+import '../services/categorias_service.dart';
 import '../widgets/aviso.dart';
 
 class BusinessEditPage extends StatefulWidget {
@@ -46,7 +49,13 @@ class BusinessEditPage extends StatefulWidget {
 class _BusinessEditPageState extends State<BusinessEditPage> {
   final _formKey = GlobalKey<FormState>();
   late final _nameController = TextEditingController(text: widget.business.businessName);
-  late final _categoryController = TextEditingController(text: widget.business.category);
+  /// Categoría elegida en el desplegable; con "Otro", lo escrito va en
+  /// [_categoryController].
+  late String? _tipo = tipoNegocioInicial(widget.business.category, CategoriasService.respaldo);
+  late final _categoryController = TextEditingController(
+      text: _tipo == tipoNegocioOtro ? widget.business.category : '');
+  late final _costoController = TextEditingController(text: widget.business.costoPorPersona);
+  late final _menuController = TextEditingController(text: widget.business.menu);
   late final _descriptionController = TextEditingController(text: widget.business.description);
   late final _addressController = TextEditingController(text: widget.business.address);
   /// Pin del negocio en el mapa (va junto a la dirección).
@@ -98,6 +107,18 @@ class _BusinessEditPageState extends State<BusinessEditPage> {
     return null;
   }
 
+  /// Acomoda la portada elegida (qué parte de la foto se ve).
+  Future<void> _ajustarPortada() async {
+    final bytes = _pendingCoverBytes;
+    if (bytes == null) return;
+    final recortada = await recortarImagen(context, bytes, titulo: 'Ajusta la foto de portada');
+    if (recortada == null || !mounted) return;
+    setState(() {
+      _pendingCoverBytes = recortada;
+      _pendingCoverName = 'portada.png';
+    });
+  }
+
   /// Solo elige la portada y la muestra como vista previa; no la sube.
   Future<void> _changeCover() async {
     final picked = await ImagePickerService.pick();
@@ -134,6 +155,8 @@ class _BusinessEditPageState extends State<BusinessEditPage> {
   void dispose() {
     _nameController.dispose();
     _categoryController.dispose();
+    _costoController.dispose();
+    _menuController.dispose();
     _descriptionController.dispose();
     _addressController.dispose();
     _phoneController.dispose();
@@ -188,12 +211,14 @@ class _BusinessEditPageState extends State<BusinessEditPage> {
 
       final updated = await _authService.updateNegocio(token, widget.business.id, {
         'nombre': _nameController.text.trim(),
-        'categoria': _categoryController.text.trim(),
+        'categoria': valorTipoNegocio(_tipo, _categoryController) ?? '',
         'descripcion': _descriptionController.text.trim(),
         'direccion': _addressController.text.trim(),
         'telefono': _phoneController.text.trim(),
         'sitioWeb': _websiteController.text.trim(),
         'horario': _horario ?? widget.business.hours.trim(),
+        'costoPorPersona': _costoController.text.trim().isEmpty ? null : _costoController.text.trim(),
+        'menu': _menuController.text.trim().isEmpty ? null : _menuController.text.trim(),
         'latitud': _ubicacion?.lat,
         'longitud': _ubicacion?.lng,
       });
@@ -208,6 +233,8 @@ class _BusinessEditPageState extends State<BusinessEditPage> {
       business.phone = negocio?.telefono ?? '';
       business.website = negocio?.sitioWeb ?? '';
       business.hours = negocio?.horario ?? '';
+      business.costoPorPersona = negocio?.costoPorPersona ?? '';
+      business.menu = negocio?.menu ?? '';
       business.latitud = negocio?.latitud;
       business.longitud = negocio?.longitud;
       final portada = negocio?.portada ?? newCover;
@@ -273,12 +300,12 @@ class _BusinessEditPageState extends State<BusinessEditPage> {
     return Scaffold(
       backgroundColor: AppColors.panelNavy,
       body: SafeArea(
-        child: Align(
-          alignment: Alignment.topCenter,
+        child: SizedBox.expand(
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 520),
+            child: Center(
+              child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 720),
               child: Form(
                 key: _formKey,
                 child: Column(
@@ -312,14 +339,17 @@ class _BusinessEditPageState extends State<BusinessEditPage> {
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(18),
                         child: SizedBox(
-                          height: 140,
+                          height: 180,
                           width: double.infinity,
                           child: Stack(
                             fit: StackFit.expand,
                             children: [
-                              _pendingCoverBytes != null
-                                  ? Image.memory(_pendingCoverBytes!, fit: BoxFit.cover)
-                                  : CoverImage(source: widget.business.coverImage),
+                              if (_pendingCoverBytes != null)
+                                Image.memory(_pendingCoverBytes!, fit: BoxFit.cover)
+                              else if (widget.business.coverImage.trim().isNotEmpty)
+                                CoverImage(source: widget.business.coverImage)
+                              else
+                                ColoredBox(color: AppColors.surfaceAlt),
                               DecoratedBox(decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.25))),
                               Center(
                                 child: Column(
@@ -341,6 +371,16 @@ class _BusinessEditPageState extends State<BusinessEditPage> {
                         ),
                       ),
                     ),
+                    if (_pendingCoverBytes != null)
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton.icon(
+                          key: const ValueKey('ajustar-portada'),
+                          onPressed: _isSaving ? null : _ajustarPortada,
+                          icon: Icon(Icons.crop, size: 16, color: AppColors.businessOrange),
+                          label: Text('Ajustar encuadre', style: TextStyle(color: AppColors.businessOrange, fontSize: 13)),
+                        ),
+                      ),
                     const SizedBox(height: 24),
                     AppTextField(
                       label: 'Nombre del negocio',
@@ -350,13 +390,12 @@ class _BusinessEditPageState extends State<BusinessEditPage> {
                       validator: (v) => _requiredValidator(v, 'Ingresa el nombre del negocio'),
                     ),
                     const SizedBox(height: 20),
-                    AppTextField(
-                      label: 'Categoría',
-                      icon: Icons.local_offer_outlined,
-                      controller: _categoryController,
-                      hintText: 'Ej. Playa · Restaurante · Bar',
+                    TipoNegocioField(
+                      etiqueta: 'Categoría',
+                      seleccionado: _tipo,
+                      onChanged: (v) => setState(() => _tipo = v),
+                      otroController: _categoryController,
                       accentColor: AppColors.businessOrange,
-                      validator: (v) => _requiredValidator(v, 'Ingresa una categoría'),
                     ),
                     const SizedBox(height: 20),
                     Text('Descripción', style: TextStyle(color: AppColors.slate300, fontSize: 14)),
@@ -456,6 +495,40 @@ class _BusinessEditPageState extends State<BusinessEditPage> {
                             aceptarAnterior: !widget.obligatorio,
                             onChanged: (v) => _horario = v,
                           ),
+                          const SizedBox(height: 24),
+                          Text('Precios y menú (opcional)', style: AppTypography.h3),
+                          const SizedBox(height: 16),
+                          AppTextField(
+                            fieldKey: const ValueKey('costo-field'),
+                            label: 'Costo por persona',
+                            icon: Icons.payments_outlined,
+                            controller: _costoController,
+                            hintText: r'Ej. $150 – $300 MXN',
+                            accentColor: AppColors.businessOrange,
+                            validator: (v) => (v ?? '').trim().length > 60 ? 'Máximo 60 caracteres' : null,
+                          ),
+                          const SizedBox(height: 16),
+                          Text('Menú', style: TextStyle(color: AppColors.slate300, fontSize: 14)),
+                          const SizedBox(height: 8),
+                          TextFormField(
+                            key: const ValueKey('menu-field'),
+                            controller: _menuController,
+                            maxLength: 2000,
+                            minLines: 2,
+                            maxLines: 6,
+                            style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
+                            decoration: InputDecoration(
+                              hintText: 'Escribe tus platillos o pega la liga a tu menú (PDF o página)',
+                              hintStyle: TextStyle(color: AppColors.slate500),
+                              filled: true,
+                              fillColor: AppColors.panelNavySoft,
+                              contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
+                              counterStyle: TextStyle(color: AppColors.slate500, fontSize: 12),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.overlay(0.1))),
+                              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.overlay(0.1))),
+                              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.businessOrange)),
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -487,6 +560,7 @@ class _BusinessEditPageState extends State<BusinessEditPage> {
                   ],
                 ),
               ),
+            ),
             ),
           ),
         ),

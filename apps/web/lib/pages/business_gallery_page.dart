@@ -47,12 +47,13 @@ class _BusinessGalleryPageState extends State<BusinessGalleryPage> {
 
   bool get _isDirty => _pendingAdds.isNotEmpty || _pendingRemovals.isNotEmpty;
 
+  /// Se pueden elegir varias fotos de una vez en el selector.
   Future<void> _addImage() async {
-    final picked = await ImagePickerService.pick();
-    if (picked == null || !mounted) return;
+    final picked = await ImagePickerService.pickMany();
+    if (picked.isEmpty || !mounted) return;
 
     setState(() {
-      _pendingAdds.add(_PendingImage(picked.bytes, picked.name));
+      _pendingAdds.addAll([for (final p in picked) _PendingImage(p.bytes, p.name)]);
       _error = null;
     });
   }

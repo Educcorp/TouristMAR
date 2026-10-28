@@ -22,6 +22,18 @@ class ImagePickerService {
   /// Se puede reemplazar en pruebas. Devuelve `null` si el usuario cancela.
   static Future<PickedImage?> Function() pick = _pickWithFilePicker;
 
+  /// Varias imágenes de una vez (la galería del negocio). Lista vacía si el
+  /// usuario cancela.
+  static Future<List<PickedImage>> Function() pickMany = _pickManyWithFilePicker;
+
+  static Future<List<PickedImage>> _pickManyWithFilePicker() async {
+    final result = await FilePicker.platform.pickFiles(type: FileType.image, withData: true, allowMultiple: true);
+    return [
+      for (final f in result?.files ?? const <PlatformFile>[])
+        if (f.bytes != null) PickedImage(f.bytes!, f.name),
+    ];
+  }
+
   static Future<PickedImage?> _pickWithFilePicker() async {
     final result = await FilePicker.platform.pickFiles(type: FileType.image, withData: true);
     final file = result?.files.single;

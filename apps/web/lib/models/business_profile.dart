@@ -1,5 +1,6 @@
 import '../services/auth_service.dart';
 import '../services/resenas_service.dart';
+import '../services/session_storage.dart';
 import 'horario.dart';
 
 class BusinessProfile {
@@ -20,6 +21,9 @@ class BusinessProfile {
   String website;
   String address;
   String hours;
+  /// Opcionales: rango de precio por persona y menú (texto o liga).
+  String costoPorPersona;
+  String menu;
   bool verified;
   String estado;
   String? archivo360;
@@ -47,6 +51,8 @@ class BusinessProfile {
     required this.website,
     required this.address,
     required this.hours,
+    this.costoPorPersona = '',
+    this.menu = '',
     required this.verified,
     required this.estado,
     this.archivo360,
@@ -94,10 +100,23 @@ class BusinessProfile {
     }
   }
 
+  /// Visitas a la ficha (últimos 30 días) y cuántos lo tienen en favoritos,
+  /// reales desde el backend. Si falla se quedan las que había.
+  Future<void> cargarEstadisticas([AuthService? service]) async {
+    final token = SessionStorage.token;
+    if (token == null) return;
+    try {
+      final e = await (service ?? AuthService()).negocioEstadisticas(token, id);
+      monthlyVisits = e.visitasMes;
+      favorites = e.favoritos;
+    } catch (_) {
+      // Sin conexión: se conservan las cifras anteriores.
+    }
+  }
+
   /// Un negocio puntual de una cuenta (una cuenta puede tener varios). Las
-  /// estadísticas de visitas y favoritos aún no existen como feature en el
-  /// backend (se muestran en cero en vez de datos inventados); la calificación
-  /// y las reseñas se completan con [cargarResenas].
+  /// visitas y favoritos se completan con [cargarEstadisticas]; la
+  /// calificación y las reseñas con [cargarResenas].
   factory BusinessProfile.fromNegocioInfo(AuthUser user, NegocioInfo negocio) {
     return BusinessProfile(
       id: negocio.id,
@@ -117,6 +136,8 @@ class BusinessProfile {
       website: negocio.sitioWeb ?? '',
       address: negocio.direccion ?? '',
       hours: negocio.horario ?? '',
+      costoPorPersona: negocio.costoPorPersona ?? '',
+      menu: negocio.menu ?? '',
       verified: negocio.aprobado,
       estado: negocio.estado,
       archivo360: negocio.archivo360,

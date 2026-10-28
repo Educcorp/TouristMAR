@@ -39,7 +39,7 @@ class _BusinessDashboardContentState extends State<BusinessDashboardContent> {
 
   Future<void> _cargarResenas() async {
     if (!widget.business.verified) return;
-    final datos = await widget.business.cargarResenas();
+    final (datos, _) = await (widget.business.cargarResenas(), widget.business.cargarEstadisticas()).wait;
     if (!mounted) return;
     setState(() => _resenas = datos?.resenas ?? const []);
   }
@@ -207,7 +207,9 @@ class _BusinessDashboardContentState extends State<BusinessDashboardContent> {
         ? ('—', 'Sin reseñas todavía')
         : (business.rating.toStringAsFixed(1), 'Calificación · ${business.totalReviews} ${business.totalReviews == 1 ? 'reseña' : 'reseñas'}');
     final celdas = [
-      (Icons.people_outline, '${business.monthlyVisits}', 'Visitas este mes'),
+      // Veces que abrieron la ficha del negocio en los últimos 30 días (un
+      // mismo visitante cuenta una vez al día).
+      (Icons.people_outline, '${business.monthlyVisits}', 'Visitas a tu ficha (30 días)'),
       (Icons.star_outline, calificacion.$1, calificacion.$2),
       (Icons.forum_outlined, '${business.newReviews}', 'Reseñas del mes'),
       (Icons.favorite_border, '${business.favorites}', 'En favoritos'),
