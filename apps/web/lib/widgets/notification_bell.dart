@@ -280,6 +280,7 @@ class EstiloNotificacion {
         'recorrido_solicitado' => const EstiloNotificacion._(Icons.threesixty_rounded, _violeta, 'Recorrido 360° solicitado'),
         'recorrido_listo' => EstiloNotificacion._(Icons.threesixty_rounded, AppColors.emerald, 'Recorrido 360° listo'),
         'recorrido_rechazado' => EstiloNotificacion._(Icons.threesixty_rounded, AppColors.rojoTexto, 'Recorrido 360° rechazado'),
+        'resena_respondida' => EstiloNotificacion._(Icons.mark_chat_read_outlined, AppColors.azulTexto, 'Respuesta a tu reseña'),
         _ => EstiloNotificacion._(Icons.notifications_outlined, AppColors.slate400, 'Aviso'),
       };
 }
