@@ -9,7 +9,10 @@ import '../widgets/casco_lugar.dart';
 import '../widgets/cover_image.dart';
 import '../widgets/experiencias/experiencias_lugar.dart';
 import '../widgets/favorito_button.dart';
+import '../services/lugares_service.dart';
 import '../services/resenas_service.dart';
+import '../utils/contact_launcher.dart';
+import '../widgets/galeria_fotos.dart';
 import '../widgets/mapa/mapa_lugares.dart';
 import '../widgets/resenas/resenas_lugar_section.dart';
 import '../widgets/themed_builder.dart';
@@ -36,6 +39,14 @@ class _LugarDetallePageState extends State<LugarDetallePage> {
   /// Calificación real vigente (la que traen las reseñas al abrir la ficha o
   /// al publicar/editar/borrar una); mientras no cargue, la del lugar.
   ResumenResenas? _resumen;
+
+  @override
+  void initState() {
+    super.initState();
+    // Cuenta para "Visitas este mes" del panel de empresa (no la vista previa
+    // del propio negocio ni la del admin).
+    if (!vistaPrevia) const LugaresService().registrarVisita(lugar.id);
+  }
 
   /// Publicar o borrar una reseña cambia "Mis reseñas" del visitante (y los
   /// contadores del menú lateral): se vuelven a traer.
@@ -225,6 +236,18 @@ class _Principal extends StatelessWidget {
           Text(lugar.descripcion, style: AppTypography.body.copyWith(fontSize: 15, height: 1.55)),
           const SizedBox(height: AppSpacing.xxl),
         ],
+        if (lugar.galeria.isNotEmpty) ...[
+          Row(
+            children: [
+              Text('Galería', style: AppTypography.h3),
+              const SizedBox(width: AppSpacing.sm),
+              Text('${lugar.galeria.length} ${lugar.galeria.length == 1 ? 'foto' : 'fotos'}', style: AppTypography.caption),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          GaleriaFotos(fotos: lugar.galeria, alto: 140),
+          const SizedBox(height: AppSpacing.xxl),
+        ],
         ExperienciasLugarSection(lugar: lugar, vistaPrevia: vistaPrevia),
         const SizedBox(height: AppSpacing.xxl),
         ResenasLugarSection(lugar: lugar, vistaPrevia: vistaPrevia, onResumen: onResumen, onCambio: onCambio),
@@ -244,7 +267,12 @@ class _Lateral extends StatelessWidget {
       if (lugar.direccion != null && lugar.direccion!.isNotEmpty) (Icons.place_outlined, lugar.direccion!),
       if (lugar.horario != null && lugar.horario!.isNotEmpty) (Icons.schedule, lugar.horario!),
       if (lugar.telefono != null && lugar.telefono!.isNotEmpty) (Icons.phone_outlined, lugar.telefono!),
+      if (lugar.sitioWeb != null && lugar.sitioWeb!.isNotEmpty) (Icons.language, lugar.sitioWeb!),
+      if (lugar.costoPorPersona != null && lugar.costoPorPersona!.isNotEmpty)
+        (Icons.payments_outlined, 'Costo por persona: ${lugar.costoPorPersona!}'),
     ];
+    final menu = lugar.menu?.trim() ?? '';
+    final menuEsLiga = RegExp(r'^(https?://|www\.)', caseSensitive: false).hasMatch(menu);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -306,6 +334,33 @@ class _Lateral extends StatelessWidget {
                           ],
                         ),
                       ),
+                    if (menu.isNotEmpty) ...[
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(Icons.restaurant_menu, size: 16, color: AppColors.brandTeal),
+                          const SizedBox(width: AppSpacing.md),
+                          Expanded(
+                            child: menuEsLiga
+                                ? InkWell(
+                                    onTap: () => abrirSitioWeb(menu),
+                                    child: Text('Ver el menú',
+                                        style: AppTypography.body.copyWith(
+                                            color: AppColors.brandTeal, decoration: TextDecoration.underline)),
+                                  )
+                                : Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text('Menú', style: AppTypography.body.copyWith(fontWeight: FontWeight.w700)),
+                                      const SizedBox(height: 2),
+                                      Text(menu, style: AppTypography.bodySmall),
+                                    ],
+                                  ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                    ],
                     if (lugar.tiene(ExperienciaTipo.arGeo) && lugar.ubicacion != null)
                       Row(
                         children: [

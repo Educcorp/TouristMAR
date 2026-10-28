@@ -152,6 +152,9 @@ class Lugar {
   final String? direccion;
   final String? horario;
   final String? telefono;
+  final String? sitioWeb;
+  final String? costoPorPersona;
+  final String? menu;
   final String portada;
   final List<String> galeria;
   final double rating;
@@ -179,6 +182,9 @@ class Lugar {
     this.direccion,
     this.horario,
     this.telefono,
+    this.sitioWeb,
+    this.costoPorPersona,
+    this.menu,
     required this.portada,
     this.galeria = const [],
     this.rating = 0,
@@ -231,6 +237,9 @@ class Lugar {
         direccion: negocio.direccion,
         horario: negocio.horario,
         telefono: negocio.telefono,
+        sitioWeb: negocio.sitioWeb,
+        costoPorPersona: negocio.costoPorPersona,
+        menu: negocio.menu,
         portada: negocio.portada ?? '',
         galeria: negocio.galeria,
         ubicacion: ubicacion ??

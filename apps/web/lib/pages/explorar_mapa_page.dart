@@ -39,6 +39,10 @@ class _ExplorarMapaPageState extends State<ExplorarMapaPage> {
   final Set<CategoriaLugar> _categorias = {};
   bool _soloConRa = false;
   String? _seleccionadoId;
+  /// Búsqueda por nombre o categoría (panel de la lista, en pantallas anchas).
+  String _busqueda = '';
+  /// En pantallas anchas el mapa puede ocupar todo el ancho (sin la lista).
+  bool _expandido = false;
 
   @override
   void initState() {
@@ -100,12 +104,25 @@ class _ExplorarMapaPageState extends State<ExplorarMapaPage> {
   }
 
   List<Lugar> get _filtrados {
+    final q = _sinAcentos(_busqueda.trim());
     return _lugares.where((l) {
       if (_categorias.isNotEmpty && !_categorias.contains(l.categoria)) return false;
       if (_soloConRa && !l.tieneExperiencias) return false;
+      if (q.isNotEmpty &&
+          !_sinAcentos('${l.nombre} ${l.categoriaTexto} ${l.categoria.etiqueta} ${l.direccion ?? ''}').contains(q)) {
+        return false;
+      }
       return true;
     }).toList();
   }
+
+  static String _sinAcentos(String s) => s
+      .toLowerCase()
+      .replaceAll(RegExp('[áà]'), 'a')
+      .replaceAll(RegExp('[éè]'), 'e')
+      .replaceAll(RegExp('[íì]'), 'i')
+      .replaceAll(RegExp('[óò]'), 'o')
+      .replaceAll(RegExp('[úùü]'), 'u');
 
   Lugar? get _seleccionado {
     for (final l in _lugares) {
@@ -146,7 +163,7 @@ class _ExplorarMapaPageState extends State<ExplorarMapaPage> {
           return ancho
               ? Row(
                   children: [
-                    SizedBox(width: 360, child: _panelLista()),
+                    if (!_expandido) SizedBox(width: 360, child: _panelLista()),
                     Expanded(child: _mapa(compacto: false)),
                   ],
                 )
@@ -185,21 +202,40 @@ class _ExplorarMapaPageState extends State<ExplorarMapaPage> {
               ],
             ),
           ),
-        // Los controles y el aviso de datos de ejemplo van por encima de la
-        // franja de créditos de OpenStreetMap (abajo del mapa); antes estaban
-        // a 24 px del borde y tapaban el texto del copyright.
+        // Los controles van por encima de la franja de créditos de
+        // OpenStreetMap (abajo del mapa) para no tapar el copyright.
         Positioned(
           right: 12,
           bottom: compacto && seleccionado != null ? 200 : _margenInferior,
           child: ControlesMapa(controller: _mapController),
         ),
-        if (widget.service.usaDatosDemo)
+        if (!compacto)
           Positioned(
-            left: 12,
-            bottom: compacto ? (seleccionado != null ? 200 : _margenInferior + 64) : _margenInferior,
-            child: const _AvisoDemo(),
+            right: 12,
+            top: 12,
+            child: Tooltip(
+              message: _expandido ? 'Mostrar la lista' : 'Expandir el mapa',
+              child: Material(
+                color: AppColors.panelNavy,
+                shape: const CircleBorder(),
+                elevation: 3,
+                child: IconButton(
+                  key: const ValueKey('mapa-expandir'),
+                  icon: Icon(_expandido ? Icons.close_fullscreen : Icons.open_in_full, color: AppColors.tinta),
+                  onPressed: () => setState(() => _expandido = !_expandido),
+                ),
+              ),
+            ),
           ),
         if (_cargando) const Center(child: CircularProgressIndicator()),
+        if (!_cargando && _lugares.isEmpty)
+          Center(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: BoxDecoration(color: AppColors.panelNavy, borderRadius: BorderRadius.circular(AppRadius.card)),
+              child: Text('Todavía no hay lugares en el mapa.', style: AppTypography.body),
+            ),
+          ),
         if (compacto && seleccionado == null && !_cargando)
           Positioned(
             left: 0,
@@ -253,6 +289,28 @@ class _ExplorarMapaPageState extends State<ExplorarMapaPage> {
                 const SizedBox(height: 4),
                 Text('Toca un punto para ver su ficha y experiencias.', style: AppTypography.bodySmall),
                 const SizedBox(height: AppSpacing.lg),
+                TextField(
+                  key: const ValueKey('mapa-busqueda'),
+                  onChanged: (v) => setState(() => _busqueda = v),
+                  style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
+                  decoration: InputDecoration(
+                    hintText: 'Buscar un lugar o categoría…',
+                    hintStyle: TextStyle(color: AppColors.slate500, fontSize: 14),
+                    prefixIcon: Icon(Icons.search, size: 20, color: AppColors.slate400),
+                    isDense: true,
+                    filled: true,
+                    fillColor: AppColors.panelNavySoft,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppRadius.buttonLg),
+                      borderSide: BorderSide(color: AppColors.overlay(0.12)),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppRadius.buttonLg),
+                      borderSide: BorderSide(color: AppColors.overlay(0.12)),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
                 _filtros(scroll: false),
               ],
             ),
@@ -437,26 +495,6 @@ class _ChipFiltro extends StatelessWidget {
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _AvisoDemo extends StatelessWidget {
-  const _AvisoDemo();
-
-  @override
-  Widget build(BuildContext context) {
-    return Tooltip(
-      message: 'Los puntos son de ejemplo hasta que el backend guarde la ubicación de cada negocio.',
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color: AppColors.amarillo,
-          borderRadius: BorderRadius.circular(4),
-          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 8)],
-        ),
-        child: Text('DATOS DE EJEMPLO', style: AppTypography.matricula(size: 14, color: AppColors.riel)),
       ),
     );
   }
