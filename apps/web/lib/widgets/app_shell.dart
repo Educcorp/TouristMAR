@@ -206,6 +206,14 @@ class AppShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final enInicioApp = navItems.isEmpty || navItems.first.highlight;
+    return AtrasDelSistema(
+      onBack: enInicioApp ? null : navItems.first.onTap,
+      child: _buildLayout(context),
+    );
+  }
+
+  Widget _buildLayout(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final isWide = Breakpoints.isExpanded(constraints.maxWidth);

@@ -62,6 +62,13 @@ class BusinessShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return AtrasDelSistema(
+      onBack: section == BusinessSection.dashboard ? null : () => onSelectSection(BusinessSection.dashboard),
+      child: _buildLayout(context),
+    );
+  }
+
+  Widget _buildLayout(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final isWide = Breakpoints.isExpanded(constraints.maxWidth);

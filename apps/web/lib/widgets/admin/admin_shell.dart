@@ -90,6 +90,13 @@ class AdminShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return AtrasDelSistema(
+      onBack: selected == AdminSection.inicio ? null : () => onSelect(AdminSection.inicio),
+      child: _buildLayout(context),
+    );
+  }
+
+  Widget _buildLayout(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final isWide = Breakpoints.isExpanded(constraints.maxWidth);
