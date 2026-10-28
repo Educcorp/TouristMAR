@@ -15,6 +15,8 @@ import {
   deleteAdmin,
   getNegocioAdmin,
   adminUploadNegocioPortada,
+  adminAddNegocioGaleriaImage,
+  adminRemoveNegocioGaleriaImage,
   DatabaseNotReadyError,
   CannotModifyAdminError,
   NegocioNotFoundError,
@@ -82,6 +84,7 @@ function toAdminNegocio(n: NegocioConDueño) {
     categoria: n.categoria,
     descripcion: n.descripcion,
     direccion: n.direccion,
+    portada: n.portada,
     estado: n.estado,
     email: n.user.email,
     contacto: n.user.nombres,
@@ -120,6 +123,8 @@ function toNegocioDetalle(n: NegocioAdmin) {
     telefono: n.telefono,
     sitioWeb: n.sitioWeb,
     horario: n.horario,
+    costoPorPersona: n.costoPorPersona,
+    menu: n.menu,
     portada: n.portada,
     galeria: n.galeria,
     latitud: n.latitud,
@@ -167,6 +172,36 @@ export async function uploadNegocioPortadaAdmin(req: AuthedRequest & { file?: Ex
   }
 }
 
+export async function uploadNegocioGaleriaAdmin(req: AuthedRequest & { file?: Express.Multer.File }, res: Response) {
+  if (!req.file) {
+    return res.status(400).json({ error: 'No se recibió ningún archivo' })
+  }
+  try {
+    const negocio = await adminAddNegocioGaleriaImage(req.params.negocioId, {
+      buffer: req.file.buffer,
+      mimetype: req.file.mimetype,
+    })
+    return res.json({ negocio: toNegocioDetalle(negocio) })
+  } catch (err) {
+    return negocioError(res, err)
+  }
+}
+
+const quitarGaleriaSchema = z.object({ url: z.string().min(1) })
+
+export async function deleteNegocioGaleriaAdmin(req: AuthedRequest, res: Response) {
+  const parsed = quitarGaleriaSchema.safeParse(req.body)
+  if (!parsed.success) {
+    return res.status(400).json({ error: 'Datos inválidos' })
+  }
+  try {
+    const negocio = await adminRemoveNegocioGaleriaImage(req.params.negocioId, parsed.data.url)
+    return res.json({ negocio: toNegocioDetalle(negocio) })
+  } catch (err) {
+    return negocioError(res, err)
+  }
+}
+
 // Pin del mapa: los dos juntos o ninguno (null los quita).
 const lugarSchema = z
   .object({
@@ -177,6 +212,8 @@ const lugarSchema = z
     telefono: z.string().trim().max(40).nullable().optional(),
     sitioWeb: z.string().trim().max(200).nullable().optional(),
     horario: z.string().trim().max(300).nullable().optional(),
+    costoPorPersona: z.string().trim().max(60).nullable().optional(),
+    menu: z.string().trim().max(2000).nullable().optional(),
     latitud: z.number().min(-90).max(90).nullable().optional(),
     longitud: z.number().min(-180).max(180).nullable().optional(),
   })

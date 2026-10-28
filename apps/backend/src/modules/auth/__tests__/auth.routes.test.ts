@@ -3,6 +3,9 @@ import express from 'express'
 import request from 'supertest'
 import bcrypt from 'bcryptjs'
 
+// Sin red en las pruebas: el dominio del correo siempre "existe".
+vi.mock('../email-domain', () => ({ dominioDeCorreoExiste: vi.fn().mockResolvedValue(true) }))
+
 vi.mock('../../../config/prisma', () => ({
   prisma: {
     user: {

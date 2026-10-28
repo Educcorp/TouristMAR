@@ -18,6 +18,8 @@ import {
   deleteAdminAccount,
   getNegocio,
   uploadNegocioPortadaAdmin,
+  uploadNegocioGaleriaAdmin,
+  deleteNegocioGaleriaAdmin,
 } from './admin.controller'
 import { requireAuth, requireRole } from '../auth/auth.middleware'
 
@@ -46,6 +48,8 @@ adminRouter.put('/negocios/:negocioId/ubicacion', updateNegocioUbicacion)
 // :negocioId. La edición de datos es el PATCH de abajo (updateLugar).
 adminRouter.get('/negocios/:negocioId', getNegocio)
 adminRouter.post('/negocios/:negocioId/portada', upload.single('file'), uploadNegocioPortadaAdmin)
+adminRouter.post('/negocios/:negocioId/galeria', upload.single('file'), uploadNegocioGaleriaAdmin)
+adminRouter.delete('/negocios/:negocioId/galeria', deleteNegocioGaleriaAdmin)
 adminRouter.patch('/negocios/:negocioId', updateLugar)
 adminRouter.delete('/negocios/:negocioId', deleteLugar)
 // Lugar sin dueño (lo registra el admin; queda a nombre del super admin).

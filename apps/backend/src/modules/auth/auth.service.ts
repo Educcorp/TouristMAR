@@ -203,6 +203,8 @@ export interface NegocioProfileInput {
   telefono?: string
   sitioWeb?: string
   horario?: string
+  costoPorPersona?: string | null
+  menu?: string | null
   portada?: string
   /// Pin del lugar en el mapa público (null = quitarlo).
   latitud?: number | null
@@ -317,27 +319,57 @@ export async function addNegocioGaleriaImage(
 
   return withDbGuard(async () => {
     await assertOwnedNegocio(negocioId, userId)
+    return guardarEnGaleria(negocioId, file)
+  })
+}
 
-    const ext = ALLOWED_IMAGE_TYPES[file.mimetype]
-    // Ruta única por subida (a diferencia de portada/avatar): la galería
-    // acumula varias fotos en vez de reemplazar una sola.
-    const path = `${negocioId}/galeria/${Date.now()}.${ext}`
+async function guardarEnGaleria(negocioId: string, file: { buffer: Buffer; mimetype: string }) {
+  const ext = ALLOWED_IMAGE_TYPES[file.mimetype]
+  // Ruta única por subida (a diferencia de portada/avatar): la galería
+  // acumula varias fotos en vez de reemplazar una sola. El sufijo aleatorio
+  // evita choques al subir varias seguidas en el mismo milisegundo.
+  const path = `${negocioId}/galeria/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
 
-    const { error: uploadError } = await supabase.storage
-      .from(NEGOCIO_ASSETS_BUCKET)
-      .upload(path, file.buffer, { contentType: file.mimetype })
+  const { error: uploadError } = await supabase.storage
+    .from(NEGOCIO_ASSETS_BUCKET)
+    .upload(path, file.buffer, { contentType: file.mimetype })
 
-    if (uploadError) {
-      throw new Error(`No se pudo subir la imagen: ${uploadError.message}`)
-    }
+  if (uploadError) {
+    throw new Error(`No se pudo subir la imagen: ${uploadError.message}`)
+  }
 
-    const { data } = supabase.storage.from(NEGOCIO_ASSETS_BUCKET).getPublicUrl(path)
+  const { data } = supabase.storage.from(NEGOCIO_ASSETS_BUCKET).getPublicUrl(path)
 
+  return prisma.negocioProfile.update({
+    where: { id: negocioId },
+    data: { galeria: { push: data.publicUrl } },
+  })
+}
+
+/// El admin agrega fotos a la galería de cualquier negocio (mismo bucket y
+/// ruta que las que sube el dueño).
+export async function adminAddNegocioGaleriaImage(negocioId: string, file: { buffer: Buffer; mimetype: string }) {
+  if (!ALLOWED_IMAGE_TYPES[file.mimetype]) {
+    throw new Error('Formato de imagen no soportado (usa PNG, JPG, WEBP o GIF)')
+  }
+  await withDbGuard(async () => {
+    const existe = await prisma.negocioProfile.findUnique({ where: { id: negocioId }, select: { id: true } })
+    if (!existe) throw new NegocioNotFoundError('No se encontró ese negocio')
+    return guardarEnGaleria(negocioId, file)
+  })
+  return getNegocioAdmin(negocioId)
+}
+
+export async function adminRemoveNegocioGaleriaImage(negocioId: string, url: string) {
+  await withDbGuard(async () => {
+    const negocio = await prisma.negocioProfile.findUnique({ where: { id: negocioId }, select: { galeria: true } })
+    if (!negocio) throw new NegocioNotFoundError('No se encontró ese negocio')
     return prisma.negocioProfile.update({
       where: { id: negocioId },
-      data: { galeria: { push: data.publicUrl } },
+      data: { galeria: negocio.galeria.filter((img) => img !== url) },
     })
   })
+  return getNegocioAdmin(negocioId)
 }
 
 export async function removeNegocioGaleriaImage(negocioId: string, userId: string, url: string) {
@@ -359,6 +391,8 @@ export interface SuggestNegocioInput {
   telefono?: string
   sitioWeb?: string
   horario?: string
+  costoPorPersona?: string
+  menu?: string
   latitud?: number
   longitud?: number
 }
@@ -388,6 +422,8 @@ export async function suggestNegocio(userId: string, input: SuggestNegocioInput)
         telefono: input.telefono,
         sitioWeb: input.sitioWeb,
         horario: input.horario,
+        costoPorPersona: input.costoPorPersona,
+        menu: input.menu,
         latitud: input.latitud,
         longitud: input.longitud,
       },

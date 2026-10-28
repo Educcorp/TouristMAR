@@ -20,6 +20,8 @@ import {
   NegocioNotFoundError,
 } from './auth.service'
 import type { AuthedRequest } from './auth.middleware'
+import { dominioDeCorreoExiste } from './email-domain'
+import { estadisticasNegocio } from '../lugares/lugares.service'
 
 const credentialsSchema = z.object({
   email: z.string().email(),
@@ -54,6 +56,8 @@ const negocioProfileSchema = z.object({
   telefono: z.string().optional(),
   sitioWeb: z.string().optional(),
   horario: z.string().optional(),
+  costoPorPersona: z.string().trim().max(60).nullable().optional(),
+  menu: z.string().trim().max(2000).nullable().optional(),
   // Pin del mapa: los dos juntos o ninguno (null quita el pin).
   latitud: z.number().min(-90).max(90).nullable().optional(),
   longitud: z.number().min(-180).max(180).nullable().optional(),
@@ -69,6 +73,8 @@ const suggestNegocioSchema = z.object({
   telefono: z.string().max(40).optional(),
   sitioWeb: z.string().max(200).optional(),
   horario: z.string().max(300).optional(),
+  costoPorPersona: z.string().trim().max(60).optional(),
+  menu: z.string().trim().max(2000).optional(),
   // Pin del mapa (opcional): los dos juntos o ninguno. El admin lo puede
   // corregir después desde el detalle de la solicitud.
   latitud: z.number().min(-90).max(90).optional(),
@@ -101,6 +107,8 @@ export function toPublicUser(user: UserWithNegocios) {
       telefono: n.telefono,
       sitioWeb: n.sitioWeb,
       horario: n.horario,
+      costoPorPersona: n.costoPorPersona,
+      menu: n.menu,
       portada: n.portada,
       galeria: n.galeria,
       archivo360: n.archivo360,
@@ -116,6 +124,10 @@ export async function register(req: Request, res: Response) {
   const parsed = registerSchema.safeParse(req.body)
   if (!parsed.success) {
     return res.status(400).json({ error: 'Datos inválidos', details: parsed.error.flatten().fieldErrors })
+  }
+
+  if (!(await dominioDeCorreoExiste(parsed.data.email))) {
+    return res.status(400).json({ error: 'Ese correo no parece real: su dominio no existe o no recibe correos' })
   }
 
   try {
@@ -334,6 +346,22 @@ export async function updateProfile(req: AuthedRequest, res: Response) {
 
     const updated = await findUserById(current.id)
     return res.json({ user: toPublicUser(updated!) })
+  } catch (err) {
+    if (err instanceof DatabaseNotReadyError) {
+      return res.status(503).json({ error: err.message })
+    }
+    return res.status(500).json({ error: 'Error interno' })
+  }
+}
+
+/// Cifras reales del dashboard del negocio (visitas del mes y favoritos).
+export async function estadisticas(req: AuthedRequest, res: Response) {
+  try {
+    const user = await findUserById(req.userId!)
+    if (!user?.negocios.some((n) => n.id === req.params.negocioId)) {
+      return res.status(404).json({ error: 'No se encontró ese negocio' })
+    }
+    return res.json(await estadisticasNegocio(req.params.negocioId))
   } catch (err) {
     if (err instanceof DatabaseNotReadyError) {
       return res.status(503).json({ error: err.message })

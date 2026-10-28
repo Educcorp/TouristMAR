@@ -21,6 +21,8 @@ export interface LugarAdminInput {
   telefono?: string | null
   sitioWeb?: string | null
   horario?: string | null
+  costoPorPersona?: string | null
+  menu?: string | null
   latitud?: number | null
   longitud?: number | null
 }
@@ -92,6 +94,45 @@ export async function eliminarLugarAdmin(negocioId: string) {
   for (const r of lugar.recorridos360) await deleteRecorrido(r.id)
   for (const m of lugar.arMarcadores) await deleteMarcador(m.id)
   await withDbGuard(() => prisma.negocioProfile.delete({ where: { id: negocioId } }))
+}
+
+/// Registra que alguien abrió la ficha del lugar. Un mismo visitante con
+/// sesión cuenta una vez por lugar al día; el dueño viendo su propio negocio
+/// no cuenta. Devuelve false si el lugar no existe o no está aprobado.
+export async function registrarVisita(negocioId: string, userId?: string) {
+  return withDbGuard(async () => {
+    const negocio = await prisma.negocioProfile.findFirst({
+      where: { id: negocioId, estado: 'aprobado' },
+      select: { userId: true },
+    })
+    if (!negocio) return false
+    if (userId && negocio.userId === userId) return true
+
+    if (userId) {
+      const inicioDelDia = new Date()
+      inicioDelDia.setHours(0, 0, 0, 0)
+      const yaVino = await prisma.visitaLugar.findFirst({
+        where: { negocioId, userId, createdAt: { gte: inicioDelDia } },
+        select: { id: true },
+      })
+      if (yaVino) return true
+    }
+    await prisma.visitaLugar.create({ data: { negocioId, userId: userId ?? null } })
+    return true
+  })
+}
+
+/// Cifras del panel de empresa: visitas a la ficha en los últimos 30 días y
+/// cuántos visitantes lo tienen en favoritos.
+export async function estadisticasNegocio(negocioId: string) {
+  const hace30Dias = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+  return withDbGuard(async () => {
+    const [visitasMes, favoritos] = await Promise.all([
+      prisma.visitaLugar.count({ where: { negocioId, createdAt: { gte: hace30Dias } } }),
+      prisma.favorito.count({ where: { negocioId } }),
+    ])
+    return { visitasMes, favoritos }
+  })
 }
 
 export async function listLugaresPublicos() {

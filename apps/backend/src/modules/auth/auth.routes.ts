@@ -6,6 +6,7 @@ import {
   me,
   updateProfile,
   updateNegocio,
+  estadisticas,
   uploadAvatar,
   uploadNegocioPortadaHandler,
   uploadGaleriaImage,
@@ -37,6 +38,7 @@ authRouter.patch('/profile', requireAuth, updateProfile)
 authRouter.post('/profile/avatar', requireAuth, upload.single('file'), uploadAvatar)
 authRouter.post('/profile/negocios', requireAuth, createNegocioSuggestion)
 authRouter.patch('/profile/negocios/:negocioId', requireAuth, updateNegocio)
+authRouter.get('/profile/negocios/:negocioId/estadisticas', requireAuth, estadisticas)
 authRouter.post('/profile/negocios/:negocioId/avatar', requireAuth, upload.single('file'), uploadNegocioPortadaHandler)
 authRouter.post('/profile/negocios/:negocioId/galeria', requireAuth, upload.single('file'), uploadGaleriaImage)
 authRouter.delete('/profile/negocios/:negocioId/galeria', requireAuth, deleteGaleriaImage)
