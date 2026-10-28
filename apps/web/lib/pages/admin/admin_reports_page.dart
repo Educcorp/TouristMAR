@@ -190,23 +190,30 @@ class _ChartShell extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title, style: AppTypography.h3),
-                    if (subtitle != null) ...[
-                      const SizedBox(height: 2),
-                      Text(subtitle!, style: AppTypography.caption.copyWith(color: AppColors.slate400)),
-                    ],
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final titulo = Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: AppTypography.h3),
+                  if (subtitle != null) ...[
+                    const SizedBox(height: 2),
+                    Text(subtitle!, style: AppTypography.caption.copyWith(color: AppColors.slate400)),
                   ],
-                ),
-              ),
-              if (trailing != null) trailing!,
-            ],
+                ],
+              );
+              // En pantallas angostas el selector va debajo del título.
+              if (trailing == null || constraints.maxWidth < 560) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [titulo, if (trailing != null) ...[const SizedBox(height: AppSpacing.md), trailing!]],
+                );
+              }
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [Expanded(child: titulo), trailing!],
+              );
+            },
           ),
           const SizedBox(height: AppSpacing.lg),
           child,
@@ -321,7 +328,10 @@ class _EstadoDonutCard extends StatelessWidget {
       subtitle: 'Solicitudes revisadas y por revisar',
       child: total == 0
           ? const _SinDatos('Sin datos todavía')
-          : Row(
+          : LayoutBuilder(
+              builder: (context, constraints) => Flex(
+              direction: constraints.maxWidth < 380 ? Axis.vertical : Axis.horizontal,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 SizedBox(
                   width: 150,
@@ -351,9 +361,11 @@ class _EstadoDonutCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                const SizedBox(width: AppSpacing.lg),
-                Expanded(
+                const SizedBox(width: AppSpacing.lg, height: AppSpacing.lg),
+                Flexible(
+                  fit: constraints.maxWidth < 380 ? FlexFit.loose : FlexFit.tight,
                   child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       for (final (clave, etiqueta, color) in estados)
@@ -379,6 +391,7 @@ class _EstadoDonutCard extends StatelessWidget {
                   ),
                 ),
               ],
+            ),
             ),
     );
   }
@@ -437,8 +450,6 @@ class _SolicitudesPorMesCard extends StatelessWidget {
     final maximo = conteo.isEmpty ? 0 : conteo.reduce((a, b) => a > b ? a : b);
     final intervalo = maximo <= 5 ? 1.0 : (maximo / 4).ceilToDouble();
     final conAnio = periodos.isNotEmpty && periodos.first.year != periodos.last.year;
-    // Con muchas barras se etiqueta una de cada N para que no se encimen.
-    final cadaN = (periodos.length / 8).ceil().clamp(1, 99);
     final estiloCifra = TextStyle(color: AppColors.tinta, fontSize: 12, fontWeight: FontWeight.w700);
 
     return _ChartShell(
@@ -449,7 +460,13 @@ class _SolicitudesPorMesCard extends StatelessWidget {
         height: 220,
         child: total == 0
             ? const _SinDatos('Sin solicitudes en este rango')
-            : BarChart(
+            : LayoutBuilder(builder: (context, constraints) {
+              // Una etiqueta cada ~56 px para que no se encimen en el celular,
+              // y barras más delgadas si no caben.
+              final caben = (constraints.maxWidth / 56).floor().clamp(2, 12);
+              final cadaN = (periodos.length / caben).ceil().clamp(1, 99);
+              final anchoBarra = ((constraints.maxWidth - 40) / periodos.length * 0.55).clamp(4.0, 18.0);
+              return BarChart(
                 BarChartData(
                   maxY: (maximo + intervalo).toDouble(),
                   alignment: BarChartAlignment.spaceAround,
@@ -506,14 +523,15 @@ class _SolicitudesPorMesCard extends StatelessWidget {
                           BarChartRodData(
                             toY: conteo[i].toDouble(),
                             color: AppColors.turquesa,
-                            width: periodos.length > 20 ? 8 : 18,
+                            width: anchoBarra,
                             borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
                           ),
                         ],
                       ),
                   ],
                 ),
-              ),
+              );
+            }),
       ),
     );
   }

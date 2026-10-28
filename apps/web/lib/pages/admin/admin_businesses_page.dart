@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../models/lugar.dart';
 import '../../navegacion/rutas.dart';
 import '../../services/auth_service.dart';
+import '../../services/categorias_service.dart';
 import '../../services/session_storage.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/admin/ds_badge.dart';
@@ -10,6 +12,8 @@ import '../../widgets/admin/ds_button.dart';
 import '../../widgets/admin/ds_card.dart';
 import '../../widgets/admin/ds_icon_badge.dart';
 import '../../widgets/admin/ds_states.dart';
+import '../../widgets/aviso.dart';
+import 'admin_categorias_dialog.dart';
 import 'admin_negocio_detalle_page.dart';
 
 const _estadoLabels = {'aprobado': 'Activo', 'pendiente': 'Pendiente', 'rechazado': 'Rechazado'};
@@ -29,6 +33,9 @@ class _AdminBusinessesPageState extends State<AdminBusinessesPage> {
   List<NegocioSummary> _negocios = [];
   bool _loading = true;
   String? _error;
+  /// Filtro por categoría (null = todas).
+  String? _categoria;
+  List<String> _categorias = const [];
 
   @override
   void initState() {
@@ -51,9 +58,14 @@ class _AdminBusinessesPageState extends State<AdminBusinessesPage> {
       _error = null;
     });
     try {
-      final negocios = await widget.authService.adminListNegocios(token);
+      final (negocios, categorias) =
+          await (widget.authService.adminListNegocios(token), CategoriasService().nombres(refrescar: true)).wait;
       if (!mounted) return;
-      setState(() => _negocios = negocios);
+      setState(() {
+        _negocios = negocios;
+        _categorias = categorias;
+        if (_categoria != null && !_opcionesCategoria.contains(_categoria)) _categoria = null;
+      });
     } catch (err) {
       if (!mounted) return;
       setState(() => _error = err is AuthError ? err.message : 'No se pudo conectar con el servidor');
@@ -75,9 +87,63 @@ class _AdminBusinessesPageState extends State<AdminBusinessesPage> {
     if (resultado.editado || resultado.aprobado != null) _load();
   }
 
+  /// Eliminar desde el catálogo (antes solo se podía desde "Mapa y RA").
+  Future<void> _eliminar(NegocioSummary negocio) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.panelNavySoft,
+        title: Text('Eliminar "${negocio.nombre}"', style: TextStyle(color: AppColors.textPrimary)),
+        content: Text(
+          'Se borran el negocio, sus reseñas, favoritos, marcadores de RA y recorridos 360°. No se puede deshacer.',
+          style: TextStyle(color: AppColors.textSecondary),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancelar')),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text('Eliminar', style: TextStyle(color: AppColors.errorRed)),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    final token = SessionStorage.token;
+    if (token == null) return;
+    try {
+      await widget.authService.adminEliminarLugar(token, negocio.id);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(aviso('"${negocio.nombre}" se eliminó'));
+      _load();
+    } catch (err) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(aviso(err is AuthError ? err.message : 'No se pudo eliminar el negocio', tipo: AvisoTipo.error));
+    }
+  }
+
+  Future<void> _gestionarCategorias() async {
+    await mostrarCategoriasAdmin(context);
+    if (mounted) _load();
+  }
+
+  /// Las categorías administrables más las que usan los negocios aunque no
+  /// estén en la lista (texto libre de "Otro").
+  List<String> get _opcionesCategoria {
+    final opciones = [..._categorias];
+    final enMinusculas = opciones.map((c) => c.toLowerCase()).toSet();
+    for (final n in _negocios) {
+      final c = (n.categoria ?? '').trim();
+      if (c.isNotEmpty && enMinusculas.add(c.toLowerCase())) opciones.add(c);
+    }
+    return opciones;
+  }
+
   List<NegocioSummary> get _filtered {
     final query = _searchController.text.trim().toLowerCase();
+    final categoria = _categoria?.toLowerCase();
     return _negocios.where((n) {
+      if (categoria != null && (n.categoria ?? '').trim().toLowerCase() != categoria) return false;
       if (query.isNotEmpty &&
           !n.nombre.toLowerCase().contains(query) &&
           !(n.categoria ?? '').toLowerCase().contains(query)) {
@@ -118,8 +184,10 @@ class _AdminBusinessesPageState extends State<AdminBusinessesPage> {
   }
 
   Widget _buildFilters() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Wrap(
+      spacing: AppSpacing.md,
+      runSpacing: AppSpacing.md,
+      crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 360),
@@ -148,6 +216,46 @@ class _AdminBusinessesPageState extends State<AdminBusinessesPage> {
             ),
           ),
         ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(AppRadius.buttonLg),
+            border: Border.all(color: AppColors.borderSubtle),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String?>(
+              key: const ValueKey('filtro-categoria'),
+              value: _categoria,
+              dropdownColor: AppColors.panelNavySoft,
+              style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
+              icon: Icon(Icons.keyboard_arrow_down, color: AppColors.slate400),
+              items: [
+                const DropdownMenuItem<String?>(value: null, child: Text('Todas las categorías')),
+                for (final c in _opcionesCategoria)
+                  DropdownMenuItem<String?>(
+                    value: c,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(CategoriaLugarDetector.detectar(c).icon, size: 16, color: AppColors.slate400),
+                        const SizedBox(width: 8),
+                        Text('$c (${_negocios.where((n) => (n.categoria ?? '').trim().toLowerCase() == c.toLowerCase()).length})'),
+                      ],
+                    ),
+                  ),
+              ],
+              onChanged: (v) => setState(() => _categoria = v),
+            ),
+          ),
+        ),
+        DsButton(
+          label: 'Categorías',
+          icon: Icons.category_outlined,
+          variant: DsButtonVariant.ghost,
+          accent: AppColors.adminViolet,
+          onPressed: _gestionarCategorias,
+        ),
       ],
     );
   }
@@ -171,7 +279,10 @@ class _AdminBusinessesPageState extends State<AdminBusinessesPage> {
           runSpacing: AppSpacing.md,
           children: filtered.map((n) {
             final width = columns == 1 ? constraints.maxWidth : (constraints.maxWidth - AppSpacing.md) / 2;
-            return SizedBox(width: width, child: _BusinessCard(negocio: n, onEdit: () => _abrirDetalle(n)));
+            return SizedBox(
+              width: width,
+              child: _BusinessCard(negocio: n, onEdit: () => _abrirDetalle(n), onDelete: () => _eliminar(n)),
+            );
           }).toList(),
         );
       },
@@ -182,8 +293,9 @@ class _AdminBusinessesPageState extends State<AdminBusinessesPage> {
 class _BusinessCard extends StatelessWidget {
   final NegocioSummary negocio;
   final VoidCallback onEdit;
+  final VoidCallback onDelete;
 
-  const _BusinessCard({required this.negocio, required this.onEdit});
+  const _BusinessCard({required this.negocio, required this.onEdit, required this.onDelete});
 
   @override
   Widget build(BuildContext context) {
@@ -201,7 +313,13 @@ class _BusinessCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              DsIconBadgeCircle(icon: Icons.apartment, color: AppColors.businessOrange, size: 40),
+              // Ícono según la categoría (playa, restaurante, hotel…) para
+              // distinguirlos de un vistazo.
+              DsIconBadgeCircle(
+                icon: CategoriaLugarDetector.detectar(negocio.categoria ?? '').icon,
+                color: CategoriaLugarDetector.detectar(negocio.categoria ?? '').color,
+                size: 40,
+              ),
               const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: Column(
@@ -226,6 +344,12 @@ class _BusinessCard extends StatelessWidget {
               const SizedBox(width: 4),
               _AssetDot(label: 'G', active: negocio.arGeo != null),
               const Spacer(),
+              IconButton(
+                tooltip: 'Eliminar negocio',
+                onPressed: onDelete,
+                icon: Icon(Icons.delete_outline, size: 20, color: AppColors.errorRed),
+              ),
+              const SizedBox(width: 4),
               DsButton(
                 label: 'Editar',
                 icon: Icons.edit_outlined,

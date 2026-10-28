@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../models/lugar.dart';
 import '../../services/auth_service.dart';
+import '../../services/categorias_service.dart';
 import '../../services/image_picker_service.dart';
 import '../../services/session_storage.dart';
 import '../../theme/app_theme.dart';
@@ -12,9 +13,12 @@ import '../../widgets/admin/ds_button.dart';
 import '../../widgets/admin/ds_card.dart';
 import '../../widgets/admin/ds_states.dart';
 import '../../widgets/app_text_field.dart';
+import '../../widgets/cover_image.dart';
+import '../../widgets/galeria_fotos.dart';
 import '../../widgets/horario_field.dart';
 import '../../widgets/mapa/ubicacion_lugar.dart';
 import '../../widgets/themed_builder.dart';
+import '../../widgets/tipo_negocio_field.dart';
 import '../../widgets/aviso.dart';
 
 /// Contenido de RA que el admin puede ligar a un negocio desde su solicitud.
@@ -76,6 +80,12 @@ class _AdminNegocioDetallePageState extends State<AdminNegocioDetallePage> {
   /// Horario elegido con el selector (null = no se tocó: se conserva el guardado).
   String? _horario;
   final _sitioWeb = TextEditingController();
+  final _costo = TextEditingController();
+  final _menu = TextEditingController();
+  /// Categoría elegida en el desplegable; con "Otro" el texto va en [_categoria].
+  String? _tipo;
+  /// Subiendo o quitando fotos de la galería (se guardan al momento).
+  bool _galeriaOcupada = false;
 
   NegocioDetalle? _negocio;
   Coordenadas? _ubicacion;
@@ -88,7 +98,7 @@ class _AdminNegocioDetallePageState extends State<AdminNegocioDetallePage> {
   String? _error;
 
   List<TextEditingController> get _controllers =>
-      [_nombre, _categoria, _descripcion, _direccion, _telefono, _sitioWeb];
+      [_nombre, _categoria, _descripcion, _direccion, _telefono, _sitioWeb, _costo, _menu];
 
   @override
   void initState() {
@@ -116,7 +126,10 @@ class _AdminNegocioDetallePageState extends State<AdminNegocioDetallePage> {
   void _llenarCampos(NegocioDetalle n) {
     _cargandoCampos = true;
     _nombre.text = n.nombre;
-    _categoria.text = n.categoria ?? '';
+    _tipo = tipoNegocioInicial(n.categoria ?? '', CategoriasService.respaldo);
+    _categoria.text = _tipo == tipoNegocioOtro ? (n.categoria ?? '') : '';
+    _costo.text = n.costoPorPersona ?? '';
+    _menu.text = n.menu ?? '';
     _descripcion.text = n.descripcion ?? '';
     _direccion.text = n.direccion ?? '';
     _telefono.text = n.telefono ?? '';
@@ -165,6 +178,45 @@ class _AdminNegocioDetallePageState extends State<AdminNegocioDetallePage> {
     });
   }
 
+  /// La galería se guarda al momento (no espera a "Guardar cambios"): se
+  /// pueden elegir varias fotos de una vez.
+  Future<void> _agregarFotos() async {
+    final fotos = await ImagePickerService.pickMany();
+    final token = SessionStorage.token;
+    if (fotos.isEmpty || token == null || !mounted) return;
+    setState(() => _galeriaOcupada = true);
+    var subidas = 0;
+    try {
+      for (final f in fotos) {
+        final n = await widget.authService.adminUploadNegocioGaleria(token, widget.negocioId, f.bytes, f.name);
+        subidas++;
+        if (mounted) setState(() => _negocio = n);
+      }
+      _editado = true;
+      _aviso(subidas == 1 ? 'Foto agregada a la galería.' : '$subidas fotos agregadas a la galería.');
+    } catch (err) {
+      _editado = _editado || subidas > 0;
+      if (mounted) _aviso(err is AuthError ? err.message : 'No se pudo subir la foto');
+    } finally {
+      if (mounted) setState(() => _galeriaOcupada = false);
+    }
+  }
+
+  Future<void> _quitarFoto(String url) async {
+    final token = SessionStorage.token;
+    if (token == null) return;
+    setState(() => _galeriaOcupada = true);
+    try {
+      final n = await widget.authService.adminDeleteNegocioGaleria(token, widget.negocioId, url);
+      _editado = true;
+      if (mounted) setState(() => _negocio = n);
+    } catch (err) {
+      if (mounted) _aviso(err is AuthError ? err.message : 'No se pudo quitar la foto');
+    } finally {
+      if (mounted) setState(() => _galeriaOcupada = false);
+    }
+  }
+
   /// Guarda los datos editados (y la portada nueva, si hay). Devuelve `false`
   /// si algo falló — ya se avisó al admin.
   Future<bool> _guardar() async {
@@ -177,12 +229,14 @@ class _AdminNegocioDetallePageState extends State<AdminNegocioDetallePage> {
       String? texto(TextEditingController c) => c.text.trim().isEmpty ? null : c.text.trim();
       var n = await widget.authService.adminUpdateNegocio(token, widget.negocioId, {
         'nombre': _nombre.text.trim(),
-        'categoria': texto(_categoria),
+        'categoria': valorTipoNegocio(_tipo, _categoria),
         'descripcion': texto(_descripcion),
         'direccion': texto(_direccion),
         'telefono': texto(_telefono),
         'horario': _horario ?? _negocio?.horario,
         'sitioWeb': texto(_sitioWeb),
+        'costoPorPersona': texto(_costo),
+        'menu': texto(_menu),
         'latitud': _ubicacion?.lat,
         'longitud': _ubicacion?.lng,
       });
@@ -276,14 +330,15 @@ class _AdminNegocioDetallePageState extends State<AdminNegocioDetallePage> {
     }
     final ocupado = _saving || _deciding;
 
-    return Align(
-      alignment: Alignment.topCenter,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 760),
-        // Columna normal (no ListView): todo el detalle se construye de una
-        // vez, así nada queda sin montar fuera de pantalla.
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(AppSpacing.xl),
+    // La rueda del mouse funciona en todo el ancho (antes solo sobre la
+    // columna central). Columna normal (no ListView): todo el detalle se
+    // construye de una vez, así nada queda sin montar fuera de pantalla.
+    return SizedBox.expand(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(AppSpacing.xl),
+        child: Center(
+          child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 760),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -316,10 +371,14 @@ class _AdminNegocioDetallePageState extends State<AdminNegocioDetallePage> {
                         validator: (v) => (v == null || v.trim().isEmpty) ? 'El nombre no puede quedar vacío' : null,
                       ),
                       const SizedBox(height: AppSpacing.md),
-                      AppTextField(
-                        label: 'Categoría',
-                        icon: Icons.local_offer_outlined,
-                        controller: _categoria,
+                      TipoNegocioField(
+                        etiqueta: 'Categoría',
+                        seleccionado: _tipo,
+                        onChanged: (v) => setState(() {
+                          _tipo = v;
+                          if (!_cargandoCampos) _dirty = true;
+                        }),
+                        otroController: _categoria,
                         accentColor: AppColors.adminViolet,
                       ),
                       const SizedBox(height: AppSpacing.md),
@@ -382,6 +441,24 @@ class _AdminNegocioDetallePageState extends State<AdminNegocioDetallePage> {
                         accentColor: AppColors.adminViolet,
                         validator: (v) => (v != null && v.trim().length > 350) ? 'Máximo 350 caracteres' : null,
                       ),
+                      const SizedBox(height: AppSpacing.md),
+                      AppTextField(
+                        label: 'Costo por persona (opcional)',
+                        icon: Icons.payments_outlined,
+                        controller: _costo,
+                        hintText: r'Ej. $150 – $300 MXN',
+                        accentColor: AppColors.adminViolet,
+                        validator: (v) => (v ?? '').trim().length > 60 ? 'Máximo 60 caracteres' : null,
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      AppTextField(
+                        label: 'Menú (opcional: texto o liga)',
+                        icon: Icons.restaurant_menu,
+                        controller: _menu,
+                        maxLines: 4,
+                        accentColor: AppColors.adminViolet,
+                        validator: (v) => (v ?? '').trim().length > 2000 ? 'Máximo 2000 caracteres' : null,
+                      ),
                       const SizedBox(height: AppSpacing.lg),
                       Align(
                         alignment: Alignment.centerRight,
@@ -396,6 +473,13 @@ class _AdminNegocioDetallePageState extends State<AdminNegocioDetallePage> {
                     ],
                   ),
                 ),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              _GaleriaAdmin(
+                fotos: n.galeria,
+                ocupado: _galeriaOcupada || ocupado,
+                onAgregar: _agregarFotos,
+                onQuitar: _quitarFoto,
               ),
               const SizedBox(height: AppSpacing.lg),
               _SeccionContenido(
@@ -462,6 +546,7 @@ class _AdminNegocioDetallePageState extends State<AdminNegocioDetallePage> {
                 ),
               ],
             ],
+          ),
           ),
         ),
       ),
@@ -681,6 +766,86 @@ class _SeccionContenido extends StatelessWidget {
               onPressed: onAnadir,
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Galería de fotos del negocio en el detalle del admin: se agregan (varias
+/// a la vez) y se quitan al momento.
+class _GaleriaAdmin extends StatelessWidget {
+  final List<String> fotos;
+  final bool ocupado;
+  final VoidCallback onAgregar;
+  final ValueChanged<String> onQuitar;
+
+  const _GaleriaAdmin({required this.fotos, required this.ocupado, required this.onAgregar, required this.onQuitar});
+
+  @override
+  Widget build(BuildContext context) {
+    return DsCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(child: _Titulo(icon: Icons.photo_library_outlined, texto: 'Galería de fotos (${fotos.length})')),
+              DsButton(
+                key: const ValueKey('admin-galeria-agregar'),
+                label: ocupado ? 'Subiendo…' : 'Agregar fotos',
+                icon: Icons.add_photo_alternate_outlined,
+                size: DsButtonSize.sm,
+                accent: AppColors.adminViolet,
+                onPressed: ocupado ? null : onAgregar,
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text('Se guardan al momento y se ven en la ficha del lugar.', style: AppTypography.bodySmall),
+          const SizedBox(height: AppSpacing.md),
+          if (fotos.isEmpty)
+            Text('Este negocio todavía no tiene fotos en su galería.', style: AppTypography.bodySmall)
+          else
+            Wrap(
+              spacing: AppSpacing.sm,
+              runSpacing: AppSpacing.sm,
+              children: [
+                for (var i = 0; i < fotos.length; i++)
+                  SizedBox(
+                    width: 132,
+                    height: 99,
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(AppRadius.button),
+                          child: GestureDetector(
+                            onTap: () => abrirVisorFotos(context, fotos, inicial: i),
+                            child: CoverImage(source: fotos[i]),
+                          ),
+                        ),
+                        Positioned(
+                          top: 4,
+                          right: 4,
+                          child: Material(
+                            color: Colors.black54,
+                            shape: const CircleBorder(),
+                            child: InkWell(
+                              customBorder: const CircleBorder(),
+                              onTap: ocupado ? null : () => onQuitar(fotos[i]),
+                              child: const Padding(
+                                padding: EdgeInsets.all(4),
+                                child: Icon(Icons.close, size: 16, color: Colors.white),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
         ],
       ),
     );
