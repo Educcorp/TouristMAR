@@ -244,7 +244,7 @@ class _AdminTopBar extends StatelessWidget {
               const SizedBox(width: 8),
               Text(
                 'TOURISTMAR',
-                style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, letterSpacing: 2, fontSize: 13),
+                style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, letterSpacing: 2, fontSize: 14),
               ),
             ],
             const SizedBox(width: 8),
@@ -319,7 +319,7 @@ class _AdminSidebarContent extends StatelessWidget {
               const SizedBox(width: 8),
               Text(
                 'TOURISTMAR',
-                style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700, fontSize: 12, letterSpacing: 1.5),
+                style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700, fontSize: 13, letterSpacing: 1.5),
               ),
               const SizedBox(width: 6),
               const RolInsignia('ADMIN'),
@@ -363,7 +363,7 @@ class _AdminSidebarContent extends StatelessWidget {
                       admin.email,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(color: AppColors.slate400, fontSize: 12),
+                      style: TextStyle(color: AppColors.slate400, fontSize: 13),
                     ),
                   ],
                 ),
@@ -400,7 +400,7 @@ class _AdminSidebarContent extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 color: active ? color : AppColors.tinta,
-                                fontSize: 14,
+                                fontSize: 15,
                                 fontWeight: active ? FontWeight.w600 : FontWeight.w500,
                               ),
                             ),

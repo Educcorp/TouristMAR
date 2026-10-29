@@ -112,6 +112,22 @@ class AppRadius {
   static const hero = 20.0;
 }
 
+/// Anchos máximos de contenido. Antes cada pantalla elegía el suyo (420, 520,
+/// 720, 760, 960, 1080…) y en escritorio unas se veían como una columna de
+/// celular en medio de la nada; ahora hay tres medidas.
+class AppAncho {
+  AppAncho._();
+
+  /// Formularios (editar perfil, editar negocio, sugerir lugar).
+  static const formulario = 680.0;
+
+  /// Fichas y páginas de lectura (perfil, ficha de un lugar, aviso de privacidad).
+  static const lectura = 1040.0;
+
+  /// Listas y tableros (inicio, paneles, catálogos).
+  static const pagina = 1180.0;
+}
+
 /// Alto de la franja de flotación que separa la foto de los datos.
 const kFranja = 6.0;
 
@@ -166,7 +182,22 @@ class AppTypography {
   static TextStyle get caption => GoogleFonts.barlow(
         fontSize: 13,
         fontWeight: FontWeight.w500,
-        color: AppColors.slate500,
+        color: AppColors.slate400,
+      );
+
+  /// Etiqueta de campo o de dato ("Correo electrónico", "Dirección").
+  static TextStyle get label => GoogleFonts.barlow(
+        fontSize: 14,
+        fontWeight: FontWeight.w600,
+        color: AppColors.slate300,
+      );
+
+  /// Texto de botón: 16 en los de ancho completo, 14 en los compactos.
+  static TextStyle boton({double size = 16, Color? color}) => GoogleFonts.barlow(
+        fontSize: size,
+        fontWeight: FontWeight.w600,
+        height: 1.2,
+        color: color,
       );
 
   /// Cifras de tablero (métricas, distancias): condensada, gruesa y con

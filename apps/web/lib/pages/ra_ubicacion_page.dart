@@ -284,7 +284,7 @@ class _RaUbicacionPageState extends State<RaUbicacionPage> with WidgetsBindingOb
                             'RA por geolocalización · ${widget.lugar.nombre}',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13),
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14),
                           ),
                         ),
                       ),
@@ -349,7 +349,7 @@ class _RaUbicacionPageState extends State<RaUbicacionPage> with WidgetsBindingOb
               child: Text(
                 'No se pudo abrir la cámara. Puedes seguir la dirección de los puntos igualmente.',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.white70, fontSize: 13),
+                style: TextStyle(color: Colors.white70, fontSize: 14),
               ),
             )
           : const CircularProgressIndicator(color: Colors.white),
@@ -482,7 +482,7 @@ class _RaUbicacionPageState extends State<RaUbicacionPage> with WidgetsBindingOb
             children: [
               Icon(icono, color: _cerca != null ? AppColors.emerald : color, size: 18),
               const SizedBox(width: 8),
-              Expanded(child: Text(texto, style: const TextStyle(color: Colors.white, fontSize: 13))),
+              Expanded(child: Text(texto, style: const TextStyle(color: Colors.white, fontSize: 14))),
             ],
           ),
           if (accion != null) ...[const SizedBox(height: AppSpacing.sm), accion],
@@ -528,7 +528,7 @@ class _MarcadorFlotante extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(formatoDistancia(distancia),
-                    style: TextStyle(color: color, fontWeight: FontWeight.w800, fontSize: 12)),
+                    style: TextStyle(color: color, fontWeight: FontWeight.w800, fontSize: 13)),
                 const SizedBox(height: 2),
                 Text(punto.titulo,
                     maxLines: 2,
@@ -539,7 +539,7 @@ class _MarcadorFlotante extends StatelessWidget {
                   Text(punto.resumen,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                      style: const TextStyle(color: Colors.white70, fontSize: 13)),
                 ],
               ],
             ),
@@ -643,7 +643,7 @@ class _GuiaCompletaState extends State<_GuiaCompleta> {
                       style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800)),
                   if (p.resumen.isNotEmpty) ...[
                     const SizedBox(height: 4),
-                    Text(p.resumen, style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                    Text(p.resumen, style: const TextStyle(color: Colors.white70, fontSize: 14)),
                   ],
                   if (widget.onMarcadores != null) ...[
                     const SizedBox(height: AppSpacing.md),
@@ -659,7 +659,7 @@ class _GuiaCompletaState extends State<_GuiaCompleta> {
                         children: [
                           const Text(
                             'Aquí hay marcadores de realidad aumentada: apunta la cámara a las imágenes del lugar.',
-                            style: TextStyle(color: Colors.white, fontSize: 13),
+                            style: TextStyle(color: Colors.white, fontSize: 14),
                           ),
                           const SizedBox(height: AppSpacing.sm),
                           FilledButton.icon(

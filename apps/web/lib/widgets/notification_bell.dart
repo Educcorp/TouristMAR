@@ -86,7 +86,7 @@ class _NotificationBellState extends State<NotificationBell> {
                     child: Text(
                       _unread > 9 ? '9+' : '$_unread',
                       textAlign: TextAlign.center,
-                      style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700),
+                      style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w700),
                     ),
                   ),
                 ),
@@ -198,7 +198,7 @@ class _NotificationsDialogState extends State<_NotificationsDialog> {
           if (hasUnread)
             TextButton(
               onPressed: _markAllRead,
-              child: Text('Marcar todas como leídas', style: TextStyle(color: widget.accentColor, fontSize: 12)),
+              child: Text('Marcar todas como leídas', style: TextStyle(color: widget.accentColor, fontSize: 13)),
             ),
         ],
       ),
@@ -300,78 +300,77 @@ class NotificacionTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final estilo = EstiloNotificacion.of(notification.tipo);
     final color = estilo.color;
+    final nueva = !notification.leida;
+    // Sin franja lateral de color ni fondo tintado por tipo (una lista de
+    // avisos se volvía un arcoíris): el tipo lo dicen el ícono y su etiqueta;
+    // las no leídas, el fondo suave, el título en negrita y el punto.
     return Material(
-      color: notification.leida ? AppColors.overlay(0.02) : color.withValues(alpha: 0.08),
-      borderRadius: BorderRadius.circular(12),
+      color: nueva ? AppColors.surfaceAlt : Colors.transparent,
+      borderRadius: BorderRadius.circular(AppRadius.button),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
-        child: IntrinsicHeight(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
           child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(width: 4, color: notification.leida ? color.withValues(alpha: 0.35) : color),
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: AppColors.cubierta,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppColors.borderSubtle),
+                ),
+                child: Icon(estilo.icon, size: 20, color: color),
+              ),
+              const SizedBox(width: 12),
               Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        width: 38,
-                        height: 38,
-                        decoration: BoxDecoration(
-                          color: color.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            estilo.etiqueta,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.w600),
+                          ),
                         ),
-                        child: Icon(estilo.icon, size: 20, color: color),
+                        const SizedBox(width: 8),
+                        Text(formatDateEs(notification.createdAt), style: AppTypography.caption),
+                        if (nueva) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: const BoxDecoration(color: AppColors.rojo, shape: BoxShape.circle),
+                          ),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      notification.titulo,
+                      maxLines: compacta ? 1 : null,
+                      overflow: compacta ? TextOverflow.ellipsis : null,
+                      style: TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 15,
+                        fontWeight: nueva ? FontWeight.w700 : FontWeight.w500,
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Flexible(
-                                  child: Text(
-                                    estilo.etiqueta.toUpperCase(),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.6),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Text(formatDateEs(notification.createdAt), style: TextStyle(color: AppColors.slate500, fontSize: 12)),
-                                if (!notification.leida) ...[
-                                  const Spacer(),
-                                  Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
-                                ],
-                              ],
-                            ),
-                            const SizedBox(height: 3),
-                            Text(
-                              notification.titulo,
-                              maxLines: compacta ? 1 : null,
-                              overflow: compacta ? TextOverflow.ellipsis : null,
-                              style: TextStyle(
-                                color: AppColors.textPrimary,
-                                fontSize: 13.5,
-                                fontWeight: notification.leida ? FontWeight.w500 : FontWeight.w700,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              notification.cuerpo,
-                              maxLines: compacta ? 1 : null,
-                              overflow: compacta ? TextOverflow.ellipsis : null,
-                              style: TextStyle(color: AppColors.textSecondary, fontSize: 12.5, height: 1.35),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      notification.cuerpo,
+                      maxLines: compacta ? 1 : 3,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: AppColors.textSecondary, fontSize: 14, height: 1.35),
+                    ),
+                  ],
                 ),
               ),
             ],

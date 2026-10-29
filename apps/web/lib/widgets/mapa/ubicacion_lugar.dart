@@ -166,7 +166,7 @@ class _CampoCoordenadasState extends State<CampoCoordenadas> {
                 decoration: InputDecoration(
                   prefixIcon: Icon(Icons.my_location, size: 18, color: AppColors.slate500),
                   hintText: 'Ej. 19.1006, -104.3399',
-                  hintStyle: TextStyle(color: AppColors.slate500, fontSize: 13),
+                  hintStyle: TextStyle(color: AppColors.slate500, fontSize: 14),
                   errorText: _error,
                   filled: true,
                   fillColor: AppColors.panelNavySoft,
@@ -210,7 +210,7 @@ class _CampoCoordenadasState extends State<CampoCoordenadas> {
           const SizedBox(height: AppSpacing.sm),
           Row(
             children: [
-              Icon(Icons.touch_app_outlined, size: 14, color: AppColors.slate500),
+              Icon(Icons.touch_app_outlined, size: 16, color: AppColors.slate500),
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
@@ -243,7 +243,7 @@ class _CampoCoordenadasState extends State<CampoCoordenadas> {
               child: TextButton.icon(
                 onPressed: widget.habilitado ? () => _cambiar(null) : null,
                 icon: Icon(Icons.wrong_location_outlined, size: 16, color: AppColors.slate400),
-                label: Text('Quitar pin', style: TextStyle(color: AppColors.slate400, fontSize: 12)),
+                label: Text('Quitar pin', style: TextStyle(color: AppColors.slate400, fontSize: 13)),
               ),
             ),
         ] else if (_valor != null) ...[

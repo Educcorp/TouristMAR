@@ -399,7 +399,7 @@ class _AdminMapaPageState extends State<AdminMapaPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(r.titulo, style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 13)),
+                        Text(r.titulo, style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
                         Text('${r.nombre} · ${r.escenas.length} escenarios', style: AppTypography.caption),
                       ],
                     ),
@@ -423,7 +423,7 @@ class _AdminMapaPageState extends State<AdminMapaPage> {
                           children: [
                             Icon(Icons.place_outlined, size: 16, color: AppColors.adminViolet),
                             const SizedBox(width: 4),
-                            Text('Asignar a…', style: TextStyle(color: AppColors.adminViolet, fontSize: 13, fontWeight: FontWeight.w600)),
+                            Text('Asignar a…', style: TextStyle(color: AppColors.adminViolet, fontSize: 14, fontWeight: FontWeight.w600)),
                             Icon(Icons.arrow_drop_down, color: AppColors.adminViolet),
                           ],
                         ),
@@ -577,7 +577,7 @@ class _Leyenda extends StatelessWidget {
               children: [
                 Container(width: 10, height: 10, decoration: BoxDecoration(color: c.color, shape: BoxShape.circle)),
                 const SizedBox(width: 6),
-                Text(c.etiqueta, style: TextStyle(color: AppColors.textPrimary, fontSize: 12)),
+                Text(c.etiqueta, style: TextStyle(color: AppColors.textPrimary, fontSize: 13)),
               ],
             ),
         ],

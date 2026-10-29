@@ -78,7 +78,7 @@ class DsErrorState extends StatelessWidget {
           Icon(Icons.error_outline, color: AppColors.errorRed, size: 18),
           const SizedBox(width: AppSpacing.md),
           Expanded(
-            child: Text(message, style: TextStyle(color: AppColors.errorRed, fontSize: 13)),
+            child: Text(message, style: TextStyle(color: AppColors.errorRed, fontSize: 14)),
           ),
           if (onRetry != null) ...[
             const SizedBox(width: AppSpacing.md),

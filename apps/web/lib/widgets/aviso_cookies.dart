@@ -32,14 +32,17 @@ class _AvisoCookiesState extends State<AvisoCookies> {
     return Stack(
       children: [
         widget.child,
+        // En escritorio va en la esquina, compacto (centrado tapaba la foto
+        // del login y su leyenda); en el celular, de lado a lado.
         Positioned(
-          left: 12,
+          left: MediaQuery.sizeOf(context).width >= 900 ? null : 12,
           right: 12,
           bottom: 12,
           child: SafeArea(
-            child: Center(
+            child: Align(
+              alignment: Alignment.bottomRight,
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 760),
+                constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width >= 900 ? 420 : 760),
                 child: Material(
                   color: AppColors.cubierta,
                   elevation: 8,
@@ -63,7 +66,7 @@ class _AvisoCookiesState extends State<AvisoCookies> {
                                 child: Text(
                                   'No usamos cookies de rastreo ni de publicidad. Solo guardamos en tu navegador tu sesión '
                                   'y tus preferencias.',
-                                  style: TextStyle(color: AppColors.tinta, fontSize: 13.5, height: 1.35),
+                                  style: TextStyle(color: AppColors.tinta, fontSize: 14, height: 1.35),
                                 ),
                               ),
                             ],

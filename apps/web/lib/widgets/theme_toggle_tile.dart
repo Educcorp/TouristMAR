@@ -29,13 +29,15 @@ class ThemeToggleTile extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           child: Row(
             children: [
-              Icon(isDark ? Icons.dark_mode_outlined : Icons.light_mode_outlined,
-                  size: 18, color: AppColors.slate300),
+              Icon(Icons.dark_mode_outlined, size: 20, color: AppColors.slate300),
               const SizedBox(width: 12),
+              // Etiqueta fija y el interruptor dice si está activo: "Modo claro"
+              // con el interruptor apagado se leía como "el modo claro está
+              // apagado" justo cuando estaba encendido.
               Expanded(
                 child: Text(
-                  isDark ? 'Modo oscuro' : 'Modo claro',
-                  style: TextStyle(color: AppColors.overlay(0.85), fontSize: 14, fontWeight: FontWeight.w500),
+                  'Modo oscuro',
+                  style: TextStyle(color: AppColors.slate300, fontSize: 15, fontWeight: FontWeight.w500),
                 ),
               ),
               Switch.adaptive(

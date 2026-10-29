@@ -182,7 +182,7 @@ class _CategoriasDialogState extends State<_CategoriasDialog> {
               ),
               if (_error != null) ...[
                 const SizedBox(height: AppSpacing.sm),
-                Text(_error!, style: TextStyle(color: AppColors.errorRed, fontSize: 13)),
+                Text(_error!, style: TextStyle(color: AppColors.errorRed, fontSize: 14)),
               ],
               const SizedBox(height: AppSpacing.md),
               Flexible(

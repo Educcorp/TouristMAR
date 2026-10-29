@@ -214,7 +214,7 @@ class _AdminAdminsPageState extends State<AdminAdminsPage> {
             ),
             if (_formError != null) ...[
               const SizedBox(height: AppSpacing.sm),
-              Text(_formError!, style: TextStyle(color: AppColors.errorRed, fontSize: 13)),
+              Text(_formError!, style: TextStyle(color: AppColors.errorRed, fontSize: 14)),
             ],
             const SizedBox(height: AppSpacing.lg),
             Row(
@@ -283,7 +283,7 @@ class _AdminRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(admin.name, style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 13)),
+                Text(admin.name, style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
                 Text(admin.email, maxLines: 1, overflow: TextOverflow.ellipsis, style: AppTypography.bodySmall),
               ],
             ),

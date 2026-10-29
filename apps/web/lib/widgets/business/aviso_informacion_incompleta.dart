@@ -71,16 +71,16 @@ class _AvisoInformacionIncompletaState extends State<AvisoInformacionIncompleta>
                 ),
                 if (faltantes.isNotEmpty) ...[
                   const SizedBox(height: AppSpacing.lg),
-                  Text('Información pendiente:', style: TextStyle(color: AppColors.slate400, fontSize: 13)),
+                  Text('Información pendiente:', style: TextStyle(color: AppColors.slate400, fontSize: 14)),
                   const SizedBox(height: 6),
                   for (final dato in faltantes)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 4),
                       child: Row(
                         children: [
-                          Icon(Icons.radio_button_unchecked, size: 14, color: AppColors.businessOrange),
+                          Icon(Icons.radio_button_unchecked, size: 16, color: AppColors.businessOrange),
                           const SizedBox(width: 8),
-                          Expanded(child: Text(dato, style: TextStyle(color: AppColors.textPrimary, fontSize: 13))),
+                          Expanded(child: Text(dato, style: TextStyle(color: AppColors.textPrimary, fontSize: 14))),
                         ],
                       ),
                     ),
@@ -97,7 +97,7 @@ class _AvisoInformacionIncompletaState extends State<AvisoInformacionIncompleta>
                     child: Text(
                       mensajeCompletarPrimero,
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: AppColors.amber, fontSize: 13),
+                      style: TextStyle(color: AppColors.amber, fontSize: 14),
                     ),
                   ),
                 ],
@@ -111,7 +111,7 @@ class _AvisoInformacionIncompletaState extends State<AvisoInformacionIncompleta>
                 const SizedBox(height: AppSpacing.sm),
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(false),
-                  child: Text('Cerrar sesión', style: TextStyle(color: AppColors.slate400, fontSize: 13)),
+                  child: Text('Cerrar sesión', style: TextStyle(color: AppColors.slate400, fontSize: 14)),
                 ),
               ],
             ),

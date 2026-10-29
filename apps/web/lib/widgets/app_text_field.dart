@@ -38,8 +38,8 @@ class AppTextField extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: TextStyle(color: AppColors.slate300, fontSize: 14)),
-        const SizedBox(height: 8),
+        Text(label, style: AppTypography.label),
+        const SizedBox(height: 6),
         TextFormField(
           key: fieldKey,
           controller: controller,
@@ -47,35 +47,38 @@ class AppTextField extends StatelessWidget {
           maxLines: obscureText ? 1 : maxLines,
           keyboardType: keyboardType,
           validator: validator,
-          style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
+          // 16 px: legible al sol y evita que el navegador del celular haga
+          // zoom al enfocar el campo.
+          style: TextStyle(color: AppColors.textPrimary, fontSize: 16),
           decoration: InputDecoration(
             hintText: hintText,
-            hintStyle: TextStyle(color: AppColors.slate500),
-            prefixIcon: Icon(icon, size: 18, color: AppColors.slate500),
+            hintStyle: TextStyle(color: AppColors.slate500, fontSize: 16),
+            prefixIcon: Icon(icon, size: 20, color: AppColors.slate400),
             suffixIcon: suffixIcon,
             filled: true,
             fillColor: AppColors.panelNavySoft,
-            contentPadding: const EdgeInsets.symmetric(vertical: 12),
+            contentPadding: const EdgeInsets.fromLTRB(0, 14, 12, 14),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: AppColors.overlay(0.1)),
+              borderRadius: BorderRadius.circular(AppRadius.button),
+              borderSide: BorderSide(color: AppColors.borderSubtle),
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: AppColors.overlay(0.1)),
+              borderRadius: BorderRadius.circular(AppRadius.button),
+              borderSide: BorderSide(color: AppColors.borderSubtle),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: accentColor ?? AppColors.brandTeal),
+              borderRadius: BorderRadius.circular(AppRadius.button),
+              borderSide: BorderSide(color: accentColor ?? AppColors.tinta, width: 2),
             ),
             errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: AppColors.errorRed),
+              borderRadius: BorderRadius.circular(AppRadius.button),
+              borderSide: BorderSide(color: AppColors.errorRed, width: 1.5),
             ),
             focusedErrorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: AppColors.errorRed),
+              borderRadius: BorderRadius.circular(AppRadius.button),
+              borderSide: BorderSide(color: AppColors.errorRed, width: 2),
             ),
+            errorStyle: TextStyle(color: AppColors.errorRed, fontSize: 13),
           ),
         ),
       ],

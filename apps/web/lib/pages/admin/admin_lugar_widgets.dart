@@ -145,7 +145,7 @@ class _LugarFormState extends State<LugarForm> {
                   selected: _categoria == c,
                   onSelected: _guardando ? null : (_) => setState(() => _categoria = c),
                   selectedColor: AppColors.adminViolet.withValues(alpha: 0.2),
-                  labelStyle: TextStyle(color: _categoria == c ? AppColors.adminViolet : AppColors.slate300, fontSize: 12),
+                  labelStyle: TextStyle(color: _categoria == c ? AppColors.adminViolet : AppColors.slate300, fontSize: 13),
                   backgroundColor: AppColors.surface,
                   side: BorderSide(color: AppColors.borderSubtle),
                   showCheckmark: false,
@@ -184,7 +184,7 @@ class _LugarFormState extends State<LugarForm> {
           ),
           if (_error != null) ...[
             const SizedBox(height: AppSpacing.md),
-            Text(_error!, style: TextStyle(color: AppColors.errorRed, fontSize: 13)),
+            Text(_error!, style: TextStyle(color: AppColors.errorRed, fontSize: 14)),
           ],
           const SizedBox(height: AppSpacing.lg),
           Wrap(
@@ -285,7 +285,7 @@ class _UbicacionLugarSectionState extends State<UbicacionLugarSection> {
         ),
         if (_error != null) ...[
           const SizedBox(height: AppSpacing.md),
-          Text(_error!, style: TextStyle(color: AppColors.errorRed, fontSize: 13)),
+          Text(_error!, style: TextStyle(color: AppColors.errorRed, fontSize: 14)),
         ],
         const SizedBox(height: AppSpacing.md),
         Align(
@@ -491,7 +491,7 @@ class _MarcadoresLugarSectionState extends State<MarcadoresLugarSection> {
                           Text(m.titulo,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 13)),
+                              style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
                           Text('${m.nombre} · ${m.escaneos} escaneos', style: AppTypography.caption),
                         ],
                       ),
@@ -614,7 +614,7 @@ class _MarcadoresLugarSectionState extends State<MarcadoresLugarSection> {
           ),
         if (_error != null) ...[
           const SizedBox(height: AppSpacing.md),
-          Text(_error!, style: TextStyle(color: AppColors.errorRed, fontSize: 13)),
+          Text(_error!, style: TextStyle(color: AppColors.errorRed, fontSize: 14)),
         ],
       ],
     );

@@ -210,7 +210,7 @@ class _BusinessExperienciasContentState extends State<BusinessExperienciasConten
                             Icon(Icons.touch_app_outlined, size: 16, color: Colors.white),
                             SizedBox(width: 6),
                             Text('Toca para colocar tu negocio',
-                                style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
+                                style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
                           ],
                         ),
                       ),
@@ -271,12 +271,12 @@ class _BusinessExperienciasContentState extends State<BusinessExperienciasConten
             padding: const EdgeInsets.only(bottom: 4),
             child: Row(
               children: [
-                Icon(Icons.check_circle, size: 14, color: info.color),
+                Icon(Icons.check_circle, size: 16, color: info.color),
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: Text(
                     '${r.titulo} · ${r.escenas.length} ${r.escenas.length == 1 ? 'escenario' : 'escenarios'} 360°',
-                    style: AppTypography.body.copyWith(fontSize: 12, color: AppColors.textPrimary),
+                    style: AppTypography.body.copyWith(fontSize: 13, color: AppColors.textPrimary),
                   ),
                 ),
               ],
@@ -376,7 +376,7 @@ class _RecursoCard extends StatelessWidget {
                 children: [
                   Icon(Icons.admin_panel_settings_outlined, size: 16, color: AppColors.slate400),
                   const SizedBox(width: AppSpacing.sm),
-                  Expanded(child: Text(comoSeActiva(tipo), style: AppTypography.body.copyWith(fontSize: 12))),
+                  Expanded(child: Text(comoSeActiva(tipo), style: AppTypography.body.copyWith(fontSize: 13))),
                 ],
               ),
               if (extra != null) ...[
@@ -420,7 +420,7 @@ class _Aviso extends StatelessWidget {
         children: [
           Icon(icon, size: 18, color: color),
           const SizedBox(width: AppSpacing.md),
-          Expanded(child: Text(texto, style: AppTypography.body.copyWith(color: AppColors.textPrimary, fontSize: 13))),
+          Expanded(child: Text(texto, style: AppTypography.body.copyWith(color: AppColors.textPrimary, fontSize: 14))),
         ],
       ),
     );

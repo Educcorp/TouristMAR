@@ -429,7 +429,7 @@ class _RecorridoFormState extends State<_RecorridoForm> {
             ),
             if (_error != null) ...[
               const SizedBox(height: AppSpacing.sm),
-              Text(_error!, style: TextStyle(color: AppColors.errorRed, fontSize: 13)),
+              Text(_error!, style: TextStyle(color: AppColors.errorRed, fontSize: 14)),
             ],
             const SizedBox(height: AppSpacing.lg),
             Wrap(
@@ -1250,7 +1250,7 @@ class _EscenariosEditorState extends State<_EscenariosEditor> {
                       children: [
                         Icon(Icons.add_photo_alternate_outlined, color: AppColors.adminViolet),
                         const SizedBox(height: 4),
-                        Text('Agregar', style: TextStyle(color: AppColors.adminViolet, fontSize: 12, fontWeight: FontWeight.w600)),
+                        Text('Agregar', style: TextStyle(color: AppColors.adminViolet, fontSize: 13, fontWeight: FontWeight.w600)),
                       ],
                     ),
                   ),
@@ -1316,7 +1316,7 @@ class _TarjetaEscenario extends StatelessWidget {
                       ),
                       child: Text(
                         entrada ? '${escena.posicion} · Entrada' : '${escena.posicion}',
-                        style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700),
+                        style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w700),
                       ),
                     ),
                   ),
@@ -1329,7 +1329,7 @@ class _TarjetaEscenario extends StatelessWidget {
                         child: Container(
                           padding: const EdgeInsets.all(3),
                           decoration: BoxDecoration(color: AppColors.amber, shape: BoxShape.circle),
-                          child: const Icon(Icons.priority_high, size: 12, color: Colors.black),
+                          child: const Icon(Icons.priority_high, size: 14, color: Colors.black),
                         ),
                       ),
                     ),
@@ -1346,10 +1346,10 @@ class _TarjetaEscenario extends StatelessWidget {
                       escena.nombre,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(color: AppColors.textPrimary, fontSize: 12, fontWeight: FontWeight.w600),
+                      style: TextStyle(color: AppColors.textPrimary, fontSize: 13, fontWeight: FontWeight.w600),
                     ),
                   ),
-                  Icon(Icons.alt_route, size: 12, color: AppColors.slate400),
+                  Icon(Icons.alt_route, size: 14, color: AppColors.slate400),
                   const SizedBox(width: 2),
                   Text('${escena.enlaces.length}', style: AppTypography.caption),
                 ],
@@ -1434,7 +1434,7 @@ class _ProgresoSubida extends StatelessWidget {
           ),
           for (final e in errores) ...[
             const SizedBox(height: 4),
-            Text('✕ $e', style: TextStyle(color: AppColors.errorRed, fontSize: 12)),
+            Text('✕ $e', style: TextStyle(color: AppColors.errorRed, fontSize: 13)),
           ],
         ],
       ),

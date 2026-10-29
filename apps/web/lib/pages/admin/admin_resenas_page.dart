@@ -246,12 +246,12 @@ class _ResenaCard extends StatelessWidget {
           ),
           if (comentario != null && comentario.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.sm),
-            Text(comentario, style: TextStyle(color: AppColors.textSecondary, fontSize: 13, height: 1.4)),
+            Text(comentario, style: TextStyle(color: AppColors.textSecondary, fontSize: 14, height: 1.4)),
           ],
           if (respuesta != null && respuesta.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.sm),
             Text('Respuesta del negocio: $respuesta',
-                style: TextStyle(color: AppColors.slate400, fontSize: 12, fontStyle: FontStyle.italic, height: 1.4)),
+                style: TextStyle(color: AppColors.slate400, fontSize: 13, fontStyle: FontStyle.italic, height: 1.4)),
           ],
           const SizedBox(height: AppSpacing.md),
           Align(

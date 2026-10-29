@@ -52,7 +52,7 @@ class ResumenResenasCard extends StatelessWidget {
               const SizedBox(height: 4),
               Text(
                 resumen.total == 1 ? '1 reseña' : '${resumen.total} reseñas',
-                style: TextStyle(color: AppColors.slate400, fontSize: 12),
+                style: TextStyle(color: AppColors.slate400, fontSize: 13),
               ),
             ],
           ),
@@ -66,7 +66,7 @@ class ResumenResenasCard extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(vertical: 2),
                   child: Row(
                     children: [
-                      Text('$estrellas', style: TextStyle(color: AppColors.slate400, fontSize: 12)),
+                      Text('$estrellas', style: TextStyle(color: AppColors.slate400, fontSize: 13)),
                       const SizedBox(width: 4),
                       const Icon(Icons.star, size: 10, color: Colors.amber),
                       const SizedBox(width: 8),
@@ -84,7 +84,7 @@ class ResumenResenasCard extends StatelessWidget {
                       const SizedBox(width: 8),
                       SizedBox(
                         width: 32,
-                        child: Text('$pct%', textAlign: TextAlign.right, style: TextStyle(color: AppColors.slate400, fontSize: 12)),
+                        child: Text('$pct%', textAlign: TextAlign.right, style: TextStyle(color: AppColors.slate400, fontSize: 13)),
                       ),
                     ],
                   ),
@@ -135,9 +135,9 @@ class ResenaTile extends StatelessWidget {
                       resena.mia ? '${resena.autorNombre} (tú)' : resena.autorNombre,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 13),
+                      style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14),
                     ),
-                    Text(resena.fecha, style: TextStyle(color: AppColors.slate500, fontSize: 12)),
+                    Text(resena.fecha, style: TextStyle(color: AppColors.slate500, fontSize: 13)),
                   ],
                 ),
               ),
@@ -146,7 +146,7 @@ class ResenaTile extends StatelessWidget {
           ),
           if (comentario != null && comentario.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.sm),
-            Text(comentario, style: TextStyle(color: AppColors.textSecondary, fontSize: 13, height: 1.4)),
+            Text(comentario, style: TextStyle(color: AppColors.textSecondary, fontSize: 14, height: 1.4)),
           ],
           if (respuesta != null && respuesta.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.md),
@@ -161,9 +161,9 @@ class ResenaTile extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text('Respuesta del negocio',
-                      style: TextStyle(color: AppColors.brandTeal, fontSize: 12, fontWeight: FontWeight.w700)),
+                      style: TextStyle(color: AppColors.brandTeal, fontSize: 13, fontWeight: FontWeight.w700)),
                   const SizedBox(height: 4),
-                  Text(respuesta, style: TextStyle(color: AppColors.textSecondary, fontSize: 13, height: 1.4)),
+                  Text(respuesta, style: TextStyle(color: AppColors.textSecondary, fontSize: 14, height: 1.4)),
                 ],
               ),
             ),
@@ -204,7 +204,7 @@ class ResenasRecientes extends StatelessWidget {
         child: Text(
           'Aún no hay reseñas de visitantes.',
           textAlign: TextAlign.center,
-          style: TextStyle(color: AppColors.slate400, fontSize: 13),
+          style: TextStyle(color: AppColors.slate400, fontSize: 14),
         ),
       );
     }

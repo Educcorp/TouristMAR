@@ -209,7 +209,7 @@ class _BusinessTopBar extends StatelessWidget {
               const SizedBox(width: 8),
               Text(
                 'TOURISTMAR',
-                style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, letterSpacing: 2, fontSize: 13),
+                style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, letterSpacing: 2, fontSize: 14),
               ),
             ],
             const SizedBox(width: 8),
@@ -331,7 +331,7 @@ class _BusinessSidebarContent extends StatelessWidget {
                                 n.businessName,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: TextStyle(color: AppColors.textPrimary, fontSize: 13, fontWeight: FontWeight.w600),
+                                style: TextStyle(color: AppColors.textPrimary, fontSize: 14, fontWeight: FontWeight.w600),
                               ),
                             ),
                             Container(
@@ -342,7 +342,7 @@ class _BusinessSidebarContent extends StatelessWidget {
                               ),
                               child: Text(
                                 _estadoLabel(n.estado),
-                                style: TextStyle(color: _estadoColor(n.estado), fontSize: 12, fontWeight: FontWeight.w700),
+                                style: TextStyle(color: _estadoColor(n.estado), fontSize: 13, fontWeight: FontWeight.w700),
                               ),
                             ),
                           ],
@@ -369,7 +369,7 @@ class _BusinessSidebarContent extends StatelessWidget {
                           const SizedBox(width: 10),
                           Text(
                             'Sugerir negocio nuevo',
-                            style: TextStyle(color: AppColors.brandTeal, fontSize: 13, fontWeight: FontWeight.w600),
+                            style: TextStyle(color: AppColors.brandTeal, fontSize: 14, fontWeight: FontWeight.w600),
                           ),
                         ],
                       ),
@@ -408,7 +408,7 @@ class _BusinessSidebarContent extends StatelessWidget {
                   'TOURISTMAR',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700, fontSize: 12, letterSpacing: 1.5),
+                  style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700, fontSize: 13, letterSpacing: 1.5),
                 ),
               ),
               const SizedBox(width: 6),
@@ -459,7 +459,7 @@ class _BusinessSidebarContent extends StatelessWidget {
                             ),
                             if (negocios.length > 1) ...[
                               const SizedBox(width: 4),
-                              Icon(Icons.unfold_more, size: 14, color: AppColors.slate400),
+                              Icon(Icons.unfold_more, size: 16, color: AppColors.slate400),
                             ],
                           ],
                         ),
@@ -467,7 +467,7 @@ class _BusinessSidebarContent extends StatelessWidget {
                           negocios.length > 1 ? '${negocios.length} negocios · toca para cambiar' : _estadoLabel(selected.estado),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(color: AppColors.slate400, fontSize: 12),
+                          style: TextStyle(color: AppColors.slate400, fontSize: 13),
                         ),
                       ],
                     ),
@@ -504,7 +504,7 @@ class _BusinessSidebarContent extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 color: active ? color : AppColors.tinta,
-                                fontSize: 14,
+                                fontSize: 15,
                                 fontWeight: active ? FontWeight.w600 : FontWeight.w500,
                               ),
                             ),
