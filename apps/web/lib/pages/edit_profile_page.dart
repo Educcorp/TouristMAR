@@ -7,6 +7,7 @@ import '../services/auth_service.dart';
 import '../services/image_picker_service.dart';
 import '../services/session_storage.dart';
 import '../theme/app_theme.dart';
+import '../widgets/pagina_formulario.dart';
 import '../widgets/app_button.dart';
 import '../widgets/themed_builder.dart';
 import '../widgets/user_avatar.dart';
@@ -74,7 +75,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
       // 1) La foto (si se eligió una) se sube hasta ahora, al guardar.
       String? newAvatarUrl;
       if (_pendingPhotoBytes != null) {
-        final withPhoto = await _authService.uploadAvatar(token, _pendingPhotoBytes!, _pendingPhotoName ?? 'avatar.jpg');
+        final withPhoto =
+            await _authService.uploadAvatar(token, _pendingPhotoBytes!, _pendingPhotoName ?? 'avatar.jpg');
         newAvatarUrl = withPhoto.avatarUrl;
       }
 
@@ -100,115 +102,88 @@ class _EditProfilePageState extends State<EditProfilePage> {
   Widget build(BuildContext context) => ThemedBuilder(builder: _buildScaffold);
 
   Widget _buildScaffold(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.panelNavy,
-      body: SafeArea(
-        child: Align(
-          alignment: Alignment.topCenter,
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 480),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: TextButton.icon(
-                      onPressed: () => Navigator.of(context).pop(false),
-                      icon: Icon(Icons.arrow_back, size: 15, color: AppColors.slate400),
-                      label: Text('Volver a mi perfil', style: TextStyle(color: AppColors.slate400, fontSize: 13)),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text('Editar perfil', style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 24)),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Actualiza tu foto, nombre y descripción personal.',
-                    style: TextStyle(color: AppColors.slate400, fontSize: 14),
-                  ),
-                  const SizedBox(height: 28),
-                  Center(
-                    child: Column(
-                      children: [
-                        GestureDetector(
-                          onTap: _isSaving ? null : _changePhoto,
-                          child: _pendingPhotoBytes != null
-                              ? CircleAvatar(
-                                  radius: 48,
-                                  backgroundColor: AppColors.brandTeal.withValues(alpha: 0.2),
-                                  backgroundImage: MemoryImage(_pendingPhotoBytes!),
-                                )
-                              : UserAvatar(
-                                  imageUrl: widget.profile.avatarUrl,
-                                  fallbackLetter: _nameController.text,
-                                  radius: 48,
-                                ),
+    return PaginaFormulario(
+      volver: 'Volver a mi perfil',
+      onVolver: () => Navigator.of(context).pop(false),
+      titulo: 'Editar perfil',
+      descripcion: 'Actualiza tu foto, nombre y descripción personal.',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Center(
+            child: Column(
+              children: [
+                GestureDetector(
+                  onTap: _isSaving ? null : _changePhoto,
+                  child: _pendingPhotoBytes != null
+                      ? CircleAvatar(
+                          radius: 48,
+                          backgroundColor: AppColors.surfaceAlt,
+                          backgroundImage: MemoryImage(_pendingPhotoBytes!),
+                        )
+                      : UserAvatar(
+                          imageUrl: widget.profile.avatarUrl,
+                          fallbackLetter: _nameController.text,
+                          radius: 48,
                         ),
-                        if (_pendingPhotoBytes != null) ...[
-                          const SizedBox(height: 6),
-                          Text(
-                            'Vista previa — se aplicará al guardar',
-                            style: TextStyle(color: AppColors.slate400, fontSize: 12),
-                          ),
-                        ],
-                        const SizedBox(height: 10),
-                        TextButton.icon(
-                          onPressed: _isSaving ? null : _changePhoto,
-                          icon: Icon(Icons.camera_alt_outlined, size: 13, color: AppColors.brandTeal),
-                          label: Text('Cambiar foto', style: TextStyle(color: AppColors.brandTeal, fontSize: 12)),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text('Nombre completo', style: TextStyle(color: AppColors.slate300, fontSize: 14)),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: _nameController,
-                    onChanged: (_) => setState(() {}),
-                    style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
-                    decoration: _inputDecoration(),
-                  ),
-                  const SizedBox(height: 20),
-                  Text('Descripción personal', style: TextStyle(color: AppColors.slate300, fontSize: 14)),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: _bioController,
-                    maxLength: 200,
-                    maxLines: 4,
-                    onChanged: (_) => setState(() {}),
-                    style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
-                    decoration: _inputDecoration(hint: 'Cuéntanos un poco sobre ti…'),
-                  ),
-                  if (_error != null) ...[
-                    const SizedBox(height: 12),
-                    Text(_error!, style: TextStyle(color: AppColors.errorRed, fontSize: 13)),
-                  ],
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: AppButton(
-                          variant: AppButtonVariant.ghost,
-                          onPressed: () => Navigator.of(context).pop(false),
-                          child: const Text('Cancelar'),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: AppButton(
-                          onPressed: _isSaving ? null : _save,
-                          child: Text(_isSaving ? 'Guardando...' : 'Guardar cambios'),
-                        ),
-                      ),
-                    ],
-                  ),
+                ),
+                if (_pendingPhotoBytes != null) ...[
+                  const SizedBox(height: 6),
+                  Text('Vista previa: se aplicará al guardar', style: AppTypography.caption),
                 ],
-              ),
+                const SizedBox(height: 6),
+                TextButton.icon(
+                  onPressed: _isSaving ? null : _changePhoto,
+                  icon: const Icon(Icons.photo_camera_outlined, size: 18),
+                  label: const Text('Cambiar foto'),
+                ),
+              ],
             ),
           ),
-        ),
+          const SizedBox(height: AppSpacing.lg),
+          Text('Nombre completo', style: AppTypography.label),
+          const SizedBox(height: 6),
+          TextField(
+            controller: _nameController,
+            onChanged: (_) => setState(() {}),
+            style: TextStyle(color: AppColors.textPrimary, fontSize: 16),
+            decoration: _inputDecoration(),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          Text('Descripción personal', style: AppTypography.label),
+          const SizedBox(height: 6),
+          TextField(
+            controller: _bioController,
+            maxLength: 200,
+            maxLines: 4,
+            onChanged: (_) => setState(() {}),
+            style: TextStyle(color: AppColors.textPrimary, fontSize: 16),
+            decoration: _inputDecoration(hint: 'Cuéntanos un poco sobre ti…'),
+          ),
+          if (_error != null) ...[
+            const SizedBox(height: 12),
+            Text(_error!, style: TextStyle(color: AppColors.errorRed, fontSize: 14)),
+          ],
+          const SizedBox(height: AppSpacing.lg),
+          Row(
+            children: [
+              Expanded(
+                child: AppButton(
+                  variant: AppButtonVariant.ghost,
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text('Cancelar'),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: AppButton(
+                  onPressed: _isSaving ? null : _save,
+                  child: Text(_isSaving ? 'Guardando…' : 'Guardar cambios'),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -216,22 +191,22 @@ class _EditProfilePageState extends State<EditProfilePage> {
   InputDecoration _inputDecoration({String? hint}) {
     return InputDecoration(
       hintText: hint,
-      hintStyle: TextStyle(color: AppColors.slate500),
+      hintStyle: TextStyle(color: AppColors.slate500, fontSize: 16),
       filled: true,
       fillColor: AppColors.panelNavySoft,
-      contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
-      counterStyle: TextStyle(color: AppColors.slate500, fontSize: 12),
+      contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 14),
+      counterStyle: AppTypography.caption,
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-        borderSide: BorderSide(color: AppColors.overlay(0.1)),
+        borderRadius: BorderRadius.circular(AppRadius.button),
+        borderSide: BorderSide(color: AppColors.borderSubtle),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-        borderSide: BorderSide(color: AppColors.overlay(0.1)),
+        borderRadius: BorderRadius.circular(AppRadius.button),
+        borderSide: BorderSide(color: AppColors.borderSubtle),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-        borderSide: BorderSide(color: AppColors.brandTeal),
+        borderRadius: BorderRadius.circular(AppRadius.button),
+        borderSide: BorderSide(color: AppColors.tinta, width: 2),
       ),
     );
   }

@@ -126,7 +126,7 @@ class _ProfilePageState extends State<ProfilePage> {
     final stats = <(IconData, String, String, VoidCallback?)>[
       (Icons.favorite_border, '${FavoritosService.instance.ids.value.length}', 'Favoritos', () => context.go('/favoritos')),
       (Icons.forum_outlined, '${profile.reviews.length}', 'Reseñas escritas', null),
-      (Icons.star_outline, profile.promedioDadas == null ? '—' : profile.promedioDadas!.toStringAsFixed(1), 'Calificación que das', null),
+      (Icons.star_outline, profile.promedioDadas == null ? '—' : profile.promedioDadas!.toStringAsFixed(1), 'Promedio que das', null),
     ];
 
     return Container(
@@ -155,7 +155,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: onTap != null ? AppColors.turquesaTexto : AppColors.slate400,
-                      fontSize: 13,
+                      fontSize: 14,
                       fontWeight: onTap != null ? FontWeight.w600 : null,
                     ),
                   ),
@@ -194,7 +194,7 @@ class _ProfilePageState extends State<ProfilePage> {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(title, style: AppTypography.h2),
-        Text(trailing, style: TextStyle(color: AppColors.slate400, fontSize: 12)),
+        Text(trailing, style: TextStyle(color: AppColors.slate400, fontSize: 13)),
       ],
     );
   }
@@ -212,7 +212,7 @@ class _ProfilePageState extends State<ProfilePage> {
         child: Text(
           'Aún no has escrito reseñas. Abre un lugar y cuéntanos tu experiencia.',
           textAlign: TextAlign.center,
-          style: TextStyle(color: AppColors.slate400, fontSize: 13),
+          style: TextStyle(color: AppColors.slate400, fontSize: 14),
         ),
       );
     }
@@ -249,7 +249,7 @@ class _ReviewTile extends StatelessWidget {
                 children: [
                   Text(review.placeName,
                       style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
-                  Text(review.dateLabel, style: TextStyle(color: AppColors.slate500, fontSize: 12)),
+                  Text(review.dateLabel, style: TextStyle(color: AppColors.slate500, fontSize: 13)),
                 ],
               ),
               Row(
@@ -266,7 +266,7 @@ class _ReviewTile extends StatelessWidget {
           ),
           if (review.text.isNotEmpty) ...[
             const SizedBox(height: 8),
-            Text(review.text, style: TextStyle(color: AppColors.textSecondary, fontSize: 13, height: 1.4)),
+            Text(review.text, style: TextStyle(color: AppColors.textSecondary, fontSize: 14, height: 1.4)),
           ],
           if (review.reply != null && review.reply!.isNotEmpty) ...[
             const SizedBox(height: 10),
@@ -281,9 +281,9 @@ class _ReviewTile extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text('Respuesta del negocio',
-                      style: TextStyle(color: AppColors.brandTeal, fontSize: 12, fontWeight: FontWeight.w700)),
+                      style: TextStyle(color: AppColors.brandTeal, fontSize: 13, fontWeight: FontWeight.w700)),
                   const SizedBox(height: 4),
-                  Text(review.reply!, style: TextStyle(color: AppColors.textSecondary, fontSize: 13, height: 1.4)),
+                  Text(review.reply!, style: TextStyle(color: AppColors.textSecondary, fontSize: 14, height: 1.4)),
                 ],
               ),
             ),

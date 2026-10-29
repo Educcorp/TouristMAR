@@ -233,35 +233,52 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildEncabezadoLista() {
-    return Row(
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                _yo != null
-                    ? 'Cerca de ti'
-                    : _filtro == null
-                        ? 'Lugares destacados'
-                        : 'Destacados en ${_filtro!.etiqueta.toLowerCase()}',
-                style: AppTypography.h2,
-              ),
-              if (_yo == null) ...[
-                const SizedBox(height: 2),
-                Text('Los mejor calificados por los visitantes', style: AppTypography.bodySmall),
-              ],
-            ],
-          ),
-        ),
-        if (_yo == null)
-          TextButton.icon(
+    final accion = _yo == null
+        ? TextButton.icon(
             onPressed: _pidiendoUbicacion ? null : _pedirUbicacion,
             icon: _pidiendoUbicacion
                 ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
                 : const Icon(Icons.near_me_outlined, size: 20),
             label: const Text('Ordenar por cercanía'),
-          ),
+          )
+        : null;
+    return LayoutBuilder(builder: (context, constraints) {
+      final angosto = constraints.maxWidth < 520;
+      final titulo = _tituloLista();
+      // En el celular la acción va debajo del título: al lado lo partía en
+      // tres renglones.
+      if (angosto || accion == null) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            titulo,
+            if (accion != null) ...[
+              const SizedBox(height: 4),
+              Transform.translate(offset: const Offset(-12, 0), child: accion),
+            ],
+          ],
+        );
+      }
+      return Row(crossAxisAlignment: CrossAxisAlignment.end, children: [Expanded(child: titulo), accion]);
+    });
+  }
+
+  Widget _tituloLista() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          _yo != null
+              ? 'Cerca de ti'
+              : _filtro == null
+                  ? 'Lugares destacados'
+                  : 'Destacados en ${_filtro!.etiqueta.toLowerCase()}',
+          style: AppTypography.h2,
+        ),
+        if (_yo == null) ...[
+          const SizedBox(height: 2),
+          Text('Los mejor calificados por los visitantes', style: AppTypography.bodySmall),
+        ],
       ],
     );
   }
@@ -319,6 +336,12 @@ class _Ancho extends StatelessWidget {
   const _Ancho({required this.child});
 
   @override
-  Widget build(BuildContext context) =>
-      Center(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 1080), child: child));
+  Widget build(BuildContext context) => Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: AppAncho.pagina),
+          // Ancho completo de la columna: sin esto el saludo (más angosto que
+          // la lista) quedaba centrado y desalineado del resto.
+          child: SizedBox(width: double.infinity, child: child),
+        ),
+      );
 }

@@ -180,7 +180,7 @@ class _Hero extends StatelessWidget {
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text(
-                          lugar.categoriaTexto.isEmpty ? cat.etiqueta : lugar.categoriaTexto,
+                          lugar.categoriaVisible,
                           style: AppTypography.bodySmall.copyWith(color: AppColors.slate300, fontSize: 15),
                         ),
                       ),

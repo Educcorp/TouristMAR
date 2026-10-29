@@ -368,8 +368,8 @@ class _ExplorarMapaPageState extends State<ExplorarMapaPage> {
                     const SizedBox(height: 2),
                     Text(
                       l.tieneExperiencias
-                          ? '${cat.etiqueta} · ${l.totalExperiencias} experiencia${l.totalExperiencias == 1 ? '' : 's'}'
-                          : cat.etiqueta,
+                          ? '${l.categoriaVisible} · ${l.totalExperiencias} experiencia${l.totalExperiencias == 1 ? '' : 's'}'
+                          : l.categoriaVisible,
                       style: AppTypography.bodySmall,
                     ),
                   ],

@@ -291,7 +291,7 @@ class _LoginFormState extends State<LoginForm> {
                       Text(_negocioEstado!.nombre,
                           style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
                       if (_negocioEstado!.categoria != null)
-                        Text(_negocioEstado!.categoria!, style: TextStyle(color: AppColors.slate400, fontSize: 12)),
+                        Text(_negocioEstado!.categoria!, style: TextStyle(color: AppColors.slate400, fontSize: 13)),
                     ],
                   ),
                 ),
@@ -319,6 +319,57 @@ class _LoginFormState extends State<LoginForm> {
           ),
         ),
       ],
+    );
+  }
+
+  /// En el celular no cabe la foto de la izquierda: una franja de la bahía
+  /// con la línea de flotación de las cuatro categorías y el logo, para que
+  /// la primera pantalla no sea un formulario pelón.
+  Widget _buildMarcaMovil() {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(AppRadius.card),
+      child: SizedBox(
+        height: 132,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Image.asset('assets/images/hero-manzanillo.jpg', fit: BoxFit.cover, alignment: const Alignment(0, -0.2)),
+            Positioned(
+              left: 12,
+              top: 12,
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(8, 6, 12, 6),
+                decoration: BoxDecoration(
+                  color: AppColors.riel.withValues(alpha: 0.88),
+                  borderRadius: BorderRadius.circular(AppRadius.button),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    AppLogo(size: 26, sobreFoto: true),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'TOURISTMAR',
+                      style: TextStyle(color: AppColors.sobreRiel, fontWeight: FontWeight.w700, letterSpacing: 2, fontSize: 13),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: Row(
+                children: [
+                  for (final c in const [AppColors.turquesa, AppColors.azul, AppColors.rojo, AppColors.amarillo])
+                    Expanded(child: Container(height: kFranja, color: c)),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -353,7 +404,7 @@ class _LoginFormState extends State<LoginForm> {
                     const SizedBox(width: 6),
                     Text(
                       isBusinessTab ? 'Empresa' : 'Visitante',
-                      style: TextStyle(color: foreground, fontWeight: FontWeight.w600, fontSize: 13),
+                      style: TextStyle(color: foreground, fontWeight: FontWeight.w600, fontSize: 14),
                     ),
                   ],
                 ),
@@ -386,7 +437,7 @@ class _LoginFormState extends State<LoginForm> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 if (isNarrow) ...[
-                  _buildLogo(),
+                  _buildMarcaMovil(),
                   const SizedBox(height: 24),
                 ],
                 _buildTypeToggle(),
@@ -449,7 +500,7 @@ class _LoginFormState extends State<LoginForm> {
                   icon: Icons.lock_outline,
                   controller: _passwordController,
                   obscureText: !_showPassword,
-                  hintText: '••••••••',
+                  hintText: isRegister ? 'Mínimo 8 caracteres' : 'Tu contraseña',
                   accentColor: accentColor,
                   // En login se acepta cualquier contraseña ya existente
                   // (min. 8, lo único que exigió siempre el backend); las
@@ -478,7 +529,7 @@ class _LoginFormState extends State<LoginForm> {
                       onPressed: () => setState(() => _screen = _Screen.forgot),
                       child: Text(
                         '¿Olvidaste tu contraseña?',
-                        style: TextStyle(color: AppColors.brandTeal, fontSize: 12),
+                        style: TextStyle(color: AppColors.brandTeal, fontSize: 14, fontWeight: FontWeight.w600),
                       ),
                     ),
                   ),
@@ -500,7 +551,7 @@ class _LoginFormState extends State<LoginForm> {
                         Expanded(
                           child: Text(
                             'Tu registro será revisado por un administrador de TouristMAR antes de aparecer en el mapa.',
-                            style: TextStyle(color: AppColors.slate400, fontSize: 12, height: 1.4),
+                            style: TextStyle(color: AppColors.slate400, fontSize: 13, height: 1.4),
                           ),
                         ),
                       ],
@@ -511,21 +562,35 @@ class _LoginFormState extends State<LoginForm> {
                   const SizedBox(height: 12),
                   Text(_error!, style: TextStyle(color: AppColors.errorRed, fontSize: 14)),
                 ],
+                const SizedBox(height: 20),
+                AppButton(
+                  variant: AppButtonVariant.primary,
+                  backgroundColor: _isBusiness ? AppColors.businessOrange : null,
+                  foregroundColor: _isBusiness ? Colors.white : null,
+                  onPressed: _isSubmitting ? null : _handleSubmit,
+                  child: Text(
+                    _isSubmitting
+                        ? (isRegister ? 'Creando cuenta...' : 'Iniciando sesión...')
+                        : (isRegister
+                            ? (_isBusiness ? 'Solicitar registro' : 'Crear cuenta')
+                            : (_isBusiness ? 'Acceder al panel' : 'Iniciar sesión')),
+                  ),
+                ),
                 // El login con Google es solo para visitantes: una empresa
                 // siempre entra con correo y contraseña.
                 if (!_isBusiness) ...[
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 16),
                   Row(
                     children: [
                       Expanded(child: Divider(color: AppColors.overlay(0.1))),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 12),
-                        child: Text('o continúa con Google', style: TextStyle(color: AppColors.slate500, fontSize: 12)),
+                        child: Text('o', style: AppTypography.caption),
                       ),
                       Expanded(child: Divider(color: AppColors.overlay(0.1))),
                     ],
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 16),
                   AppButton(
                     variant: AppButtonVariant.google,
                     onPressed: _handleGoogleOrBusinessClick,
@@ -540,33 +605,19 @@ class _LoginFormState extends State<LoginForm> {
                     ),
                   ),
                 ],
-                const SizedBox(height: 12),
-                AppButton(
-                  variant: AppButtonVariant.primary,
-                  backgroundColor: _isBusiness ? AppColors.businessOrange : null,
-                  foregroundColor: _isBusiness ? Colors.white : null,
-                  onPressed: _isSubmitting ? null : _handleSubmit,
-                  child: Text(
-                    _isSubmitting
-                        ? (isRegister ? 'Creando cuenta...' : 'Iniciando sesión...')
-                        : (isRegister
-                            ? (_isBusiness ? 'Solicitar registro' : 'Crear cuenta')
-                            : (_isBusiness ? 'Acceder al panel' : 'Iniciar sesión')),
-                  ),
-                ),
                 if (isRegister) ...[
                   const SizedBox(height: 10),
                   Center(
                     child: Wrap(
                       alignment: WrapAlignment.center,
                       children: [
-                        Text('Al crear tu cuenta aceptas el ', style: TextStyle(color: AppColors.slate400, fontSize: 13)),
+                        Text('Al crear tu cuenta aceptas el ', style: TextStyle(color: AppColors.slate400, fontSize: 14)),
                         GestureDetector(
                           key: const ValueKey('ver-aviso-privacidad'),
                           onTap: () => AvisoPrivacidadPage.abrir(context),
                           child: Text('aviso de privacidad',
                               style: TextStyle(
-                                  color: accentColor, fontSize: 13, decoration: TextDecoration.underline)),
+                                  color: accentColor, fontSize: 14, decoration: TextDecoration.underline)),
                         ),
                       ],
                     ),
@@ -634,7 +685,7 @@ class _LoginFormState extends State<LoginForm> {
                 child: TextButton.icon(
                   onPressed: () => setState(() => _screen = _Screen.credentials),
                   icon: Icon(Icons.arrow_back, size: 15, color: AppColors.slate400),
-                  label: Text('Volver', style: TextStyle(color: AppColors.slate400, fontSize: 13)),
+                  label: Text('Volver', style: TextStyle(color: AppColors.slate400, fontSize: 14)),
                 ),
               ),
               const SizedBox(height: 12),
