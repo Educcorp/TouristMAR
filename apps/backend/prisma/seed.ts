@@ -58,7 +58,9 @@ const lugares = [
     telefono: null,
     sitioWeb: null,
     horario: null,
-    portada: null,
+    // CC BY-SA 2.0, Comisión Mexicana de Filmaciones, vía Wikimedia Commons:
+    // https://commons.wikimedia.org/wiki/File:Playa_Miramar,_Colima_-_Miramar_beach_(31664973424).jpg
+    portada: 'https://upload.wikimedia.org/wikipedia/commons/7/71/Playa_Miramar%2C_Colima_-_Miramar_beach_%2831664973424%29.jpg',
     latitud: 19.1185,
     longitud: -104.3861,
   },
@@ -75,7 +77,9 @@ const lugares = [
     telefono: '+52 314 333 1388',
     sitioWeb: null,
     horario: 'Lunes a domingo, 8:00 a 17:00 (confirmar vigencia)',
-    portada: null,
+    // Foto real de la fachada (letrero "Juanito's" visible), vía Zona
+    // Turística: https://www.zonaturistica.com/restaurante/2108/juanitos-manzanillo.html
+    portada: 'https://www.zonaturistica.com/files/restaurantes/2108/R1_2108.jpg',
     latitud: 19.1149,
     longitud: -104.3465,
   },
@@ -89,7 +93,11 @@ const lugares = [
     telefono: null,
     sitioWeb: null,
     horario: null,
-    portada: null,
+    // Foto real de una mesa puesta con el plato grabado "Legazpi" — confirma
+    // que es este restaurante y no otro del resort. Vía En Primeur Club:
+    // https://www.enprimeurclub.com/restaurants/legazpi-restaurant-and-bar-manzanillo-restaurant
+    portada:
+      'https://cdn.enprimeurclub.com/storage/v1/object/public/images/restaurants/9eb5371d-1a27-4441-8ad1-7ca096bd9899/hero1.jpg',
     // Aproximado: Nominatim no tiene el restaurante como punto propio, esto
     // ubica la zona de Las Hadas/La Punta donde está el resort.
     latitud: 19.1008,
@@ -108,7 +116,10 @@ const lugares = [
     telefono: null,
     sitioWeb: 'https://www.barcelo.com/es-mx/hoteles/manzanillo/hotel-barcelo-karmina-palace-deluxe/',
     horario: null,
-    portada: null,
+    // CC BY-SA 3.0, Jack Borno, vía Wikimedia Commons (foto de 2006, el
+    // hotel pudo renovarse desde entonces):
+    // https://commons.wikimedia.org/wiki/File:Karmina_Palace_Pools_-_panoramio.jpg
+    portada: 'https://upload.wikimedia.org/wikipedia/commons/1/18/Karmina_Palace_Pools_-_panoramio.jpg',
     // Geocodificado: coincide con el punto que OpenStreetMap ya tiene
     // registrado para "Barceló Karmina Palace Deluxe".
     latitud: 19.1054,
@@ -125,7 +136,9 @@ const lugares = [
     telefono: null,
     sitioWeb: null,
     horario: null,
-    portada: null,
+    // Foto real de la fachada, vía Zona Turística:
+    // https://www.zonaturistica.com/hotel/5639/colonial-manzanillo.html
+    portada: 'https://www.zonaturistica.com/hotel_files/5639/F1_5639.jpg',
     // Geocodificado a partir de la dirección; queda a ~100m del Monumento al
     // Pez Vela, consistente con la referencia "a menos de 0.1 mi" encontrada.
     latitud: 19.0532,
@@ -180,7 +193,10 @@ const lugares = [
     telefono: null,
     sitioWeb: null,
     horario: null,
-    portada: null,
+    // CC BY-SA 3.0, Yaomautzin Ohtokani Olvera Lara, vía Wikimedia Commons
+    // (foto de 2007, la fuente/plaza pudo renovarse desde entonces):
+    // https://commons.wikimedia.org/wiki/File:Manzanillo_fuente.JPG
+    portada: 'https://upload.wikimedia.org/wikipedia/commons/3/32/Manzanillo_fuente.JPG',
     // Geocodificado: coincide con el punto que OpenStreetMap ya tiene
     // registrado para "Jardín Álvaro Obregón".
     latitud: 19.054,
@@ -270,7 +286,11 @@ const lugares = [
     telefono: null,
     sitioWeb: null,
     horario: null,
-    portada: null,
+    // Foto de su ficha en En Primeur Club (vista de alberca/palapa junto a
+    // la bahía, consistente con la zona de Las Hadas; sin letrero visible
+    // que lo confirme al 100%, pero es la foto que el propio directorio usa
+    // para este negocio): https://www.enprimeurclub.com/bars/coco-loco-manzanillo-bar
+    portada: 'https://cdn.enprimeurclub.com/storage/v1/object/public/images/bars/ff312bbd-d4df-4c15-9cfc-de05fadfa00a/hero1.jpg',
     // Aproximado: Nominatim no tiene el bar como punto propio, esto ubica la
     // zona de Las Hadas/La Punta.
     latitud: 19.1008,
