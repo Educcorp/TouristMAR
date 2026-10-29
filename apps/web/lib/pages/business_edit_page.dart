@@ -9,6 +9,7 @@ import '../services/image_picker_service.dart';
 import '../services/recorridos_service.dart';
 import '../services/session_storage.dart';
 import '../theme/app_theme.dart';
+import '../widgets/pagina_formulario.dart';
 import '../widgets/app_button.dart';
 import '../widgets/app_text_field.dart';
 import '../widgets/business/aviso_informacion_incompleta.dart';
@@ -49,21 +50,24 @@ class BusinessEditPage extends StatefulWidget {
 class _BusinessEditPageState extends State<BusinessEditPage> {
   final _formKey = GlobalKey<FormState>();
   late final _nameController = TextEditingController(text: widget.business.businessName);
+
   /// Categoría elegida en el desplegable; con "Otro", lo escrito va en
   /// [_categoryController].
   late String? _tipo = tipoNegocioInicial(widget.business.category, CategoriasService.respaldo);
-  late final _categoryController = TextEditingController(
-      text: _tipo == tipoNegocioOtro ? widget.business.category : '');
+  late final _categoryController =
+      TextEditingController(text: _tipo == tipoNegocioOtro ? widget.business.category : '');
   late final _costoController = TextEditingController(text: widget.business.costoPorPersona);
   late final _menuController = TextEditingController(text: widget.business.menu);
   late final _descriptionController = TextEditingController(text: widget.business.description);
   late final _addressController = TextEditingController(text: widget.business.address);
+
   /// Pin del negocio en el mapa (va junto a la dirección).
   late Coordenadas? _ubicacion = widget.business.latitud != null && widget.business.longitud != null
       ? Coordenadas(widget.business.latitud!, widget.business.longitud!)
       : null;
   late final _phoneController = TextEditingController(text: widget.business.phone);
   late final _websiteController = TextEditingController(text: widget.business.website);
+
   /// Horario elegido con el selector (null = no se ha tocado: se guarda el
   /// que ya tenía).
   String? _horario;
@@ -297,272 +301,261 @@ class _BusinessEditPageState extends State<BusinessEditPage> {
   }
 
   Widget _buildContenido(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.panelNavy,
-      body: SafeArea(
-        child: SizedBox.expand(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-            child: Center(
-              child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 720),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: TextButton.icon(
-                        onPressed: _salir,
-                        icon: Icon(Icons.arrow_back, size: 15, color: AppColors.slate400),
-                        label: Text('Volver a mi negocio', style: TextStyle(color: AppColors.slate400, fontSize: 13)),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      widget.obligatorio ? 'Completa la información de tu negocio' : 'Editar negocio',
-                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 24),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Actualiza la información visible a los visitantes en el mapa.',
-                      style: TextStyle(color: AppColors.slate400, fontSize: 14),
-                    ),
-                    if (widget.obligatorio) ...[
-                      const SizedBox(height: 16),
-                      _AvisoObligatorio(faltantes: widget.business.datosFaltantes),
-                    ],
-                    const SizedBox(height: 24),
-                    GestureDetector(
-                      onTap: _isSaving ? null : _changeCover,
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(18),
-                        child: SizedBox(
-                          height: 180,
-                          width: double.infinity,
-                          child: Stack(
-                            fit: StackFit.expand,
+    return PaginaFormulario(
+      volver: 'Volver a mi negocio',
+      onVolver: _salir,
+      titulo: widget.obligatorio ? 'Completa la información de tu negocio' : 'Editar negocio',
+      descripcion: 'Actualiza la información visible a los visitantes en el mapa.',
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (widget.obligatorio) ...[
+              _AvisoObligatorio(faltantes: widget.business.datosFaltantes),
+              const SizedBox(height: 24),
+            ],
+            GestureDetector(
+              onTap: _isSaving ? null : _changeCover,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(AppRadius.card),
+                child: SizedBox(
+                  height: 200,
+                  width: double.infinity,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      if (_pendingCoverBytes != null)
+                        Image.memory(_pendingCoverBytes!, fit: BoxFit.cover)
+                      else if (widget.business.coverImage.trim().isNotEmpty)
+                        CoverImage(source: widget.business.coverImage)
+                      else
+                        ColoredBox(color: AppColors.surfaceAlt),
+                      Positioned(
+                        right: 12,
+                        bottom: 12,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: AppColors.riel.withValues(alpha: 0.85),
+                            borderRadius: BorderRadius.circular(AppRadius.button),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
-                              if (_pendingCoverBytes != null)
-                                Image.memory(_pendingCoverBytes!, fit: BoxFit.cover)
-                              else if (widget.business.coverImage.trim().isNotEmpty)
-                                CoverImage(source: widget.business.coverImage)
-                              else
-                                ColoredBox(color: AppColors.surfaceAlt),
-                              DecoratedBox(decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.25))),
-                              Center(
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(Icons.camera_alt_outlined, color: Colors.white, size: 22),
-                                    const SizedBox(height: 6),
-                                    Text(
-                                      _pendingCoverBytes != null
-                                          ? 'Vista previa — se aplicará al guardar'
-                                          : 'Cambiar foto de portada',
-                                      style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
-                                    ),
-                                  ],
-                                ),
+                              const Icon(Icons.photo_camera_outlined, color: Colors.white, size: 18),
+                              const SizedBox(width: 6),
+                              Text(
+                                _pendingCoverBytes != null ? 'Vista previa: se aplicará al guardar' : 'Cambiar portada',
+                                style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
                               ),
                             ],
                           ),
                         ),
                       ),
-                    ),
-                    if (_pendingCoverBytes != null)
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: TextButton.icon(
-                          key: const ValueKey('ajustar-portada'),
-                          onPressed: _isSaving ? null : _ajustarPortada,
-                          icon: Icon(Icons.crop, size: 16, color: AppColors.businessOrange),
-                          label: Text('Ajustar encuadre', style: TextStyle(color: AppColors.businessOrange, fontSize: 13)),
-                        ),
-                      ),
-                    const SizedBox(height: 24),
-                    AppTextField(
-                      label: 'Nombre del negocio',
-                      icon: Icons.apartment,
-                      controller: _nameController,
-                      accentColor: AppColors.businessOrange,
-                      validator: (v) => _requiredValidator(v, 'Ingresa el nombre del negocio'),
-                    ),
-                    const SizedBox(height: 20),
-                    TipoNegocioField(
-                      etiqueta: 'Categoría',
-                      seleccionado: _tipo,
-                      onChanged: (v) => setState(() => _tipo = v),
-                      otroController: _categoryController,
-                      accentColor: AppColors.businessOrange,
-                    ),
-                    const SizedBox(height: 20),
-                    Text('Descripción', style: TextStyle(color: AppColors.slate300, fontSize: 14)),
-                    const SizedBox(height: 8),
-                    TextFormField(
-                      controller: _descriptionController,
-                      maxLength: 350,
-                      maxLines: 4,
-                      onChanged: (_) => setState(() {}),
-                      validator: (v) => _requiredValidator(v, 'Describe brevemente tu negocio'),
-                      style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
-                      decoration: InputDecoration(
-                        hintText: 'Describe tu negocio o lugar turístico…',
-                        hintStyle: TextStyle(color: AppColors.slate500),
-                        filled: true,
-                        fillColor: AppColors.panelNavySoft,
-                        contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
-                        counterStyle: TextStyle(color: AppColors.slate500, fontSize: 12),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.overlay(0.1))),
-                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.overlay(0.1))),
-                        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.businessOrange)),
-                        errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.errorRed)),
-                        focusedErrorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.errorRed)),
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.all(20),
-                      margin: const EdgeInsets.only(top: 8),
-                      decoration: BoxDecoration(border: Border(top: BorderSide(color: AppColors.overlay(0.08)))),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Información de contacto',
-                            style: AppTypography.h3,
-                          ),
-                          const SizedBox(height: 16),
-                          AppTextField(
-                            label: 'Dirección',
-                            icon: Icons.place_outlined,
-                            controller: _addressController,
-                            hintText: 'Calle, número, colonia…',
-                            accentColor: AppColors.businessOrange,
-                            validator: (v) => _requiredValidator(v, 'Ingresa la dirección'),
-                          ),
-                          const SizedBox(height: 16),
-                          CampoCoordenadas(
-                            lugar: _nameController.text.trim().isEmpty ? 'tu negocio' : _nameController.text.trim(),
-                            inicial: _ubicacion,
-                            acento: AppColors.businessOrange,
-                            habilitado: !_isSaving,
-                            marcarEnMapa: true,
-                            onChanged: (c) => setState(() => _ubicacion = c),
-                            onDireccionSugerida: (direccion) {
-                              if (_addressController.text.trim().isEmpty) {
-                                setState(() => _addressController.text = direccion);
-                              }
-                            },
-                          ),
-                          if (!_recorridoNoDisponible) ...[
-                            const SizedBox(height: 16),
-                            SolicitudRecorridoCard(
-                              estado: _recorrido,
-                              tienePin: _ubicacion != null,
-                              pinGuardado: _pinGuardado,
-                              ocupado: _isSaving,
-                              onSolicitar: () => _save(solicitarRecorrido: true),
-                            ),
-                          ],
-                          const SizedBox(height: 16),
-                          AppTextField(
-                            label: 'Teléfono',
-                            icon: Icons.phone_outlined,
-                            controller: _phoneController,
-                            hintText: '+52 314 000 0000',
-                            keyboardType: TextInputType.phone,
-                            accentColor: AppColors.businessOrange,
-                            validator: _phoneValidator,
-                          ),
-                          const SizedBox(height: 16),
-                          AppTextField(
-                            label: 'Sitio web',
-                            icon: Icons.language,
-                            controller: _websiteController,
-                            hintText: 'miweb.com.mx',
-                            keyboardType: TextInputType.url,
-                            accentColor: AppColors.businessOrange,
-                            validator: _websiteValidator,
-                          ),
-                          const SizedBox(height: 16),
-                          HorarioField(
-                            inicial: widget.business.hours,
-                            acento: AppColors.businessOrange,
-                            habilitado: !_isSaving,
-                            // Fuera del modo obligatorio se acepta el horario
-                            // escrito a mano de antes mientras no se cambie.
-                            aceptarAnterior: !widget.obligatorio,
-                            onChanged: (v) => _horario = v,
-                          ),
-                          const SizedBox(height: 24),
-                          Text('Precios y menú (opcional)', style: AppTypography.h3),
-                          const SizedBox(height: 16),
-                          AppTextField(
-                            fieldKey: const ValueKey('costo-field'),
-                            label: 'Costo por persona',
-                            icon: Icons.payments_outlined,
-                            controller: _costoController,
-                            hintText: r'Ej. $150 – $300 MXN',
-                            accentColor: AppColors.businessOrange,
-                            validator: (v) => (v ?? '').trim().length > 60 ? 'Máximo 60 caracteres' : null,
-                          ),
-                          const SizedBox(height: 16),
-                          Text('Menú', style: TextStyle(color: AppColors.slate300, fontSize: 14)),
-                          const SizedBox(height: 8),
-                          TextFormField(
-                            key: const ValueKey('menu-field'),
-                            controller: _menuController,
-                            maxLength: 2000,
-                            minLines: 2,
-                            maxLines: 6,
-                            style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
-                            decoration: InputDecoration(
-                              hintText: 'Escribe tus platillos o pega la liga a tu menú (PDF o página)',
-                              hintStyle: TextStyle(color: AppColors.slate500),
-                              filled: true,
-                              fillColor: AppColors.panelNavySoft,
-                              contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
-                              counterStyle: TextStyle(color: AppColors.slate500, fontSize: 12),
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.overlay(0.1))),
-                              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.overlay(0.1))),
-                              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.businessOrange)),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (_error != null) ...[
-                      const SizedBox(height: 12),
-                      Text(_error!, style: TextStyle(color: AppColors.errorRed, fontSize: 13)),
                     ],
-                    const SizedBox(height: 20),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: AppButton(
-                            variant: AppButtonVariant.ghost,
-                            onPressed: _salir,
-                            child: const Text('Cancelar'),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: AppButton(
-                            backgroundColor: AppColors.businessOrange,
-                            foregroundColor: Colors.white,
-                            onPressed: _isSaving ? null : _save,
-                            child: Text(_isSaving ? 'Guardando...' : 'Guardar cambios'),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),
+            if (_pendingCoverBytes != null)
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  key: const ValueKey('ajustar-portada'),
+                  onPressed: _isSaving ? null : _ajustarPortada,
+                  icon: Icon(Icons.crop, size: 16, color: AppColors.businessOrange),
+                  label: Text('Ajustar encuadre', style: TextStyle(color: AppColors.businessOrange, fontSize: 14)),
+                ),
+              ),
+            const SizedBox(height: 24),
+            AppTextField(
+              label: 'Nombre del negocio',
+              icon: Icons.apartment,
+              controller: _nameController,
+              accentColor: AppColors.businessOrange,
+              validator: (v) => _requiredValidator(v, 'Ingresa el nombre del negocio'),
             ),
-          ),
+            const SizedBox(height: 20),
+            TipoNegocioField(
+              etiqueta: 'Categoría',
+              seleccionado: _tipo,
+              onChanged: (v) => setState(() => _tipo = v),
+              otroController: _categoryController,
+              accentColor: AppColors.businessOrange,
+            ),
+            const SizedBox(height: 20),
+            Text('Descripción', style: TextStyle(color: AppColors.slate300, fontSize: 14)),
+            const SizedBox(height: 8),
+            TextFormField(
+              controller: _descriptionController,
+              maxLength: 350,
+              maxLines: 4,
+              onChanged: (_) => setState(() {}),
+              validator: (v) => _requiredValidator(v, 'Describe brevemente tu negocio'),
+              style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
+              decoration: InputDecoration(
+                hintText: 'Describe tu negocio o lugar turístico…',
+                hintStyle: TextStyle(color: AppColors.slate500),
+                filled: true,
+                fillColor: AppColors.panelNavySoft,
+                contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
+                counterStyle: TextStyle(color: AppColors.slate500, fontSize: 13),
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.overlay(0.1))),
+                enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.overlay(0.1))),
+                focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.businessOrange)),
+                errorBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.errorRed)),
+                focusedErrorBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.errorRed)),
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.only(top: 24),
+              margin: const EdgeInsets.only(top: 8),
+              decoration: BoxDecoration(border: Border(top: BorderSide(color: AppColors.borderSubtle))),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Información de contacto',
+                    style: AppTypography.h3,
+                  ),
+                  const SizedBox(height: 16),
+                  AppTextField(
+                    label: 'Dirección',
+                    icon: Icons.place_outlined,
+                    controller: _addressController,
+                    hintText: 'Calle, número, colonia…',
+                    accentColor: AppColors.businessOrange,
+                    validator: (v) => _requiredValidator(v, 'Ingresa la dirección'),
+                  ),
+                  const SizedBox(height: 16),
+                  CampoCoordenadas(
+                    lugar: _nameController.text.trim().isEmpty ? 'tu negocio' : _nameController.text.trim(),
+                    inicial: _ubicacion,
+                    acento: AppColors.businessOrange,
+                    habilitado: !_isSaving,
+                    marcarEnMapa: true,
+                    onChanged: (c) => setState(() => _ubicacion = c),
+                    onDireccionSugerida: (direccion) {
+                      if (_addressController.text.trim().isEmpty) {
+                        setState(() => _addressController.text = direccion);
+                      }
+                    },
+                  ),
+                  if (!_recorridoNoDisponible) ...[
+                    const SizedBox(height: 16),
+                    SolicitudRecorridoCard(
+                      estado: _recorrido,
+                      tienePin: _ubicacion != null,
+                      pinGuardado: _pinGuardado,
+                      ocupado: _isSaving,
+                      onSolicitar: () => _save(solicitarRecorrido: true),
+                    ),
+                  ],
+                  const SizedBox(height: 16),
+                  AppTextField(
+                    label: 'Teléfono',
+                    icon: Icons.phone_outlined,
+                    controller: _phoneController,
+                    hintText: '+52 314 000 0000',
+                    keyboardType: TextInputType.phone,
+                    accentColor: AppColors.businessOrange,
+                    validator: _phoneValidator,
+                  ),
+                  const SizedBox(height: 16),
+                  AppTextField(
+                    label: 'Sitio web',
+                    icon: Icons.language,
+                    controller: _websiteController,
+                    hintText: 'miweb.com.mx',
+                    keyboardType: TextInputType.url,
+                    accentColor: AppColors.businessOrange,
+                    validator: _websiteValidator,
+                  ),
+                  const SizedBox(height: 16),
+                  HorarioField(
+                    inicial: widget.business.hours,
+                    acento: AppColors.businessOrange,
+                    habilitado: !_isSaving,
+                    // Fuera del modo obligatorio se acepta el horario
+                    // escrito a mano de antes mientras no se cambie.
+                    aceptarAnterior: !widget.obligatorio,
+                    onChanged: (v) => _horario = v,
+                  ),
+                  const SizedBox(height: 24),
+                  Text('Precios y menú (opcional)', style: AppTypography.h3),
+                  const SizedBox(height: 16),
+                  AppTextField(
+                    fieldKey: const ValueKey('costo-field'),
+                    label: 'Costo por persona',
+                    icon: Icons.payments_outlined,
+                    controller: _costoController,
+                    hintText: r'Ej. $150 – $300 MXN',
+                    accentColor: AppColors.businessOrange,
+                    validator: (v) => (v ?? '').trim().length > 60 ? 'Máximo 60 caracteres' : null,
+                  ),
+                  const SizedBox(height: 16),
+                  Text('Menú', style: TextStyle(color: AppColors.slate300, fontSize: 14)),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    key: const ValueKey('menu-field'),
+                    controller: _menuController,
+                    maxLength: 2000,
+                    minLines: 2,
+                    maxLines: 6,
+                    style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
+                    decoration: InputDecoration(
+                      hintText: 'Escribe tus platillos o pega la liga a tu menú (PDF o página)',
+                      hintStyle: TextStyle(color: AppColors.slate500),
+                      filled: true,
+                      fillColor: AppColors.panelNavySoft,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
+                      counterStyle: TextStyle(color: AppColors.slate500, fontSize: 13),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(color: AppColors.overlay(0.1))),
+                      enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(color: AppColors.overlay(0.1))),
+                      focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(color: AppColors.businessOrange)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (_error != null) ...[
+              const SizedBox(height: 12),
+              Text(_error!, style: TextStyle(color: AppColors.errorRed, fontSize: 14)),
+            ],
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(
+                  child: AppButton(
+                    variant: AppButtonVariant.ghost,
+                    onPressed: _salir,
+                    child: const Text('Cancelar'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: AppButton(
+                    backgroundColor: AppColors.businessOrange,
+                    foregroundColor: Colors.white,
+                    onPressed: _isSaving ? null : _save,
+                    child: Text(_isSaving ? 'Guardando...' : 'Guardar cambios'),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );
@@ -596,7 +589,7 @@ class _AvisoObligatorio extends StatelessWidget {
               faltantes.isEmpty
                   ? 'Revisa tu información y guarda para continuar.'
                   : 'Para continuar completa: ${faltantes.join(', ')}.',
-              style: TextStyle(color: AppColors.textPrimary, fontSize: 13, height: 1.35),
+              style: TextStyle(color: AppColors.textPrimary, fontSize: 14, height: 1.35),
             ),
           ),
         ],

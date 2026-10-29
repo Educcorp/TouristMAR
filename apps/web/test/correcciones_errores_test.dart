@@ -261,7 +261,7 @@ void main() {
       await tester.pumpWidget(_anfitrion(() => EditProfilePage(profile: perfil, authService: servicio)));
       await _tocar(tester, find.text('Abrir'));
       await _tocar(tester, find.text('Cambiar foto'));
-      expect(find.text('Vista previa — se aplicará al guardar'), findsOneWidget);
+      expect(find.text('Vista previa: se aplicará al guardar'), findsOneWidget);
 
       // Error 5: cambiar de tema con la foto sin guardar no la aplica.
       ThemeController.toggle();
@@ -276,7 +276,7 @@ void main() {
 
       // Error 4: al volver a "Editar perfil" ya no aparece la foto descartada.
       await _tocar(tester, find.text('Abrir'));
-      expect(find.text('Vista previa — se aplicará al guardar'), findsNothing);
+      expect(find.text('Vista previa: se aplicará al guardar'), findsNothing);
     });
 
     testWidgets('al tocar "Guardar cambios" sí se sube y se aplica', (tester) async {
@@ -342,8 +342,8 @@ void main() {
 
       await tester.pumpWidget(_anfitrion(() => BusinessEditPage(business: negocio, authService: servicio)));
       await _tocar(tester, find.text('Abrir'));
-      await _tocar(tester, find.text('Cambiar foto de portada'));
-      expect(find.text('Vista previa — se aplicará al guardar'), findsOneWidget);
+      await _tocar(tester, find.text('Cambiar portada'));
+      expect(find.text('Vista previa: se aplicará al guardar'), findsOneWidget);
 
       await _tocar(tester, find.text('Cancelar'));
       expect(negocio.coverImage, _portadaOriginal);
@@ -361,7 +361,7 @@ void main() {
 
       await tester.pumpWidget(_anfitrion(() => BusinessEditPage(business: negocio, authService: servicio)));
       await _tocar(tester, find.text('Abrir'));
-      await _tocar(tester, find.text('Cambiar foto de portada'));
+      await _tocar(tester, find.text('Cambiar portada'));
       await _tocar(tester, find.text('Guardar cambios'));
 
       expect(peticiones.where((p) => p.startsWith('POST') && p.endsWith('/negocios/n-1/avatar')), hasLength(1));

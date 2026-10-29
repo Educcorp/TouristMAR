@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../models/lugar.dart';
 import '../models/business_profile.dart';
 import '../theme/app_theme.dart';
-import '../theme/breakpoints.dart';
 import '../services/resenas_service.dart';
 import '../widgets/cover_image.dart';
 import '../widgets/resenas/resenas_widgets.dart';
+import '../widgets/tablero_cifras.dart';
 
 /// Contenido de la sección "Dashboard" embebido en [BusinessShell] — sin
 /// Scaffold/AppBar propio, igual que las páginas del panel admin.
@@ -96,7 +97,7 @@ class _BusinessDashboardContentState extends State<BusinessDashboardContent> {
                         onTap: widget.onOpenReviews,
                         child: Text(
                           'Ver todas',
-                          style: TextStyle(color: AppColors.businessOrange, fontSize: 13, fontWeight: FontWeight.w500),
+                          style: TextStyle(color: AppColors.businessOrange, fontSize: 14, fontWeight: FontWeight.w500),
                         ),
                       ),
                     ],
@@ -113,7 +114,35 @@ class _BusinessDashboardContentState extends State<BusinessDashboardContent> {
     );
   }
 
+  /// El negocio como casco: foto, franja del color de su categoría y datos.
+  /// En pantallas anchas la foto va a la izquierda en 16:9 (a lo ancho de
+  /// la columna recortaba la portada, sobre todo los logos).
   Widget _buildHero(BusinessProfile business) {
+    final cat = CategoriaLugarDetector.detectar(business.category);
+    final datos = Padding(
+      padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(business.businessName, style: AppTypography.h1.copyWith(fontSize: 28)),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              Icon(cat.icon, size: 18, color: cat.color),
+              const SizedBox(width: 6),
+              Flexible(child: Text(business.category, style: AppTypography.bodySmall.copyWith(fontSize: 15))),
+              if (business.verified) ...[
+                const SizedBox(width: 12),
+                Icon(Icons.verified_outlined, size: 18, color: AppColors.turquesaTexto),
+                const SizedBox(width: 4),
+                Text('Verificado', style: AppTypography.bodySmall.copyWith(color: AppColors.turquesaTexto)),
+              ],
+            ],
+          ),
+        ],
+      ),
+    );
     return ClipRRect(
       borderRadius: BorderRadius.circular(AppRadius.card),
       child: DecoratedBox(
@@ -122,34 +151,35 @@ class _BusinessDashboardContentState extends State<BusinessDashboardContent> {
           border: Border.all(color: AppColors.borderSubtle),
           borderRadius: BorderRadius.circular(AppRadius.card),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            SizedBox(height: 150, child: CoverImage(source: business.coverImage)),
-            Container(height: kFranja, color: AppColors.amarillo),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(18, 14, 18, 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(business.businessName, style: AppTypography.h1.copyWith(fontSize: 28)),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Flexible(child: Text(business.category, style: AppTypography.bodySmall.copyWith(fontSize: 15))),
-                      if (business.verified) ...[
-                        const SizedBox(width: 10),
-                        Icon(Icons.verified, size: 18, color: AppColors.turquesaTexto),
-                        const SizedBox(width: 4),
-                        Text('Verificado', style: AppTypography.bodySmall.copyWith(color: AppColors.turquesaTexto)),
-                      ],
-                    ],
-                  ),
-                ],
+        child: LayoutBuilder(builder: (context, constraints) {
+          if (constraints.maxWidth < 640) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                AspectRatio(aspectRatio: 16 / 9, child: CoverImage(source: business.coverImage)),
+                Container(height: kFranja, color: cat.esmalte),
+                datos,
+              ],
+            );
+          }
+          // La franja sigue siendo horizontal (la línea de flotación bajo la
+          // foto), no una raya lateral.
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              SizedBox(
+                width: 320,
+                child: Column(
+                  children: [
+                    AspectRatio(aspectRatio: 16 / 9, child: CoverImage(source: business.coverImage)),
+                    Container(height: kFranja, color: cat.esmalte),
+                  ],
+                ),
               ),
-            ),
-          ],
-        ),
+              Expanded(child: datos),
+            ],
+          );
+        }),
       ),
     );
   }
@@ -206,54 +236,14 @@ class _BusinessDashboardContentState extends State<BusinessDashboardContent> {
     final calificacion = business.totalReviews == 0
         ? ('—', 'Sin reseñas todavía')
         : (business.rating.toStringAsFixed(1), 'Calificación · ${business.totalReviews} ${business.totalReviews == 1 ? 'reseña' : 'reseñas'}');
-    final celdas = [
+    return TableroCifras(celdas: [
       // Veces que abrieron la ficha del negocio en los últimos 30 días (un
       // mismo visitante cuenta una vez al día).
-      (Icons.people_outline, '${business.monthlyVisits}', 'Visitas a tu ficha (30 días)'),
-      (Icons.star_outline, calificacion.$1, calificacion.$2),
-      (Icons.forum_outlined, '${business.newReviews}', 'Reseñas del mes'),
-      (Icons.favorite_border, '${business.favorites}', 'En favoritos'),
-    ];
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final columnas = Breakpoints.isCompact(constraints.maxWidth) ? 2 : 4;
-        final ancho = constraints.maxWidth / columnas;
-        return Container(
-          decoration: BoxDecoration(
-            color: AppColors.cubierta,
-            borderRadius: BorderRadius.circular(AppRadius.card),
-            border: Border.all(color: AppColors.borderSubtle),
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: Wrap(
-            children: [
-              for (var i = 0; i < celdas.length; i++)
-                Container(
-                  width: ancho - (i % columnas == columnas - 1 ? 2 : 0),
-                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-                  decoration: BoxDecoration(
-                    border: Border(
-                      right: i % columnas == columnas - 1 ? BorderSide.none : BorderSide(color: AppColors.borderSubtle),
-                      top: i >= columnas ? BorderSide(color: AppColors.borderSubtle) : BorderSide.none,
-                    ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(celdas[i].$1, size: 20, color: AppColors.slate400),
-                      const SizedBox(height: 8),
-                      Text(celdas[i].$2, style: AppTypography.cifra(size: 32)),
-                      const SizedBox(height: 2),
-                      Text(celdas[i].$3, style: AppTypography.caption.copyWith(color: AppColors.slate400)),
-                    ],
-                  ),
-                ),
-            ],
-          ),
-        );
-      },
-    );
+      CeldaCifra(Icons.people_outline, '${business.monthlyVisits}', 'Visitas a tu ficha · 30 días'),
+      CeldaCifra(Icons.star_outline, calificacion.$1, calificacion.$2),
+      CeldaCifra(Icons.forum_outlined, '${business.newReviews}', 'Reseñas del mes'),
+      CeldaCifra(Icons.favorite_border, '${business.favorites}', 'En favoritos'),
+    ]);
   }
 
   Widget _buildManageGrid() {
