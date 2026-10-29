@@ -7,12 +7,21 @@ const prisma = new PrismaClient()
 /// creciendo. Cada uno trae en un comentario de dónde sale cada dato que se
 /// pudo confirmar — varios campos quedan en null a propósito porque la
 /// búsqueda no encontró una fuente confiable para ellos (mejor vacío que un
-/// dato inventado): coordenadas exactas (se
-/// recomienda ponerlas a mano desde "Elegir en el mapa" en el panel admin,
-/// que ya sugiere la dirección aproximada al soltar el pin), teléfono/sitio
-/// web/horario cuando las fuentes se contradecían entre sí, y portada
-/// cuando no se encontró una foto de uso libre que de verdad fuera de ese
-/// lugar.
+/// dato inventado): teléfono/sitio web/horario cuando las fuentes se
+/// contradecían entre sí, y portada cuando no se encontró una foto de uso
+/// libre que de verdad fuera de ese lugar.
+///
+/// Las coordenadas son necesarias: `GET /api/lugares` (el mapa y los
+/// "Destacados" del inicio del visitante) solo muestra negocios aprobados
+/// CON latitud/longitud (ver `listLugaresPublicos` en lugares.service.ts) —
+/// sin coordenadas, un lugar aprobado existe en la base pero no aparece en
+/// ninguna pantalla pública. Se geocodificaron las direcciones de arriba con
+/// Nominatim/OpenStreetMap (mismo proveedor que ya usa el mapa de la app);
+/// donde el resultado no coincidía con lo que decían las fuentes (Cerro de
+/// la Cruz) o no hubo ningún resultado (Iguanario Archundia) se dejó la
+/// coordenada en null en vez de usar un punto dudoso — se recomienda
+/// ponerlas a mano desde "Elegir en el mapa" en el panel admin, que ya
+/// sugiere la dirección aproximada al soltar el pin.
 ///
 /// No se pudo armar un "Club de playa" con datos verificables: lo más
 /// cercano (Sun Club/Club de Playa en Plaza Las Glorias, Pata Salada Beach
@@ -33,8 +42,9 @@ const lugares = [
     sitioWeb: null,
     horario: null,
     portada: 'assets/images/place-playa-audiencia.jpg',
-    latitud: null,
-    longitud: null,
+    // Geocodificado (Nominatim/OpenStreetMap) a partir de la dirección de arriba.
+    latitud: 19.1047,
+    longitud: -104.3501,
   },
   {
     nombre: 'Playa Miramar',
@@ -49,8 +59,8 @@ const lugares = [
     sitioWeb: null,
     horario: null,
     portada: null,
-    latitud: null,
-    longitud: null,
+    latitud: 19.1185,
+    longitud: -104.3861,
   },
 
   // --- Restaurante -----------------------------------------------------------
@@ -66,8 +76,8 @@ const lugares = [
     sitioWeb: null,
     horario: 'Lunes a domingo, 8:00 a 17:00 (confirmar vigencia)',
     portada: null,
-    latitud: null,
-    longitud: null,
+    latitud: 19.1149,
+    longitud: -104.3465,
   },
   {
     nombre: 'Legazpi Restaurant & Bar',
@@ -80,8 +90,10 @@ const lugares = [
     sitioWeb: null,
     horario: null,
     portada: null,
-    latitud: null,
-    longitud: null,
+    // Aproximado: Nominatim no tiene el restaurante como punto propio, esto
+    // ubica la zona de Las Hadas/La Punta donde está el resort.
+    latitud: 19.1008,
+    longitud: -104.3506,
   },
 
   // --- Hotel -----------------------------------------------------------------
@@ -97,8 +109,10 @@ const lugares = [
     sitioWeb: 'https://www.barcelo.com/es-mx/hoteles/manzanillo/hotel-barcelo-karmina-palace-deluxe/',
     horario: null,
     portada: null,
-    latitud: null,
-    longitud: null,
+    // Geocodificado: coincide con el punto que OpenStreetMap ya tiene
+    // registrado para "Barceló Karmina Palace Deluxe".
+    latitud: 19.1054,
+    longitud: -104.3421,
   },
   {
     nombre: 'Hotel Colonial',
@@ -112,8 +126,10 @@ const lugares = [
     sitioWeb: null,
     horario: null,
     portada: null,
-    latitud: null,
-    longitud: null,
+    // Geocodificado a partir de la dirección; queda a ~100m del Monumento al
+    // Pez Vela, consistente con la referencia "a menos de 0.1 mi" encontrada.
+    latitud: 19.0532,
+    longitud: -104.3176,
   },
 
   // --- Mirador ---------------------------------------------------------------
@@ -128,8 +144,9 @@ const lugares = [
     sitioWeb: null,
     horario: null,
     portada: 'assets/images/place-cerro-vigia.jpg',
-    latitud: null,
-    longitud: null,
+    // Geocodificado a partir de la dirección (Calle 21 de Marzo).
+    latitud: 19.0499,
+    longitud: -104.3174,
   },
   {
     nombre: 'Cerro de la Cruz',
@@ -143,6 +160,11 @@ const lugares = [
     sitioWeb: null,
     horario: null,
     portada: null,
+    // Sin coordenadas: lo único que encontró el geocodificador para "Cerro de
+    // la Cruz" fue un cerro del mismo nombre en El Colomo, a varios
+    // kilómetros del Centro Histórico — no coincide con las fuentes, que lo
+    // describen junto al Mirador El Vigía. Mejor dejarlo en blanco que un pin
+    // en el lugar equivocado; ponerlo a mano desde "Elegir en el mapa".
     latitud: null,
     longitud: null,
   },
@@ -159,8 +181,10 @@ const lugares = [
     sitioWeb: null,
     horario: null,
     portada: null,
-    latitud: null,
-    longitud: null,
+    // Geocodificado: coincide con el punto que OpenStreetMap ya tiene
+    // registrado para "Jardín Álvaro Obregón".
+    latitud: 19.054,
+    longitud: -104.3169,
   },
   {
     nombre: 'Monumento al Pez Vela',
@@ -196,8 +220,11 @@ const lugares = [
     sitioWeb: null,
     horario: null,
     portada: 'assets/images/place-laguna-cuyutlan.jpg',
-    latitud: null,
-    longitud: null,
+    // Aproximado: geocodificado al pueblo de Cuyutlán — las fuentes ubican
+    // el centro ecológico entre 3 y 4 km de ahí, pero no coinciden en
+    // dirección exacta.
+    latitud: 18.92,
+    longitud: -104.0696,
   },
   {
     nombre: 'Iguanario Archundia',
@@ -212,6 +239,9 @@ const lugares = [
     sitioWeb: null,
     horario: null,
     portada: null,
+    // Sin coordenadas: el geocodificador no encontró este lugar (es un
+    // sitio pequeño, sin punto propio en OpenStreetMap). Ponerlas a mano
+    // desde "Elegir en el mapa" en el panel admin.
     latitud: null,
     longitud: null,
   },
@@ -228,8 +258,9 @@ const lugares = [
     sitioWeb: null,
     horario: null,
     portada: null,
-    latitud: null,
-    longitud: null,
+    // Geocodificado a partir de la dirección (boulevard costero).
+    latitud: 19.1195,
+    longitud: -104.3841,
   },
   {
     nombre: 'Coco Loco',
@@ -240,8 +271,10 @@ const lugares = [
     sitioWeb: null,
     horario: null,
     portada: null,
-    latitud: null,
-    longitud: null,
+    // Aproximado: Nominatim no tiene el bar como punto propio, esto ubica la
+    // zona de Las Hadas/La Punta.
+    latitud: 19.1008,
+    longitud: -104.3506,
   },
 ] as const
 
