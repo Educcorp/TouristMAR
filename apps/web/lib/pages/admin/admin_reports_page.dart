@@ -5,10 +5,9 @@ import '../../models/lugar.dart';
 import '../../services/auth_service.dart';
 import '../../services/session_storage.dart';
 import '../../theme/app_theme.dart';
-import '../../theme/breakpoints.dart';
+import '../../widgets/tablero_cifras.dart';
 import '../../widgets/admin/ds_card.dart';
 import '../../widgets/admin/ds_states.dart';
-import '../../widgets/admin/ds_stat_card.dart';
 
 enum _DateRange { d30, d90, d365, all }
 
@@ -105,7 +104,7 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _StatsRow(stats: stats),
+        _StatsRow(stats: stats, negocios: _negocios),
         const SizedBox(height: AppSpacing.xl),
         LayoutBuilder(
           builder: (context, constraints) {
@@ -142,33 +141,23 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
 
 class _StatsRow extends StatelessWidget {
   final AdminStats stats;
-  const _StatsRow({required this.stats});
+  final List<NegocioSummary> negocios;
+  const _StatsRow({required this.stats, required this.negocios});
 
   @override
   Widget build(BuildContext context) {
-    final items = [
-      (Icons.groups_outlined, stats.turistas, 'Visitantes registrados', AppColors.brandTeal),
-      (Icons.apartment, stats.negociosActivos, 'Negocios activos', AppColors.businessOrange),
-      (Icons.report_gmailerrorred_outlined, stats.negociosPendientes, 'Solicitudes pendientes', AppColors.amber),
-      (Icons.store_outlined, stats.negociosTotal, 'Negocios totales', AppColors.emerald),
-    ];
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final compact = Breakpoints.isCompact(constraints.maxWidth);
-        return GridView.count(
-          crossAxisCount: compact ? 2 : 4,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          mainAxisSpacing: AppSpacing.md,
-          crossAxisSpacing: AppSpacing.md,
-          childAspectRatio: compact ? 1.05 : 1.5,
-          children: items.map((s) {
-            final (icon, value, label, color) = s;
-            return DsStatCard(icon: icon, value: value, label: label, accent: color);
-          }).toList(),
-        );
-      },
-    );
+    // Lo que el inicio no dice: de las solicitudes ya revisadas, cuántas se
+    // aprobaron.
+    final aprobados = negocios.where((n) => n.aprobado).length;
+    final revisados = aprobados + negocios.where((n) => n.rechazado).length;
+    final tasa = revisados == 0 ? '—' : '${(aprobados * 100 / revisados).round()} %';
+    return TableroCifras(celdas: [
+      CeldaCifra(Icons.groups_outlined, '${stats.turistas}', 'Visitantes registrados'),
+      CeldaCifra(Icons.apartment, '${stats.negociosActivos}', 'Negocios activos'),
+      CeldaCifra(Icons.pending_actions_outlined, '${stats.negociosPendientes}', 'Solicitudes pendientes',
+          alerta: stats.negociosPendientes > 0),
+      CeldaCifra(Icons.fact_check_outlined, tasa, 'Solicitudes aprobadas'),
+    ]);
   }
 }
 
@@ -230,7 +219,7 @@ class _SinDatos extends StatelessWidget {
   @override
   Widget build(BuildContext context) => SizedBox(
         height: 120,
-        child: Center(child: Text(texto, style: TextStyle(color: AppColors.slate400, fontSize: 13))),
+        child: Center(child: Text(texto, style: TextStyle(color: AppColors.slate400, fontSize: 14))),
       );
 }
 
@@ -450,7 +439,7 @@ class _SolicitudesPorMesCard extends StatelessWidget {
     final maximo = conteo.isEmpty ? 0 : conteo.reduce((a, b) => a > b ? a : b);
     final intervalo = maximo <= 5 ? 1.0 : (maximo / 4).ceilToDouble();
     final conAnio = periodos.isNotEmpty && periodos.first.year != periodos.last.year;
-    final estiloCifra = TextStyle(color: AppColors.tinta, fontSize: 12, fontWeight: FontWeight.w700);
+    final estiloCifra = TextStyle(color: AppColors.tinta, fontSize: 13, fontWeight: FontWeight.w700);
 
     return _ChartShell(
       title: _porSemana ? 'Solicitudes por semana' : 'Solicitudes por mes',
@@ -563,7 +552,7 @@ class _RangeSelector extends StatelessWidget {
                 e.value,
                 style: TextStyle(
                   color: selected ? AppColors.casco : AppColors.slate300,
-                  fontSize: 12,
+                  fontSize: 13,
                   fontWeight: FontWeight.w600,
                 ),
               ),

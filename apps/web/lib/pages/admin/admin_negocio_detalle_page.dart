@@ -603,7 +603,7 @@ class _Dato extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 13, color: AppColors.slate500),
+        Icon(icon, size: 15, color: AppColors.slate500),
         const SizedBox(width: 6),
         Flexible(child: Text(texto, style: AppTypography.bodySmall, overflow: TextOverflow.ellipsis)),
       ],
@@ -693,7 +693,7 @@ class _PortadaAdmin extends StatelessWidget {
               Flexible(
                 child: Text(
                   'Vista previa — se aplicará al guardar',
-                  style: TextStyle(color: AppColors.amber, fontSize: 12),
+                  style: TextStyle(color: AppColors.amber, fontSize: 13),
                 ),
               ),
             ],
@@ -735,7 +735,7 @@ class _SeccionContenido extends StatelessWidget {
           Text(descripcion, style: AppTypography.bodySmall),
           const SizedBox(height: AppSpacing.md),
           if (items.isEmpty)
-            Text(vacio, style: TextStyle(color: AppColors.slate500, fontSize: 13))
+            Text(vacio, style: TextStyle(color: AppColors.slate500, fontSize: 14))
           else
             for (final item in items)
               Padding(
@@ -747,7 +747,7 @@ class _SeccionContenido extends StatelessWidget {
                     Expanded(
                       child: Text(
                         item.titulo.isEmpty ? item.nombre : '${item.titulo} · ${item.nombre}',
-                        style: TextStyle(color: AppColors.textPrimary, fontSize: 13),
+                        style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),

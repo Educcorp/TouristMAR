@@ -339,12 +339,14 @@ class _ResumenExperiencias extends StatelessWidget {
       (visibles: final v, total: final t) =>
         ('Activa', AppColors.emerald, '$v de $t ${_unidad(tipo, t)} visibles en la app.'),
     };
+    // Fondo neutro: el color de la experiencia ya va en su ícono, y el
+    // fondo tintado hacía que "Sin configurar" en rojo pareciera un error.
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        color: info.color.withValues(alpha: 0.06),
+        color: AppColors.cubierta,
         borderRadius: BorderRadius.circular(AppRadius.card),
-        border: Border.all(color: info.color.withValues(alpha: 0.25)),
+        border: Border.all(color: AppColors.borderSubtle),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -361,7 +363,7 @@ class _ResumenExperiencias extends StatelessWidget {
             children: [
               Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
               const SizedBox(width: 6),
-              Text(estado, style: TextStyle(color: color, fontWeight: FontWeight.w700, fontSize: 13)),
+              Text(estado, style: TextStyle(color: color, fontWeight: FontWeight.w700, fontSize: 14)),
             ],
           ),
           if (detalle.isNotEmpty) ...[

@@ -5,13 +5,11 @@ import '../../navegacion/rutas.dart';
 import '../../services/auth_service.dart';
 import '../../services/session_storage.dart';
 import '../../theme/app_theme.dart';
-import '../../theme/breakpoints.dart';
 import '../../utils/date_format_es.dart';
+import '../../widgets/tablero_cifras.dart';
 import '../../widgets/admin/admin_shell.dart';
 import '../../widgets/admin/ds_states.dart';
-import '../../widgets/admin/ds_section_card.dart';
 import '../../widgets/admin/ds_card.dart';
-import '../../widgets/admin/ds_stat_card.dart';
 import '../../widgets/notification_bell.dart';
 import '../../widgets/themed_builder.dart';
 import 'admin_admins_page.dart';
@@ -212,7 +210,7 @@ class _InicioContentState extends State<_InicioContent> {
         physics: const AlwaysScrollableScrollPhysics(),
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 960),
+            constraints: const BoxConstraints(maxWidth: AppAncho.pagina),
             child: Padding(
               padding: const EdgeInsets.all(AppSpacing.xl),
               child: Column(
@@ -233,7 +231,7 @@ class _InicioContentState extends State<_InicioContent> {
                     onVerTodas: _verTodas,
                   ),
                   const SizedBox(height: AppSpacing.xl),
-                  Text('Atajos del sistema', style: AppTypography.h3),
+                  Text('Ir a', style: AppTypography.h2),
                   const SizedBox(height: AppSpacing.sm),
                   _SectionsGrid(onNavigate: widget.onNavigate),
                 ],
@@ -276,7 +274,7 @@ class _NotificacionesCard extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(color: AppColors.amarillo, borderRadius: BorderRadius.circular(999)),
                   child: Text('$sinLeer sin leer',
-                      style: const TextStyle(color: AppColors.riel, fontSize: 12, fontWeight: FontWeight.w700)),
+                      style: const TextStyle(color: AppColors.riel, fontSize: 13, fontWeight: FontWeight.w700)),
                 ),
               ],
               const Spacer(),
@@ -322,35 +320,20 @@ class _StatsGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final items = [
-      (Icons.groups_outlined, stats.turistas, 'Visitantes registrados', AppColors.turquesa),
-      (Icons.apartment, stats.negociosActivos, 'Negocios activos', AppColors.turquesa),
-      (Icons.report_gmailerrorred_outlined, stats.negociosPendientes, 'Solicitudes pendientes', AppColors.amarillo),
-      (Icons.store_outlined, stats.negociosTotal, 'Negocios totales', AppColors.turquesa),
-    ];
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final compact = Breakpoints.isCompact(constraints.maxWidth);
-        return GridView.count(
-          crossAxisCount: compact ? 2 : 4,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          mainAxisSpacing: AppSpacing.md,
-          crossAxisSpacing: AppSpacing.md,
-          childAspectRatio: compact ? 1.05 : 1.35,
-          children: items.map((s) {
-            final (icon, value, label, color) = s;
-            // Solo las solicitudes pendientes piden atención (cuando hay).
-            final alerta = icon == Icons.report_gmailerrorred_outlined && value > 0;
-            return DsStatCard(icon: icon, value: value, label: label, accent: color, alerta: alerta);
-          }).toList(),
-        );
-      },
-    );
+    return TableroCifras(celdas: [
+      CeldaCifra(Icons.groups_outlined, '${stats.turistas}', 'Visitantes registrados'),
+      CeldaCifra(Icons.apartment, '${stats.negociosActivos}', 'Negocios activos'),
+      // Solo las solicitudes pendientes piden atención (cuando hay).
+      CeldaCifra(Icons.pending_actions_outlined, '${stats.negociosPendientes}', 'Solicitudes pendientes',
+          alerta: stats.negociosPendientes > 0),
+      CeldaCifra(Icons.store_outlined, '${stats.negociosTotal}', 'Negocios en total'),
+    ]);
   }
 }
 
+/// Accesos a las secciones que más se usan, como lista (la misma pieza que
+/// "Gestionar negocio" en el panel de empresa) en vez de una cuadrícula de
+/// tarjetas con ícono que repetía el menú lateral.
 class _SectionsGrid extends StatelessWidget {
   final ValueChanged<AdminSection> onNavigate;
   const _SectionsGrid({required this.onNavigate});
@@ -358,34 +341,34 @@ class _SectionsGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final items = [
-      (Icons.report_gmailerrorred_outlined, 'Solicitudes', AppColors.amber, AdminSection.solicitudes),
-      (Icons.group_outlined, 'Usuarios', AppColors.brandTeal, AdminSection.usuarios),
-      (Icons.apartment_outlined, 'Negocios', AppColors.businessOrange, AdminSection.negocios),
-      (Icons.view_in_ar_outlined, 'Mapa y RA', AppColors.emerald, AdminSection.mapa),
-      (Icons.shield_outlined, 'Admins', AppColors.adminViolet, AdminSection.admins),
+      (Icons.pending_actions_outlined, 'Solicitudes', 'Aprueba o rechaza negocios nuevos', AdminSection.solicitudes),
+      (Icons.apartment_outlined, 'Negocios', 'Catálogo, categorías y fichas', AdminSection.negocios),
+      (Icons.map_outlined, 'Lugares y experiencias', 'Pins del mapa, RA y recorridos 360°', AdminSection.mapa),
+      (Icons.group_outlined, 'Usuarios', 'Edita o bloquea cuentas', AdminSection.usuarios),
     ];
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final compact = Breakpoints.isCompact(constraints.maxWidth);
-        return GridView.count(
-          crossAxisCount: compact ? 1 : 2,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          mainAxisSpacing: AppSpacing.sm,
-          crossAxisSpacing: AppSpacing.sm,
-          childAspectRatio: compact ? 5.5 : 4.2,
-          children: items.map((s) {
-            final (icon, title, color, section) = s;
-            return DsSectionCard(
-              icon: icon,
-              title: title,
-              accent: color,
-              onTap: () => onNavigate(section),
-            );
-          }).toList(),
-        );
-      },
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.cubierta,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        border: Border.all(color: AppColors.borderSubtle),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          for (var i = 0; i < items.length; i++) ...[
+            if (i > 0) Divider(height: 1, color: AppColors.borderSubtle),
+            ListTile(
+              onTap: () => onNavigate(items[i].$4),
+              minTileHeight: 64,
+              leading: Icon(items[i].$1, color: AppColors.tinta),
+              title: Text(items[i].$2, style: AppTypography.h3),
+              subtitle: Text(items[i].$3, style: AppTypography.bodySmall),
+              trailing: Icon(Icons.chevron_right, color: AppColors.slate400),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }

@@ -355,7 +355,8 @@ class _RequestRow extends StatelessWidget {
                       DsButton(label: 'Rechazar', variant: DsButtonVariant.danger, size: DsButtonSize.sm, onPressed: onReject),
                       DsButton(
                         label: 'Aprobar',
-                        variant: DsButtonVariant.secondary,
+                        icon: Icons.check,
+                        variant: DsButtonVariant.primary,
                         accent: AppColors.emerald,
                         size: DsButtonSize.sm,
                         onPressed: onApprove,
@@ -382,7 +383,7 @@ class _InfoChip extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 13, color: AppColors.slate500),
+        Icon(icon, size: 15, color: AppColors.slate500),
         const SizedBox(width: 6),
         Flexible(child: Text(text, style: AppTypography.bodySmall, overflow: TextOverflow.ellipsis)),
       ],
@@ -429,7 +430,7 @@ Future<String?> _pedirNota(BuildContext context, String negocio) {
           style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
           decoration: InputDecoration(
             hintText: 'Motivo (opcional), p. ej. "Por ahora solo cubrimos la zona centro"',
-            hintStyle: TextStyle(color: AppColors.slate500, fontSize: 13),
+            hintStyle: TextStyle(color: AppColors.slate500, fontSize: 14),
           ),
         ),
       ),
@@ -539,7 +540,7 @@ class _SolicitudRecorridoRow extends StatelessWidget {
                           DsButton(
                             label: 'Crear recorrido',
                             icon: Icons.add,
-                            variant: DsButtonVariant.secondary,
+                            variant: DsButtonVariant.primary,
                             accent: AppColors.emerald,
                             size: DsButtonSize.sm,
                             onPressed: onCrear,

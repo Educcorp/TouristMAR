@@ -252,7 +252,7 @@ class _AdminBusinessesPageState extends State<AdminBusinessesPage> {
         DsButton(
           label: 'Categorías',
           icon: Icons.category_outlined,
-          variant: DsButtonVariant.ghost,
+          variant: DsButtonVariant.secondary,
           accent: AppColors.adminViolet,
           onPressed: _gestionarCategorias,
         ),
@@ -325,7 +325,7 @@ class _BusinessCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(negocio.nombre, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 13)),
+                    Text(negocio.nombre, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
                     const SizedBox(height: 2),
                     Text(negocio.categoria ?? 'Sin categoría', maxLines: 1, overflow: TextOverflow.ellipsis, style: AppTypography.bodySmall),
                   ],
@@ -338,11 +338,11 @@ class _BusinessCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.md),
           Row(
             children: [
-              _AssetDot(label: '360', active: negocio.archivo360 != null),
+              _AssetDot(tipo: ExperienciaTipo.recorrido360, active: negocio.archivo360 != null),
               const SizedBox(width: 4),
-              _AssetDot(label: 'M', active: negocio.arMarcador != null),
+              _AssetDot(tipo: ExperienciaTipo.arMarcador, active: negocio.arMarcador != null),
               const SizedBox(width: 4),
-              _AssetDot(label: 'G', active: negocio.arGeo != null),
+              _AssetDot(tipo: ExperienciaTipo.arGeo, active: negocio.arGeo != null),
               const Spacer(),
               IconButton(
                 tooltip: 'Eliminar negocio',
@@ -365,35 +365,31 @@ class _BusinessCard extends StatelessWidget {
   }
 }
 
-/// Punto de estado para un recurso AR/360 (ver [_BusinessCard]): "360" =
-/// archivo 360°, "M" = modelo AR de marcador, "G" = modelo AR de
-/// geolocalización. Solo indica si ya se subió — la gestión real ocurre
-/// desde el panel del propio negocio.
+/// Si el negocio ya tiene cada experiencia (marcador, ubicación, 360°): su
+/// ícono a color cuando sí y apagado cuando no, con la explicación al pasar el
+/// cursor. Antes eran las letras "360", "M" y "G" en cajitas, que nadie sabía
+/// leer (y "360" ya no cabía con la letra nueva).
 class _AssetDot extends StatelessWidget {
-  final String label;
+  final ExperienciaTipo tipo;
   final bool active;
 
-  const _AssetDot({required this.label, required this.active});
+  const _AssetDot({required this.tipo, required this.active});
 
   @override
   Widget build(BuildContext context) {
-    final color = active ? AppColors.brandTeal : AppColors.slate500;
+    final info = ExperienciaInfo.of(tipo);
     return Tooltip(
-      message: label == '360'
-          ? (active ? 'Foto/video 360° subido' : 'Sin foto/video 360°')
-          : label == 'M'
-              ? (active ? 'Modelo AR de marcador subido' : 'Sin modelo AR de marcador')
-              : (active ? 'Modelo AR de geolocalización subido' : 'Sin modelo AR de geolocalización'),
+      message: '${info.titulo}: ${active ? 'activa' : 'sin configurar'}',
       child: Container(
-        width: 22,
-        height: 20,
+        width: 30,
+        height: 30,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: active ? color.withValues(alpha: 0.15) : AppColors.overlay(0.05),
-          borderRadius: BorderRadius.circular(6),
-          border: Border.all(color: active ? color.withValues(alpha: 0.4) : AppColors.overlay(0.1)),
+          color: active ? AppColors.surfaceAlt : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: active ? Colors.transparent : AppColors.borderSubtle),
         ),
-        child: Text(label, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w700)),
+        child: Icon(info.icon, size: 18, color: active ? info.color : AppColors.slate500.withValues(alpha: 0.6)),
       ),
     );
   }
