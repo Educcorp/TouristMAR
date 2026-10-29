@@ -17,11 +17,13 @@ const prisma = new PrismaClient()
 /// sin coordenadas, un lugar aprobado existe en la base pero no aparece en
 /// ninguna pantalla pública. Se geocodificaron las direcciones de arriba con
 /// Nominatim/OpenStreetMap (mismo proveedor que ya usa el mapa de la app);
-/// donde el resultado no coincidía con lo que decían las fuentes (Cerro de
-/// la Cruz) o no hubo ningún resultado (Iguanario Archundia) se dejó la
+/// donde no hubo ningún resultado confiable (Iguanario Archundia) se dejó la
 /// coordenada en null en vez de usar un punto dudoso — se recomienda
-/// ponerlas a mano desde "Elegir en el mapa" en el panel admin, que ya
-/// sugiere la dirección aproximada al soltar el pin.
+/// ponerla a mano desde "Elegir en el mapa" en el panel admin, que ya
+/// sugiere la dirección aproximada al soltar el pin. Por la misma razón se
+/// reemplazó "Cerro de la Cruz" por "Mirador Ventanas" en la categoría
+/// Mirador: no se pudo verificar ni coordenadas ni foto confiables para el
+/// primero, y el segundo sí tiene ambas.
 ///
 /// No se pudo armar un "Club de playa" con datos verificables: lo más
 /// cercano (Sun Club/Club de Playa en Plaza Las Glorias, Pata Salada Beach
@@ -162,24 +164,24 @@ const lugares = [
     longitud: -104.3174,
   },
   {
-    nombre: 'Cerro de la Cruz',
+    // Reemplaza a "Cerro de la Cruz": no se pudo verificar ni una foto real
+    // ni coordenadas confiables para ese mirador (ver el historial del
+    // script). Mirador Ventanas sí tiene ambas cosas confirmadas.
+    nombre: 'Mirador Ventanas',
     categoria: 'Mirador',
     descripcion:
-      'Caminata corta (de unos 15 minutos) pero exigente hasta un mirador con vista de 360° de Manzanillo: la ' +
-      'bahía, la Laguna de Cuyutlán y el puerto interior de San Pedrito. Se llega por un sendero que conecta con el ' +
-      'Mirador El Vigía.',
-    direccion: 'Centro Histórico, Manzanillo, Colima (acceso por el sendero desde el Mirador El Vigía)',
+      'Mirador sobre la carretera de Manzanillo a Campos, llamado así por la formación rocosa que enmarca el mar ' +
+      'como una ventana. Recomendado para fotografiar el amanecer o el atardecer sobre el Pacífico.',
+    direccion: 'Carretera de Manzanillo a Campos, Manzanillo, Colima',
     telefono: null,
     sitioWeb: null,
     horario: null,
-    portada: null,
-    // Sin coordenadas: lo único que encontró el geocodificador para "Cerro de
-    // la Cruz" fue un cerro del mismo nombre en El Colomo, a varios
-    // kilómetros del Centro Histórico — no coincide con las fuentes, que lo
-    // describen junto al Mirador El Vigía. Mejor dejarlo en blanco que un pin
-    // en el lugar equivocado; ponerlo a mano desde "Elegir en el mapa".
-    latitud: null,
-    longitud: null,
+    // Foto real del lugar (amanecer entre las rocas), vía Zona Turística:
+    // https://www.zonaturistica.com/que-hacer-en/colima/manzanillo/mirador-ventanas
+    portada: 'https://www.zonaturistica.com/files/atractivos/110/A1_110.jpg',
+    // Coordenadas de la misma fuente (enlace "Cómo llegar" de la página).
+    latitud: 19.0314,
+    longitud: -104.3334,
   },
 
   // --- Cultura -----------------------------------------------------------------
@@ -311,6 +313,14 @@ async function main() {
     )
   }
 
+  // Lugares que un seed anterior creó y que este reemplazó por otro mejor
+  // (ver el comentario junto al nuevo nombre en `lugares`) — se borran para
+  // no dejar el reemplazado como un duplicado huérfano en la base.
+  const reemplazados = ['Cerro de la Cruz']
+  const { count: borrados } = await prisma.negocioProfile.deleteMany({
+    where: { userId: superAdmin.id, nombre: { in: reemplazados } },
+  })
+
   let creados = 0
   let actualizados = 0
   for (const lugar of lugares) {
@@ -329,7 +339,10 @@ async function main() {
     }
   }
 
-  console.log(`Listo: ${creados} lugares creados, ${actualizados} actualizados (cuenta: ${superAdmin.email}).`)
+  console.log(
+    `Listo: ${creados} lugares creados, ${actualizados} actualizados, ${borrados} reemplazados-borrados ` +
+      `(cuenta: ${superAdmin.email}).`,
+  )
 }
 
 main()
