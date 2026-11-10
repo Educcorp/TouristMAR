@@ -160,7 +160,8 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                         _IdentityCell(user: u),
                         DsBadge(
                           text: u.isNegocio ? 'Empresa' : 'Visitante',
-                          tone: u.isNegocio ? BadgeTone.warning : BadgeTone.info,
+                          tone: BadgeTone.neutral,
+                          icon: u.isNegocio ? Icons.storefront_outlined : Icons.person_outline,
                         ),
                         DsBadge(
                           text: u.activo ? 'Activo' : 'Bloqueado',
@@ -322,7 +323,11 @@ class _UserCard extends StatelessWidget {
                   spacing: 6,
                   runSpacing: 6,
                   children: [
-                    DsBadge(text: user.isNegocio ? 'Empresa' : 'Visitante', tone: user.isNegocio ? BadgeTone.warning : BadgeTone.info),
+                    DsBadge(
+                      text: user.isNegocio ? 'Empresa' : 'Visitante',
+                      tone: BadgeTone.neutral,
+                      icon: user.isNegocio ? Icons.storefront_outlined : Icons.person_outline,
+                    ),
                     DsBadge(text: blocked ? 'Bloqueado' : 'Activo', tone: blocked ? BadgeTone.danger : BadgeTone.success),
                   ],
                 ),
@@ -426,7 +431,7 @@ class _EditarUsuarioDialogState extends State<_EditarUsuarioDialog> {
               ),
               if (_error != null) ...[
                 const SizedBox(height: AppSpacing.md),
-                Text(_error!, style: TextStyle(color: AppColors.errorRed, fontSize: 13)),
+                Text(_error!, style: TextStyle(color: AppColors.errorRed, fontSize: 14)),
               ],
             ],
           ),

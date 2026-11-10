@@ -56,7 +56,7 @@ class _HomePageState extends State<HomePage> {
     cerrarSesion(context, registroNegocio: true);
   }
 
-  /// Lugares públicos (reales y de ejemplo); `null` mientras cargan.
+  /// Lugares públicos; `null` mientras cargan.
   List<Lugar>? _lugares;
 
   /// Ubicación del visitante, solo si la compartió (se pide con un botón,
@@ -88,14 +88,29 @@ class _HomePageState extends State<HomePage> {
 
   double? _distancia(Lugar l) => (_yo == null || l.ubicacion == null) ? null : distanciaMetros(_yo!, l.ubicacion!);
 
-  /// Filtrados por categoría; con ubicación, del más cercano al más lejano
-  /// (los que no tienen pin van al final).
+  /// Filtrados por categoría. Sin ubicación van primero los destacados (los
+  /// mejor calificados); con ubicación, del más cercano al más lejano (los
+  /// que no tienen pin van al final).
   List<Lugar> get _visibles {
     final lista = (_lugares ?? const <Lugar>[]).where((l) => _filtro == null || l.categoria == _filtro).toList();
     if (_yo != null) {
       lista.sort((a, b) => (_distancia(a) ?? double.infinity).compareTo(_distancia(b) ?? double.infinity));
+    } else {
+      lista.sort((a, b) {
+        final porPuntaje = _puntaje(b).compareTo(_puntaje(a));
+        if (porPuntaje != 0) return porPuntaje;
+        // A igual calificación, primero los que tienen foto.
+        return (b.portada.isNotEmpty ? 1 : 0).compareTo(a.portada.isNotEmpty ? 1 : 0);
+      });
     }
     return lista;
+  }
+
+  /// Calificación ajustada por cuántas reseñas tiene: un 5.0 con una sola
+  /// reseña no le gana a un 4.7 con veinte (promedio bayesiano hacia 3.5).
+  static double _puntaje(Lugar l) {
+    const peso = 3;
+    return (l.rating * l.totalResenas + 3.5 * peso) / (l.totalResenas + peso) + (l.totalResenas == 0 ? -1 : 0);
   }
 
   String get _greeting {
@@ -218,17 +233,52 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildEncabezadoLista() {
-    return Row(
-      children: [
-        Expanded(child: Text(_yo != null ? 'Cerca de ti' : 'Lugares en Manzanillo', style: AppTypography.h2)),
-        if (_yo == null)
-          TextButton.icon(
+    final accion = _yo == null
+        ? TextButton.icon(
             onPressed: _pidiendoUbicacion ? null : _pedirUbicacion,
             icon: _pidiendoUbicacion
                 ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
                 : const Icon(Icons.near_me_outlined, size: 20),
             label: const Text('Ordenar por cercanía'),
-          ),
+          )
+        : null;
+    return LayoutBuilder(builder: (context, constraints) {
+      final angosto = constraints.maxWidth < 520;
+      final titulo = _tituloLista();
+      // En el celular la acción va debajo del título: al lado lo partía en
+      // tres renglones.
+      if (angosto || accion == null) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            titulo,
+            if (accion != null) ...[
+              const SizedBox(height: 4),
+              Transform.translate(offset: const Offset(-12, 0), child: accion),
+            ],
+          ],
+        );
+      }
+      return Row(crossAxisAlignment: CrossAxisAlignment.end, children: [Expanded(child: titulo), accion]);
+    });
+  }
+
+  Widget _tituloLista() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          _yo != null
+              ? 'Cerca de ti'
+              : _filtro == null
+                  ? 'Lugares destacados'
+                  : 'Destacados en ${_filtro!.etiqueta.toLowerCase()}',
+          style: AppTypography.h2,
+        ),
+        if (_yo == null) ...[
+          const SizedBox(height: 2),
+          Text('Los mejor calificados por los visitantes', style: AppTypography.bodySmall),
+        ],
       ],
     );
   }
@@ -286,6 +336,12 @@ class _Ancho extends StatelessWidget {
   const _Ancho({required this.child});
 
   @override
-  Widget build(BuildContext context) =>
-      Center(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 1080), child: child));
+  Widget build(BuildContext context) => Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: AppAncho.pagina),
+          // Ancho completo de la columna: sin esto el saludo (más angosto que
+          // la lista) quedaba centrado y desalineado del resto.
+          child: SizedBox(width: double.infinity, child: child),
+        ),
+      );
 }

@@ -301,7 +301,7 @@ class _RutaLugarPageState extends State<RutaLugarPage> {
                             ? 'Realidad aumentada en un radio de ${widget.lugar.radioDesbloqueo.round()} m del lugar.'
                             : 'Te faltan ${formatoDistancia(distanciaMetros(yo, _destino) - widget.lugar.radioDesbloqueo)} '
                                 'para la zona de realidad aumentada.',
-                    style: TextStyle(color: colorGeo, fontSize: 13),
+                    style: TextStyle(color: colorGeo, fontSize: 14),
                   ),
                 ),
               ],

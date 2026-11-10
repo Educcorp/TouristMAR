@@ -487,7 +487,7 @@ class _MarcadorFormState extends State<_MarcadorForm> {
             ),
             if (_error != null) ...[
               const SizedBox(height: AppSpacing.md),
-              Text(_error!, style: TextStyle(color: AppColors.errorRed, fontSize: 13)),
+              Text(_error!, style: TextStyle(color: AppColors.errorRed, fontSize: 14)),
             ],
             const SizedBox(height: AppSpacing.lg),
             Wrap(
@@ -842,7 +842,7 @@ class _Paso extends StatelessWidget {
               height: 26,
               alignment: Alignment.center,
               decoration: BoxDecoration(color: AppColors.adminViolet, shape: BoxShape.circle),
-              child: Text('$numero', style: TextStyle(color: AppColors.casco, fontWeight: FontWeight.w700, fontSize: 13)),
+              child: Text('$numero', style: TextStyle(color: AppColors.casco, fontWeight: FontWeight.w700, fontSize: 14)),
             ),
             const SizedBox(width: AppSpacing.sm),
             Expanded(child: Text(titulo, style: AppTypography.h3)),
@@ -923,7 +923,7 @@ class _VistaPreviaMarcador extends StatelessWidget {
                           texto.isEmpty ? 'Aquí aparecerá la información.' : texto,
                           maxLines: 5,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(color: texto.isEmpty ? Colors.black38 : Colors.black87, fontSize: 12.5, height: 1.3),
+                          style: TextStyle(color: texto.isEmpty ? Colors.black38 : Colors.black87, fontSize: 13.5, height: 1.3),
                         ),
                       ],
                     ),

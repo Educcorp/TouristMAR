@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:go_router/go_router.dart';
@@ -10,6 +11,7 @@ import 'services/ubicacion_dispositivo.dart';
 import 'services/visor_flutter_launcher.dart';
 import 'theme/app_theme.dart';
 import 'theme/theme_controller.dart';
+import 'widgets/aviso_cookies.dart';
 
 void main() {
   // URLs sin "#": el backend en producción ya regresa index.html para
@@ -41,12 +43,25 @@ class TouristMarApp extends StatefulWidget {
 class _TouristMarAppState extends State<TouristMarApp> {
   GoRouter? _router;
 
+  /// La URL con la que se abrió la página (`/privacidad`, `/lugar/…`). Se lee
+  /// en [initState], antes de pintar nada: el `MaterialApp` provisional de la
+  /// carga reporta "/" al navegador y, sin esto, el enrutador arrancaba desde
+  /// "/" y la recarga de cualquier ruta terminaba en el inicio o en el login.
+  String? _urlInicial;
+
   @override
   void initState() {
     super.initState();
+    final url = Uri.base;
+    if (kIsWeb && url.path.length > 1) {
+      _urlInicial = url.path + (url.hasQuery ? '?${url.query}' : '');
+    }
     Sesion.restaurar(widget.authService).whenComplete(() {
       if (mounted) {
-        setState(() => _router = crearRouter(authService: widget.authService, inicial: widget.rutaInicial));
+        setState(() => _router = crearRouter(
+              authService: widget.authService,
+              inicial: widget.rutaInicial ?? _urlInicial,
+            ));
       }
     });
   }
@@ -81,6 +96,10 @@ class _TouristMarAppState extends State<TouristMarApp> {
           debugShowCheckedModeBanner: false,
           theme: AppTheme.current,
           routerConfig: router,
+          builder: (context, child) => AvisoCookies(
+            onVerAviso: () => router.push('/privacidad'),
+            child: child ?? const SizedBox.shrink(),
+          ),
         );
       },
     );

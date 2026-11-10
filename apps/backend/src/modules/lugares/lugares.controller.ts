@@ -1,5 +1,7 @@
 import { Request, Response } from 'express'
-import { listLugaresPublicos } from './lugares.service'
+import { listLugaresPublicos, registrarVisita } from './lugares.service'
+import { esUuid } from '../resenas/resenas.service'
+import type { AuthedRequest } from '../auth/auth.middleware'
 import { resumenPorNegocios } from '../resenas/resenas.service'
 import { DatabaseNotReadyError } from '../../config/db-guard'
 
@@ -19,6 +21,8 @@ export async function listPublicos(_req: Request, res: Response) {
         telefono: n.telefono,
         sitioWeb: n.sitioWeb,
         horario: n.horario,
+        costoPorPersona: n.costoPorPersona,
+        menu: n.menu,
         portada: n.portada,
         galeria: n.galeria,
         archivo360: n.archivo360,
@@ -33,6 +37,20 @@ export async function listPublicos(_req: Request, res: Response) {
         createdAt: n.createdAt,
       })),
     })
+  } catch (err) {
+    if (err instanceof DatabaseNotReadyError) {
+      return res.status(503).json({ error: err.message })
+    }
+    return res.status(500).json({ error: 'Error interno' })
+  }
+}
+
+/// POST /api/lugares/:id/visita — la ficha del lugar lo llama al abrirse.
+export async function visita(req: AuthedRequest, res: Response) {
+  if (!esUuid(req.params.id)) return res.status(404).json({ error: 'No se encontró ese lugar' })
+  try {
+    const ok = await registrarVisita(req.params.id, req.userId)
+    return ok ? res.status(204).send() : res.status(404).json({ error: 'No se encontró ese lugar' })
   } catch (err) {
     if (err instanceof DatabaseNotReadyError) {
       return res.status(503).json({ error: err.message })

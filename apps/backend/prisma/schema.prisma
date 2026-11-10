@@ -37,6 +37,7 @@ enum notificacion_tipo_enum {
   recorrido_solicitado
   recorrido_listo
   recorrido_rechazado
+  resena_respondida
 }
 
 /// Estado de una solicitud de recorrido 360° que manda un negocio.
@@ -81,6 +82,7 @@ model User {
   recorridos360                 Recorrido360[]
   favoritos                     Favorito[]
   resenas                       Resena[]
+  visitas                       VisitaLugar[]
   solicitudesRecorridoAtendidas SolicitudRecorrido360[] @relation("SolicitudAtendidaPor")
 
   @@map("users")
@@ -119,6 +121,7 @@ model NegocioProfile {
   resenas              Resena[]
   solicitudesRecorrido SolicitudRecorrido360[]
   puntosRaGeo          PuntoRaGeo[]
+  visitas              VisitaLugar[]
 
   @@index([userId])
   @@map("negocio_profiles")
@@ -384,4 +387,31 @@ model PuntoRaGeo {
 
   @@index([negocioId, orden])
   @@map("ra_geo_puntos")
+}
+
+/// Una apertura de la ficha de un lugar ("Visitas este mes" del panel de
+/// empresa). La app registra como mucho una por visitante por lugar al día
+/// (lo controla el backend); `userId` es null si no había sesión.
+model VisitaLugar {
+  id        String         @id @default(uuid()) @db.Uuid
+  negocioId String         @map("negocio_id") @db.Uuid
+  negocio   NegocioProfile @relation(fields: [negocioId], references: [id], onDelete: Cascade)
+  userId    String?        @map("user_id") @db.Uuid
+  user      User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt DateTime       @default(now()) @map("created_at")
+
+  @@index([negocioId, createdAt])
+  @@map("visitas_lugar")
+}
+
+/// Categorías de negocio que se eligen en los formularios (registro, editar
+/// negocio, panel admin). Las administra un admin; `negocio_profiles.categoria`
+/// sigue guardando el texto, así renombrar o borrar una no rompe negocios.
+model CategoriaNegocio {
+  id        String   @id @default(uuid()) @db.Uuid
+  nombre    String   @unique
+  orden     Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("categorias_negocio")
 }

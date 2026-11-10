@@ -138,7 +138,7 @@ class _PuntosRaGeoSectionState extends State<PuntosRaGeoSection> {
         ),
         const SizedBox(height: AppSpacing.md),
         if (pin == null)
-          Text('Primero guarda las coordenadas del lugar (arriba).', style: TextStyle(color: AppColors.amber, fontSize: 13))
+          Text('Primero guarda las coordenadas del lugar (arriba).', style: TextStyle(color: AppColors.amber, fontSize: 14))
         else if (_error != null)
           DsErrorState(message: _error!, onRetry: _cargar)
         else if (_puntos == null)
@@ -224,7 +224,7 @@ class _NumeroPunto extends StatelessWidget {
     return Container(
       alignment: Alignment.center,
       decoration: BoxDecoration(color: color, shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 2)),
-      child: Text('$numero', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w800)),
+      child: Text('$numero', style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w800)),
     );
   }
 }
@@ -510,7 +510,7 @@ class _DialogoPuntoState extends State<_DialogoPunto> {
                 ),
                 if (_error != null) ...[
                   const SizedBox(height: AppSpacing.md),
-                  Text(_error!, style: TextStyle(color: AppColors.errorRed, fontSize: 13)),
+                  Text(_error!, style: TextStyle(color: AppColors.errorRed, fontSize: 14)),
                 ],
                 const SizedBox(height: AppSpacing.lg),
                 Wrap(

@@ -10,6 +10,7 @@ export type NotificationTipo =
   | 'recorrido_solicitado'
   | 'recorrido_listo'
   | 'recorrido_rechazado'
+  | 'resena_respondida'
 
 /// Crea la misma notificación para todos los admins/super_admins vigentes —
 /// son pocas cuentas, así que un fan-out simple al crear es más sencillo que

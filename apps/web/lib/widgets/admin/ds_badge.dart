@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 
 /// Tono semántico de un [DsBadge]. Centraliza el mapeo color/uso para que
-/// "pendiente", "activo", "rechazado", etc. se vean igual en toda la app
-/// admin en vez de que cada página elija su propio color.
+/// "pendiente", "activo", "rechazado", etc. se vean igual en todos los paneles
+/// en vez de que cada página elija su propio color.
 enum BadgeTone { success, warning, danger, info, neutral }
 
 extension on BadgeTone {
@@ -24,6 +24,12 @@ extension on BadgeTone {
   }
 }
 
+/// Estado o conteo pequeño junto a un dato.
+///
+/// - Un estado ("Activo", "Pendiente", "Bloqueado") se pinta como en un
+///   tablero: punto de color y la palabra en ese color. Sin cápsula ni borde,
+///   así una lista llena de estados no se vuelve una pared de pastillas.
+/// - Un número suelto (el conteo junto a un título) va como cifra discreta.
 class DsBadge extends StatelessWidget {
   final String text;
   final BadgeTone tone;
@@ -31,29 +37,31 @@ class DsBadge extends StatelessWidget {
 
   const DsBadge({super.key, required this.text, required this.tone, this.icon});
 
+  static final _soloNumero = RegExp(r'^\d+$');
+
   @override
   Widget build(BuildContext context) {
     final color = tone.color;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (icon != null) ...[
-            Icon(icon, size: 12, color: color),
-            const SizedBox(width: 4),
-          ],
-          Text(
-            text,
-            style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600),
-          ),
-        ],
-      ),
+    if (_soloNumero.hasMatch(text)) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceAlt,
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Text(text, style: AppTypography.cifra(size: 16, color: AppColors.slate300)),
+      );
+    }
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (icon != null)
+          Icon(icon, size: 16, color: color)
+        else
+          Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+        const SizedBox(width: 6),
+        Text(text, style: TextStyle(color: color, fontSize: 14, fontWeight: FontWeight.w600)),
+      ],
     );
   }
 }

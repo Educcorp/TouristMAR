@@ -229,7 +229,9 @@ void main() {
     await _tocar(tester, find.text('Elegir imagen'));
     expect(find.text('Elegir imagen'), findsNothing, reason: 'se ve la vista previa');
     await tester.enterText(_campo('Nombre del negocio'), 'Mariscos La Bahía');
-    await tester.enterText(_campo('Categoría'), 'Restaurantes');
+    // La categoría ya no es texto libre: se elige de la lista.
+    await _tocar(tester, find.byKey(const ValueKey('category-field')));
+    await _tocar(tester, find.text('Restaurante').last);
     await tester.enterText(_campo('Teléfono (opcional)'), '314 000 0000');
     expect(find.text('Coordenadas del lugar (pin en el mapa)'), findsOneWidget);
     expect(find.text('Elegir en el mapa'), findsOneWidget);

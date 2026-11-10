@@ -139,7 +139,7 @@ class PinLugar extends StatelessWidget {
                   borderRadius: BorderRadius.circular(6),
                   border: Border.all(color: Colors.white, width: 1.2),
                 ),
-                child: const Text('RA', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w800)),
+                child: const Text('RA', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w800)),
               ),
             ),
         ],

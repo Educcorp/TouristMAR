@@ -52,7 +52,7 @@ class PlaceCard extends StatelessWidget {
                       ),
                       child: Text(
                         category,
-                        style: TextStyle(color: AppColors.panelNavy, fontSize: 12, fontWeight: FontWeight.w600),
+                        style: TextStyle(color: AppColors.panelNavy, fontSize: 13, fontWeight: FontWeight.w600),
                       ),
                     ),
                   ),
@@ -86,11 +86,11 @@ class PlaceCard extends StatelessWidget {
                   const SizedBox(height: 6),
                   Row(
                     children: [
-                      ...List.generate(5, (_) => const Icon(Icons.star, size: 14, color: Colors.amber)),
+                      ...List.generate(5, (_) => const Icon(Icons.star, size: 16, color: Colors.amber)),
                       const SizedBox(width: 6),
                       Text(
                         rating.toString(),
-                        style: const TextStyle(color: Colors.amber, fontSize: 13, fontWeight: FontWeight.w600),
+                        style: const TextStyle(color: Colors.amber, fontSize: 14, fontWeight: FontWeight.w600),
                       ),
                     ],
                   ),

@@ -8,6 +8,7 @@ import { favoritosRouter } from '../modules/favoritos/favoritos.routes'
 import { resenasRouter, resenasAdminRouter } from '../modules/resenas/resenas.routes'
 import { lugaresRouter, raLugaresRouter } from '../modules/lugares/lugares.routes'
 import { raGeoAdminRouter } from '../modules/ra-geo/ra-geo.routes'
+import { categoriasRouter, categoriasAdminRouter } from '../modules/categorias/categorias.routes'
 
 export const apiRouter = Router()
 
@@ -39,6 +40,7 @@ apiRouter.use('/admin/ar', arAdminRouter)
 apiRouter.use('/admin/recorridos', recorridosAdminRouter)
 apiRouter.use('/admin/ra-geo', raGeoAdminRouter)
 apiRouter.use('/admin/resenas', resenasAdminRouter)
+apiRouter.use('/admin/categorias', categoriasAdminRouter)
 apiRouter.use('/admin', adminRouter)
 // Contrato con Unity: GET /api/marcadores (ver ar.controller.ts).
 // GET /api/recorridos lo consume Flutter (visor 360°), no Unity.
@@ -50,6 +52,7 @@ apiRouter.use('/ra/lugares', raLugaresRouter)
 apiRouter.use('/favoritos', favoritosRouter)
 apiRouter.use('/resenas', resenasRouter)
 apiRouter.use('/notifications', notificationRouter)
+apiRouter.use('/categorias', categoriasRouter)
 
 // Cualquier otra ruta bajo /api: error en JSON (no la página HTML de Express),
 // así Unity y la app siempre pueden leer la respuesta con su parser de JSON.

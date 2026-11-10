@@ -72,7 +72,7 @@ class _SeccionDesplegableState extends State<SeccionDesplegable> {
                       Container(
                         width: 40,
                         height: 40,
-                        decoration: BoxDecoration(color: color.withValues(alpha: 0.15), shape: BoxShape.circle),
+                        decoration: BoxDecoration(color: AppColors.surfaceAlt, borderRadius: BorderRadius.circular(10)),
                         child: Icon(widget.icon, color: color, size: 20),
                       ),
                       const SizedBox(width: AppSpacing.md),

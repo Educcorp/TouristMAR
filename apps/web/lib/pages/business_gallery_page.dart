@@ -7,6 +7,7 @@ import '../services/auth_service.dart';
 import '../services/image_picker_service.dart';
 import '../services/session_storage.dart';
 import '../theme/app_theme.dart';
+import '../widgets/pagina_formulario.dart';
 import '../widgets/app_button.dart';
 import '../widgets/cover_image.dart';
 import '../widgets/themed_builder.dart';
@@ -47,12 +48,13 @@ class _BusinessGalleryPageState extends State<BusinessGalleryPage> {
 
   bool get _isDirty => _pendingAdds.isNotEmpty || _pendingRemovals.isNotEmpty;
 
+  /// Se pueden elegir varias fotos de una vez en el selector.
   Future<void> _addImage() async {
-    final picked = await ImagePickerService.pick();
-    if (picked == null || !mounted) return;
+    final picked = await ImagePickerService.pickMany();
+    if (picked.isEmpty || !mounted) return;
 
     setState(() {
-      _pendingAdds.add(_PendingImage(picked.bytes, picked.name));
+      _pendingAdds.addAll([for (final p in picked) _PendingImage(p.bytes, p.name)]);
       _error = null;
     });
   }
@@ -145,72 +147,48 @@ class _BusinessGalleryPageState extends State<BusinessGalleryPage> {
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) _cancel();
       },
-      child: Scaffold(
-        backgroundColor: AppColors.panelNavy,
-        body: SafeArea(
-          child: Align(
-            alignment: Alignment.topCenter,
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 680),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: TextButton.icon(
-                        onPressed: _cancel,
-                        icon: Icon(Icons.arrow_back, size: 15, color: AppColors.slate400),
-                        label: Text('Volver a mi negocio', style: TextStyle(color: AppColors.slate400, fontSize: 13)),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Text('Galería de fotos', style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 24)),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Sube y organiza las fotos que verán los visitantes en el mapa.',
-                      style: TextStyle(color: AppColors.slate400, fontSize: 14),
-                    ),
-                    const SizedBox(height: 24),
-                    if (_error != null) ...[
-                      Text(_error!, style: TextStyle(color: AppColors.errorRed, fontSize: 13)),
-                      const SizedBox(height: 12),
-                    ],
-                    _buildGrid(),
-                    if (_isDirty) ...[
-                      const SizedBox(height: 12),
-                      Text(
-                        'Los cambios se aplicarán al tocar "Guardar cambios".',
-                        style: TextStyle(color: AppColors.slate400, fontSize: 12),
-                      ),
-                    ],
-                    const SizedBox(height: 20),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: AppButton(
-                            variant: AppButtonVariant.ghost,
-                            onPressed: _isSaving ? null : _cancel,
-                            child: const Text('Cancelar'),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: AppButton(
-                            backgroundColor: AppColors.businessOrange,
-                            foregroundColor: Colors.white,
-                            onPressed: (_isSaving || !_isDirty) ? null : _save,
-                            child: Text(_isSaving ? 'Guardando...' : 'Guardar cambios'),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+      child: PaginaFormulario(
+        volver: 'Volver a mi negocio',
+        onVolver: _cancel,
+        titulo: 'Galería de fotos',
+        descripcion: 'Sube y organiza las fotos que verán los visitantes en la ficha de tu lugar.',
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (_error != null) ...[
+              Text(_error!, style: TextStyle(color: AppColors.errorRed, fontSize: 14)),
+              const SizedBox(height: 12),
+            ],
+            _buildGrid(),
+            if (_isDirty) ...[
+              const SizedBox(height: 12),
+              Text(
+                'Los cambios se aplicarán al tocar "Guardar cambios".',
+                style: TextStyle(color: AppColors.slate400, fontSize: 13),
               ),
+            ],
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(
+                  child: AppButton(
+                    variant: AppButtonVariant.ghost,
+                    onPressed: _isSaving ? null : _cancel,
+                    child: const Text('Cancelar'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: AppButton(
+                    backgroundColor: AppColors.businessOrange,
+                    foregroundColor: Colors.white,
+                    onPressed: (_isSaving || !_isDirty) ? null : _save,
+                    child: Text(_isSaving ? 'Guardando...' : 'Guardar cambios'),
+                  ),
+                ),
+              ],
             ),
-          ),
+          ],
         ),
       ),
     );
@@ -280,8 +258,10 @@ class _GalleryTile extends StatelessWidget {
                 bottom: 6,
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.6), borderRadius: BorderRadius.circular(6)),
-                  child: const Text('Sin guardar', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
+                  decoration:
+                      BoxDecoration(color: Colors.black.withValues(alpha: 0.6), borderRadius: BorderRadius.circular(6)),
+                  child: const Text('Sin guardar',
+                      style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
                 ),
               ),
             if (!isBusy)
@@ -335,7 +315,7 @@ class _AddTile extends StatelessWidget {
                   children: [
                     Icon(Icons.add, size: 18, color: AppColors.slate400),
                     const SizedBox(height: 2),
-                    Text('Agregar', style: TextStyle(color: AppColors.slate400, fontSize: 12)),
+                    Text('Agregar', style: TextStyle(color: AppColors.slate400, fontSize: 13)),
                   ],
                 ),
         ),

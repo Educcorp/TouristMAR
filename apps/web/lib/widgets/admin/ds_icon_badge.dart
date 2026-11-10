@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 
-/// Círculo con ícono usado para avatares de identidad, cabeceras de card y
-/// stat cards. Reemplaza el patrón `Container(shape: circle) + Icon` que
-/// antes se repetía copiado en cada página admin.
+import '../../theme/app_theme.dart';
+
+/// Ícono de cabecera de fila o de tarjeta: una placa cuadrada (como las de
+/// la lista del mapa) con el ícono del color de su categoría o estado.
+/// Antes era un círculo tintado con borde y brillo, el adorno genérico de
+/// cualquier panel; [glow] se conserva solo por compatibilidad y ya no pinta.
 class DsIconBadgeCircle extends StatelessWidget {
   final IconData icon;
   final Color color;
@@ -23,20 +26,10 @@ class DsIconBadgeCircle extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.14),
-        shape: BoxShape.circle,
-        border: Border.all(color: color.withValues(alpha: 0.3)),
-        boxShadow: glow
-            ? [
-                BoxShadow(
-                  color: color.withValues(alpha: 0.25),
-                  blurRadius: 16,
-                  spreadRadius: 1,
-                ),
-              ]
-            : null,
+        color: AppColors.surfaceAlt,
+        borderRadius: BorderRadius.circular(size * 0.24),
       ),
-      child: Icon(icon, color: color, size: size * 0.42),
+      child: Icon(icon, color: color, size: size * 0.5),
     );
   }
 }

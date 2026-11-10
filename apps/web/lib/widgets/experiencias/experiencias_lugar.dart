@@ -127,48 +127,68 @@ class _ExperienciasLugarSectionState extends State<ExperienciasLugarSection> {
     final situaciones = [
       for (final tipo in ExperienciaTipo.values) _situacion(tipo, _yo),
     ];
-    final disponibles = situaciones.where((s) => s.estado != ExperienciaEstado.noDisponible).length;
+    // Las que el lugar ofrece van como tarjetas; las que no, en un solo
+    // renglón discreto al final (antes eran tarjetas apagadas que ocupaban
+    // más que las disponibles).
+    final ofrecidas = situaciones.where((s) => s.estado != ExperienciaEstado.noDisponible).toList();
+    final faltan = situaciones.where((s) => s.estado == ExperienciaEstado.noDisponible).toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
-            Icon(Icons.view_in_ar_outlined, size: 18, color: AppColors.textPrimary),
+            Icon(Icons.view_in_ar_outlined, size: 20, color: AppColors.textPrimary),
             const SizedBox(width: AppSpacing.sm),
             Text('Experiencias inmersivas', style: AppTypography.h3),
-            const Spacer(),
-            Text(
-              '$disponibles de 3 disponibles',
-              style: AppTypography.bodySmall,
-            ),
           ],
         ),
         const SizedBox(height: AppSpacing.md),
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final columnas = constraints.maxWidth >= 640 ? 3 : 1;
-            final ancho = columnas == 1
-                ? constraints.maxWidth
-                : (constraints.maxWidth - AppSpacing.md * (columnas - 1)) / columnas;
-            return Wrap(
-              spacing: AppSpacing.md,
-              runSpacing: AppSpacing.md,
-              children: [
-                for (final s in situaciones)
-                  SizedBox(
-                    width: ancho,
-                    child: ExperienciaCard(
-                      situacion: s,
-                      lugar: widget.lugar,
-                      compacta: columnas == 1,
-                      onTap: s.estado == ExperienciaEstado.noDisponible ? null : () => _abrirDetalle(s),
+        if (ofrecidas.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceAlt,
+              borderRadius: BorderRadius.circular(AppRadius.card),
+            ),
+            child: Text(
+              'Este lugar todavía no tiene realidad aumentada ni recorrido 360°.',
+              style: AppTypography.bodySmall,
+            ),
+          )
+        else
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final columnas = constraints.maxWidth >= 640 ? ofrecidas.length.clamp(1, 3) : 1;
+              final ancho = columnas == 1
+                  ? constraints.maxWidth
+                  : (constraints.maxWidth - AppSpacing.md * (columnas - 1)) / columnas;
+              return Wrap(
+                spacing: AppSpacing.md,
+                runSpacing: AppSpacing.md,
+                children: [
+                  for (final s in ofrecidas)
+                    SizedBox(
+                      width: ancho,
+                      child: ExperienciaCard(
+                        situacion: s,
+                        lugar: widget.lugar,
+                        compacta: columnas == 1,
+                        onTap: () => _abrirDetalle(s),
+                      ),
                     ),
-                  ),
-              ],
-            );
-          },
-        ),
+                ],
+              );
+            },
+          ),
+        if (ofrecidas.isNotEmpty && faltan.isNotEmpty) ...[
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            'Aún no disponible aquí: ${faltan.map((s) => ExperienciaInfo.of(s.tipo).tituloCorto).join(' · ')}',
+            style: AppTypography.caption,
+          ),
+        ],
       ],
     );
   }
@@ -199,11 +219,10 @@ class ExperienciaCard extends StatelessWidget {
       width: 44,
       height: 44,
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.14),
+        color: AppColors.surfaceAlt,
         borderRadius: BorderRadius.circular(AppRadius.buttonLg),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
-      child: Icon(info.icon, color: color, size: 22),
+      child: Icon(info.icon, color: color, size: 24),
     );
 
     final textos = Column(
@@ -214,8 +233,8 @@ class ExperienciaCard extends StatelessWidget {
           info.tituloCorto,
           style: TextStyle(
             color: apagada ? AppColors.slate400 : AppColors.textPrimary,
-            fontWeight: FontWeight.w600,
-            fontSize: 14,
+            fontWeight: FontWeight.w700,
+            fontSize: 16,
           ),
         ),
         const SizedBox(height: 4),
@@ -248,7 +267,7 @@ class ExperienciaCard extends StatelessWidget {
             padding: const EdgeInsets.all(AppSpacing.lg),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(AppRadius.card),
-              border: Border.all(color: apagada ? AppColors.borderSubtle : color.withValues(alpha: 0.25)),
+              border: Border.all(color: AppColors.borderSubtle),
             ),
             child: compacta
                 ? Row(
@@ -293,13 +312,13 @@ class _EstadoChip extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 13, color: color),
+        Icon(icon, size: 15, color: color),
         const SizedBox(width: 4),
         Flexible(
           child: Text(
             texto,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600),
+            style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.w600),
           ),
         ),
       ],
@@ -613,11 +632,11 @@ class _BannerVistaPrevia extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(Icons.visibility_outlined, size: 14, color: AppColors.amber),
+          Icon(Icons.visibility_outlined, size: 16, color: AppColors.amber),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Text('Vista previa — así lo verá un visitante.',
-                style: TextStyle(color: AppColors.amber, fontSize: 12, fontWeight: FontWeight.w600)),
+                style: TextStyle(color: AppColors.amber, fontSize: 13, fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -793,7 +812,7 @@ class _Pasos extends StatelessWidget {
                   alignment: Alignment.center,
                   decoration: BoxDecoration(color: AppColors.overlay(0.08), shape: BoxShape.circle),
                   child: Text('${i + 1}',
-                      style: TextStyle(color: AppColors.textPrimary, fontSize: 12, fontWeight: FontWeight.w700)),
+                      style: TextStyle(color: AppColors.textPrimary, fontSize: 13, fontWeight: FontWeight.w700)),
                 ),
                 const SizedBox(width: AppSpacing.md),
                 Expanded(
@@ -804,7 +823,7 @@ class _Pasos extends StatelessWidget {
                           style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
                       TextSpan(text: pasos[i].$2),
                     ]),
-                    style: AppTypography.body.copyWith(fontSize: 13),
+                    style: AppTypography.body.copyWith(fontSize: 14),
                   ),
                 ),
               ],

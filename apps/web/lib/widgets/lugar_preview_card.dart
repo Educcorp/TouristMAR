@@ -66,13 +66,13 @@ class LugarPreviewCard extends StatelessWidget {
       children: [
         Row(
           children: [
-            Icon(cat.icon, size: 12, color: cat.color),
+            Icon(cat.icon, size: 14, color: cat.color),
             const SizedBox(width: 4),
             Flexible(
               child: Text(
-                lugar.categoriaTexto.isEmpty ? cat.etiqueta : lugar.categoriaTexto,
+                lugar.categoriaVisible,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(color: cat.color, fontSize: 12, fontWeight: FontWeight.w600),
+                style: TextStyle(color: cat.color, fontSize: 13, fontWeight: FontWeight.w600),
               ),
             ),
           ],
@@ -244,7 +244,7 @@ class _Acceso360 extends StatelessWidget {
                   const SizedBox(width: 8),
                   const Icon(Icons.threesixty, size: 16, color: Colors.white),
                   const SizedBox(width: 4),
-                  const Text('Ver en 360°', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700)),
+                  const Text('Ver en 360°', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w700)),
                 ],
               ],
             ),
@@ -255,42 +255,36 @@ class _Acceso360 extends StatelessWidget {
   }
 }
 
-/// Tres íconos pequeños (marcador, ubicación, 360°): encendidos si el lugar
-/// ofrece esa experiencia.
+/// Las experiencias que el lugar sí ofrece (marcador, ubicación, 360°), cada
+/// una con su ícono y color. Las que no tiene ya no se enlistan tachadas: tres
+/// renglones tachados en una tarjeta chica se leían como errores.
 class ExperienciasMiniBadges extends StatelessWidget {
   final Lugar lugar;
   const ExperienciasMiniBadges({super.key, required this.lugar});
 
   @override
   Widget build(BuildContext context) {
+    final activas = ExperienciaTipo.values.where(lugar.tiene).toList();
+    if (activas.isEmpty) {
+      return Text('Sin experiencias inmersivas por ahora', style: AppTypography.caption);
+    }
     return Wrap(
-      spacing: 6,
-      runSpacing: 6,
+      spacing: 12,
+      runSpacing: 4,
       children: [
-        for (final tipo in ExperienciaTipo.values)
+        for (final tipo in activas)
           Builder(builder: (context) {
             final info = ExperienciaInfo.of(tipo);
-            final activa = lugar.tiene(tipo);
-            final color = activa ? info.color : AppColors.slate500;
             return Tooltip(
-              message: activa ? info.titulo : '${info.tituloCorto}: no disponible',
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                decoration: BoxDecoration(
-                  color: activa ? color.withValues(alpha: 0.12) : AppColors.overlay(0.04),
-                  borderRadius: BorderRadius.circular(999),
-                  border: Border.all(color: activa ? color.withValues(alpha: 0.35) : AppColors.borderSubtle),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(info.icon, size: 11, color: color),
-                    const SizedBox(width: 3),
-                    Text(info.tituloCorto,
-                        style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600,
-                            decoration: activa ? null : TextDecoration.lineThrough)),
-                  ],
-                ),
+              message: info.titulo,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(info.icon, size: 16, color: info.color),
+                  const SizedBox(width: 4),
+                  Text(info.tituloCorto,
+                      style: TextStyle(color: info.color, fontSize: 14, fontWeight: FontWeight.w600)),
+                ],
               ),
             );
           }),

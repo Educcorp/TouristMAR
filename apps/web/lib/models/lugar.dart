@@ -88,6 +88,16 @@ extension CategoriaLugarX on CategoriaLugar {
         CategoriaLugar.otro => 'Otros',
       };
 
+  String get etiquetaSingular => switch (this) {
+        CategoriaLugar.playa => 'Playa',
+        CategoriaLugar.mirador => 'Mirador',
+        CategoriaLugar.restaurante => 'Restaurante',
+        CategoriaLugar.hotel => 'Hospedaje',
+        CategoriaLugar.recreacion => 'Recreación',
+        CategoriaLugar.cultura => 'Cultura',
+        CategoriaLugar.otro => 'Lugar',
+      };
+
   IconData get icon => switch (this) {
         CategoriaLugar.playa => Icons.beach_access_outlined,
         CategoriaLugar.mirador => Icons.landscape_outlined,
@@ -152,6 +162,9 @@ class Lugar {
   final String? direccion;
   final String? horario;
   final String? telefono;
+  final String? sitioWeb;
+  final String? costoPorPersona;
+  final String? menu;
   final String portada;
   final List<String> galeria;
   final double rating;
@@ -179,6 +192,9 @@ class Lugar {
     this.direccion,
     this.horario,
     this.telefono,
+    this.sitioWeb,
+    this.costoPorPersona,
+    this.menu,
     required this.portada,
     this.galeria = const [],
     this.rating = 0,
@@ -202,6 +218,12 @@ class Lugar {
   bool get esEjemplo => !idEsReal(id);
 
   CategoriaLugar get categoria => CategoriaLugarDetector.detectar(categoriaTexto);
+
+  /// La categoría de ESTE lugar, en singular: lo que escribió el negocio
+  /// ("Club de playa") o, si no hay, el tipo detectado ("Playa"). Las
+  /// etiquetas en plural ("Playas") son para los filtros, no para un lugar.
+  String get categoriaVisible =>
+      categoriaTexto.trim().isNotEmpty ? categoriaTexto.trim() : categoria.etiquetaSingular;
 
   bool tiene(ExperienciaTipo tipo) => switch (tipo) {
         ExperienciaTipo.arMarcador => arMarcador != null,
@@ -231,6 +253,9 @@ class Lugar {
         direccion: negocio.direccion,
         horario: negocio.horario,
         telefono: negocio.telefono,
+        sitioWeb: negocio.sitioWeb,
+        costoPorPersona: negocio.costoPorPersona,
+        menu: negocio.menu,
         portada: negocio.portada ?? '',
         galeria: negocio.galeria,
         ubicacion: ubicacion ??

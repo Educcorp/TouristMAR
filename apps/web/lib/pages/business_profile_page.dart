@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../widgets/admin/ds_badge.dart';
+import '../models/lugar.dart';
 import '../models/business_profile.dart';
 import '../theme/app_theme.dart';
-import '../widgets/app_button.dart';
 import '../services/resenas_service.dart';
 import '../utils/contact_launcher.dart';
 import '../widgets/cover_image.dart';
@@ -63,116 +64,81 @@ class _BusinessProfileContentState extends State<BusinessProfileContent> {
   Widget build(BuildContext context) {
     final business = widget.business;
 
+    final cat = CategoriaLugarDetector.detectar(business.category);
     return SingleChildScrollView(
       child: Column(
         children: [
-          SizedBox(
-            height: 200,
-            width: double.infinity,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                CoverImage(source: business.coverImage),
-                DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [Colors.transparent, AppColors.scrimDark.withValues(alpha: 0.9)],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
+          // El negocio como lo ve el visitante: foto arriba de la línea de
+          // flotación (franja del color de su categoría) y los datos debajo,
+          // en tinta. Antes el nombre iba en blanco sobre la foto con un
+          // degradado y en muchas portadas no se leía.
           Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 680),
+              constraints: const BoxConstraints(maxWidth: AppAncho.formulario),
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
+                padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Transform.translate(
-                      offset: const Offset(0, -36),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.end,
+                    // La portada en 16:9 dentro de la columna (como las
+                    // tarjetas del visitante): a todo el ancho del escritorio
+                    // recortaba los logos hasta dejarlos ilegibles.
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(AppRadius.card),
+                      child: Column(
                         children: [
-                          Container(
-                            width: 76,
-                            height: 76,
-                            decoration: BoxDecoration(
-                              color: AppColors.panelNavySoft,
-                              borderRadius: BorderRadius.circular(18),
-                              border: Border.all(color: AppColors.businessOrange.withValues(alpha: 0.4), width: 2),
-                            ),
-                            child: Icon(Icons.apartment, size: 30, color: AppColors.businessOrange),
-                          ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Padding(
-                              padding: const EdgeInsets.only(bottom: 4),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Flexible(
-                                        child: Text(
-                                          business.businessName,
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .headlineMedium
-                                              ?.copyWith(fontSize: 20, color: Colors.white),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      _EstadoBadge(estado: business.estado),
-                                    ],
-                                  ),
-                                  Text(business.category, style: const TextStyle(color: Colors.white70, fontSize: 12)),
-                                ],
-                              ),
-                            ),
-                          ),
+                          AspectRatio(aspectRatio: 16 / 9, child: CoverImage(source: business.coverImage)),
+                          Container(height: kFranja, color: cat.esmalte),
                         ],
                       ),
                     ),
+                    const SizedBox(height: AppSpacing.lg),
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Row(
-                          children: [
-                            ...List.generate(
-                              5,
-                              (i) => Icon(Icons.star,
-                                  size: 15, color: i < business.rating.round() ? Colors.amber : AppColors.overlay(0.15)),
-                            ),
-                            const SizedBox(width: 8),
-                            Text('${business.rating}', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700, fontSize: 14)),
-                            const SizedBox(width: 4),
-                            Text('(${business.totalReviews} reseñas)', style: TextStyle(color: AppColors.slate400, fontSize: 12)),
-                          ],
-                        ),
-                        IntrinsicWidth(
-                          child: AppButton(
-                            variant: AppButtonVariant.ghost,
-                            onPressed: _openEdit,
-                            child: const Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.edit_outlined, size: 13),
-                                SizedBox(width: 6),
-                                Text('Editar'),
-                              ],
-                            ),
+                        Icon(cat.icon, size: 20, color: cat.color),
+                        const SizedBox(width: 6),
+                        Flexible(
+                          child: Text(
+                            business.category.trim().isEmpty ? 'Sin categoría' : business.category,
+                            style: AppTypography.bodySmall.copyWith(color: AppColors.slate300, fontSize: 15),
                           ),
+                        ),
+                        const SizedBox(width: 10),
+                        _EstadoBadge(estado: business.estado),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(business.businessName, style: AppTypography.display.copyWith(fontSize: 32)),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: business.totalReviews == 0
+                              ? Text('Sin reseñas todavía', style: AppTypography.bodySmall)
+                              : Row(
+                                  children: [
+                                    const Icon(Icons.star_rounded, size: 20, color: AppColors.amarillo),
+                                    const SizedBox(width: 4),
+                                    Text(business.rating.toStringAsFixed(1),
+                                        style: AppTypography.h3.copyWith(fontWeight: FontWeight.w700)),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      '${business.totalReviews} ${business.totalReviews == 1 ? 'reseña' : 'reseñas'}',
+                                      style: AppTypography.bodySmall,
+                                    ),
+                                  ],
+                                ),
+                        ),
+                        OutlinedButton.icon(
+                          onPressed: _openEdit,
+                          icon: const Icon(Icons.edit_outlined, size: 18),
+                          label: const Text('Editar'),
                         ),
                       ],
                     ),
                     const SizedBox(height: 16),
                     _card(
-                      title: 'DESCRIPCIÓN',
+                      title: 'Descripción',
                       child: Text(business.description, style: TextStyle(color: AppColors.textSecondary, fontSize: 14, height: 1.4)),
                     ),
                     const SizedBox(height: 16),
@@ -212,7 +178,7 @@ class _BusinessProfileContentState extends State<BusinessProfileContent> {
                         Text('Galería de fotos', style: TextStyle(color: AppColors.textPrimary, fontSize: 14, fontWeight: FontWeight.w600)),
                         GestureDetector(
                           onTap: _openGallery,
-                          child: Text('Gestionar', style: TextStyle(color: AppColors.businessOrange, fontSize: 12, fontWeight: FontWeight.w600)),
+                          child: Text('Gestionar', style: TextStyle(color: AppColors.businessOrange, fontSize: 13, fontWeight: FontWeight.w600)),
                         ),
                       ],
                     ),
@@ -226,7 +192,7 @@ class _BusinessProfileContentState extends State<BusinessProfileContent> {
                           Text('Últimas reseñas', style: TextStyle(color: AppColors.textPrimary, fontSize: 14, fontWeight: FontWeight.w600)),
                           GestureDetector(
                             onTap: widget.onOpenReviews,
-                            child: Text('Ver todas', style: TextStyle(color: AppColors.brandTeal, fontSize: 12, fontWeight: FontWeight.w600)),
+                            child: Text('Ver todas', style: TextStyle(color: AppColors.brandTeal, fontSize: 13, fontWeight: FontWeight.w600)),
                           ),
                         ],
                       ),
@@ -246,11 +212,11 @@ class _BusinessProfileContentState extends State<BusinessProfileContent> {
   Widget _card({required String title, required Widget child}) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
-        color: AppColors.panelNavySoft,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.overlay(0.08)),
+        color: AppColors.cubierta,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        border: Border.all(color: AppColors.borderSubtle),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -268,7 +234,7 @@ class _BusinessProfileContentState extends State<BusinessProfileContent> {
       value,
       style: TextStyle(
         color: onTap == null ? AppColors.textSecondary : AppColors.brandTeal,
-        fontSize: 13.5,
+        fontSize: 14,
         decoration: onTap == null ? null : TextDecoration.underline,
         decorationColor: AppColors.brandTeal.withValues(alpha: 0.5),
       ),
@@ -317,7 +283,7 @@ class _BusinessProfileContentState extends State<BusinessProfileContent> {
                 children: [
                   Icon(Icons.add, size: 18, color: AppColors.slate400),
                   const SizedBox(height: 2),
-                  Text('Agregar', style: TextStyle(color: AppColors.slate400, fontSize: 12)),
+                  Text('Agregar', style: TextStyle(color: AppColors.slate400, fontSize: 13)),
                 ],
               ),
             ),
@@ -335,37 +301,10 @@ class _EstadoBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = switch (estado) {
-      'aprobado' => AppColors.brandTeal,
-      'rechazado' => AppColors.errorRed,
-      _ => AppColors.amber,
+    return switch (estado) {
+      'aprobado' => const DsBadge(text: 'Verificado', tone: BadgeTone.info, icon: Icons.verified_outlined),
+      'rechazado' => const DsBadge(text: 'Rechazado', tone: BadgeTone.danger),
+      _ => const DsBadge(text: 'Pendiente', tone: BadgeTone.warning),
     };
-    final label = switch (estado) {
-      'aprobado' => 'Verificado',
-      'rechazado' => 'Rechazado',
-      _ => 'Pendiente',
-    };
-    final icon = switch (estado) {
-      'aprobado' => Icons.check_circle,
-      'rechazado' => Icons.cancel,
-      _ => Icons.hourglass_top,
-    };
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 10, color: color),
-          const SizedBox(width: 4),
-          Text(label, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w700)),
-        ],
-      ),
-    );
   }
 }

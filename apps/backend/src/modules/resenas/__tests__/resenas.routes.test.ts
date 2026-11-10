@@ -15,6 +15,7 @@ vi.mock('../../../config/prisma', () => ({
       update: vi.fn(),
       deleteMany: vi.fn(),
     },
+    notification: { create: vi.fn() },
   },
 }))
 
@@ -29,6 +30,7 @@ const resenaGroupBy = vi.mocked(prisma.resena.groupBy)
 const resenaUpsert = vi.mocked(prisma.resena.upsert)
 const resenaUpdate = vi.mocked(prisma.resena.update)
 const resenaDeleteMany = vi.mocked(prisma.resena.deleteMany)
+const notificationCreate = vi.mocked(prisma.notification.create)
 
 const VISITANTE = 'visitante-1'
 const DUENO = 'dueno-1'
@@ -173,11 +175,29 @@ describe('DELETE /api/resenas/lugar/:negocioId', () => {
 describe('respuesta del negocio', () => {
   const ruta = `/api/resenas/${RESENA}/respuesta`
 
-  it('el dueño del negocio reseñado puede responder', async () => {
-    resenaFindUnique.mockResolvedValue({ negocio: { userId: DUENO } } as any)
+  it('el dueño del negocio reseñado puede responder y se le avisa al autor', async () => {
+    resenaFindUnique.mockResolvedValue({
+      userId: VISITANTE,
+      respuesta: null,
+      negocio: { id: NEGOCIO, userId: DUENO, nombre: 'Playa Azul' },
+    } as any)
     const res = await request(buildApp()).put(ruta).set('Authorization', token(DUENO)).send({ respuesta: 'Gracias por venir' })
     expect(res.status).toBe(204)
     expect(resenaUpdate.mock.calls[0][0]).toMatchObject({ where: { id: RESENA }, data: { respuesta: 'Gracias por venir' } })
+    expect(notificationCreate.mock.calls[0][0]).toMatchObject({
+      data: { userId: VISITANTE, tipo: 'resena_respondida', negocioId: NEGOCIO },
+    })
+  })
+
+  it('quitar la respuesta no manda notificación', async () => {
+    resenaFindUnique.mockResolvedValue({
+      userId: VISITANTE,
+      respuesta: 'Gracias',
+      negocio: { id: NEGOCIO, userId: DUENO, nombre: 'Playa Azul' },
+    } as any)
+    const res = await request(buildApp()).delete(ruta).set('Authorization', token(DUENO))
+    expect(res.status).toBe(204)
+    expect(notificationCreate).not.toHaveBeenCalled()
   })
 
   it('otro usuario no puede responder', async () => {

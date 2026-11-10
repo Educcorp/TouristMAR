@@ -41,7 +41,7 @@ class RegisterPlaceBanner extends StatelessWidget {
                     ),
                     Text(
                       'Propón tu negocio o sitio turístico',
-                      style: TextStyle(color: AppColors.slate400, fontSize: 12),
+                      style: TextStyle(color: AppColors.slate400, fontSize: 13),
                     ),
                   ],
                 ),

@@ -72,7 +72,7 @@ class ExperienciaViewport extends StatelessWidget {
                         Text(
                           mensaje!,
                           textAlign: TextAlign.center,
-                          style: const TextStyle(color: Colors.white70, fontSize: 12, height: 1.4),
+                          style: const TextStyle(color: Colors.white70, fontSize: 13, height: 1.4),
                         ),
                       ],
                     ],
@@ -100,7 +100,7 @@ class ExperienciaViewport extends StatelessWidget {
                     const SizedBox(width: 4),
                     Text(
                       info.tituloCorto.toUpperCase(),
-                      style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 1),
+                      style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w700, letterSpacing: 1),
                     ),
                   ],
                 ),

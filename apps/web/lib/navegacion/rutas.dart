@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../models/business_profile.dart';
 import '../models/lugar.dart';
 import '../pages/admin/admin_dashboard_page.dart';
+import '../pages/aviso_privacidad_page.dart';
 import '../pages/business_edit_page.dart';
 import '../pages/business_gallery_page.dart';
 import '../pages/business_home_page.dart';
@@ -126,6 +127,9 @@ GoRouter crearRouter({AuthService? authService, String? inicial}) {
         ),
       ),
 
+      // Público, con o sin sesión (lo liga el aviso de cookies y el registro).
+      GoRoute(path: '/privacidad', builder: (context, state) => const AvisoPrivacidadPage()),
+
       // --- Visitante --------------------------------------------------------
       GoRoute(
         path: '/inicio',
@@ -243,7 +247,7 @@ GoRouter crearRouter({AuthService? authService, String? inicial}) {
 /// previa).
 String? _redirigir(String ruta) {
   final user = Sesion.usuario.value;
-  if (ruta == '/') return null;
+  if (ruta == '/' || ruta == '/privacidad') return null;
   if (user == null) return ruta == '/login' ? null : '/login';
 
   final inicio = rutaInicio(user);

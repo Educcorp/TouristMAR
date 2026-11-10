@@ -1,5 +1,6 @@
 import { prisma } from '../../config/prisma'
 import { withDbGuard } from '../../config/db-guard'
+import { notifyUser } from '../notifications/notification.service'
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -103,11 +104,12 @@ export async function listMisResenas(userId: string) {
 export type ResultadoResponder = 'ok' | 'no_encontrada' | 'prohibido'
 
 /// Solo el dueño del negocio reseñado responde. `respuesta = null` la quita.
+/// Al responder (o cambiar la respuesta) se le avisa al autor de la reseña.
 export async function responderResena(userId: string, resenaId: string, respuesta: string | null) {
   return withDbGuard(async (): Promise<ResultadoResponder> => {
     const resena = await prisma.resena.findUnique({
       where: { id: resenaId },
-      select: { negocio: { select: { userId: true } } },
+      select: { userId: true, respuesta: true, negocio: { select: { id: true, userId: true, nombre: true } } },
     })
     if (!resena) return 'no_encontrada'
     if (resena.negocio.userId !== userId) return 'prohibido'
@@ -116,6 +118,15 @@ export async function responderResena(userId: string, resenaId: string, respuest
       where: { id: resenaId },
       data: { respuesta, respuestaEn: respuesta ? new Date() : null },
     })
+    if (respuesta && respuesta !== resena.respuesta) {
+      await notifyUser(
+        resena.userId,
+        'resena_respondida',
+        'Respondieron tu reseña',
+        `${resena.negocio.nombre} respondió: "${respuesta.length > 120 ? `${respuesta.slice(0, 117)}…` : respuesta}"`,
+        resena.negocio.id,
+      )
+    }
     return 'ok'
   })
 }

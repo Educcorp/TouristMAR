@@ -3,6 +3,8 @@ import '../theme/app_theme.dart';
 
 enum AppButtonVariant { primary, google, ghost }
 
+/// Botón de ancho completo de los formularios (login, registro, guardar).
+/// 48 px de alto como mínimo: se usa con el pulgar y al sol.
 class AppButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final AppButtonVariant variant;
@@ -28,25 +30,24 @@ class AppButton extends StatelessWidget {
       foreground: foregroundColor ?? base.foreground,
       border: base.border,
     );
+    final radio = BorderRadius.circular(AppRadius.button);
 
     return SizedBox(
       width: double.infinity,
       child: Material(
         color: colors.background,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: radio,
         child: InkWell(
           onTap: onPressed,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: radio,
           child: Container(
+            constraints: const BoxConstraints(minHeight: 48),
             padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(8),
-              border: colors.border,
-            ),
+            decoration: BoxDecoration(borderRadius: radio, border: colors.border),
             child: DefaultTextStyle.merge(
-              style: TextStyle(color: colors.foreground, fontWeight: FontWeight.w500, fontSize: 14),
+              style: AppTypography.boton(color: colors.foreground),
               child: IconTheme.merge(
-                data: IconThemeData(color: colors.foreground, size: 18),
+                data: IconThemeData(color: colors.foreground, size: 20),
                 child: Center(child: child),
               ),
             ),
@@ -60,19 +61,20 @@ class AppButton extends StatelessWidget {
     switch (variant) {
       case AppButtonVariant.primary:
         return _ButtonColors(
-          background: disabled ? AppColors.brandTeal.withValues(alpha: 0.5) : AppColors.brandTeal,
-          foreground: AppColors.panelNavy,
+          background: disabled ? AppColors.surfaceAlt : AppColors.brandTeal,
+          foreground: disabled ? AppColors.slate500 : AppColors.panelNavy,
         );
       case AppButtonVariant.google:
         return _ButtonColors(
-          background: Colors.white,
-          foreground: AppColors.riel,
+          background: AppColors.cubierta,
+          foreground: AppColors.tinta,
+          border: Border.all(color: AppColors.borderSubtle),
         );
       case AppButtonVariant.ghost:
         return _ButtonColors(
-          background: AppColors.overlay(0.05),
-          foreground: AppColors.textPrimary,
-          border: Border.all(color: AppColors.overlay(0.1)),
+          background: Colors.transparent,
+          foreground: AppColors.tinta,
+          border: Border.all(color: AppColors.borderSubtle, width: 1.5),
         );
     }
   }

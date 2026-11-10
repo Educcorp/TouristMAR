@@ -23,7 +23,7 @@ class CascoLugar extends StatelessWidget {
     final categoria = lugar.categoria;
     return Semantics(
       button: true,
-      label: '${lugar.nombre}, ${categoria.etiqueta}${distanciaMetros != null ? ', a ${textoDistancia(distanciaMetros!)}' : ''}',
+      label: '${lugar.nombre}, ${lugar.categoriaVisible}${distanciaMetros != null ? ', a ${textoDistancia(distanciaMetros!)}' : ''}',
       child: Material(
         color: AppColors.cubierta,
         clipBehavior: Clip.antiAlias,
@@ -74,7 +74,14 @@ class CascoLugar extends StatelessWidget {
                       children: [
                         Icon(categoria.icon, size: 18, color: categoria.color),
                         const SizedBox(width: 6),
-                        Text(categoria.etiqueta, style: AppTypography.bodySmall.copyWith(color: AppColors.slate300)),
+                        Flexible(
+                          child: Text(
+                            lugar.categoriaVisible,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTypography.bodySmall.copyWith(color: AppColors.slate300),
+                          ),
+                        ),
                         if (lugar.tieneExperiencias) ...[
                           const SizedBox(width: 10),
                           for (final tipo in ExperienciaTipo.values.where(lugar.tiene))

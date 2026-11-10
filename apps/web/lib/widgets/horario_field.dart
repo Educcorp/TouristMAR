@@ -146,7 +146,7 @@ class _HorarioFieldState extends State<HorarioField> {
                               _resumen,
                               style: TextStyle(
                                 color: _horario == null ? AppColors.slate500 : AppColors.textPrimary,
-                                fontSize: 13,
+                                fontSize: 14,
                               ),
                             ),
                           ),
@@ -177,7 +177,7 @@ class _HorarioFieldState extends State<HorarioField> {
             ),
             if (error != null) ...[
               const SizedBox(height: 6),
-              Text(error, style: TextStyle(color: AppColors.errorRed, fontSize: 12)),
+              Text(error, style: TextStyle(color: AppColors.errorRed, fontSize: 13)),
             ],
           ],
         );
@@ -219,7 +219,7 @@ class _FilaDia extends StatelessWidget {
               ),
               Text(
                 dia.abierto ? 'Abierto' : 'Cerrado',
-                style: TextStyle(color: dia.abierto ? acento : AppColors.slate500, fontSize: 12),
+                style: TextStyle(color: dia.abierto ? acento : AppColors.slate500, fontSize: 13),
               ),
               Switch(
                 key: ValueKey('horario-$indice-abierto'),
@@ -254,12 +254,12 @@ class _FilaDia extends StatelessWidget {
               alignment: Alignment.centerLeft,
               child: TextButton.icon(
                 onPressed: habilitado ? onCopiar : null,
-                icon: Icon(Icons.content_copy, size: 14, color: acento),
-                label: Text('Usar este horario en los demás días abiertos', style: TextStyle(color: acento, fontSize: 12)),
+                icon: Icon(Icons.content_copy, size: 16, color: acento),
+                label: Text('Usar este horario en los demás días abiertos', style: TextStyle(color: acento, fontSize: 13)),
               ),
             ),
             if (dia.horasIguales)
-              Text('Abre y cierra a la misma hora', style: TextStyle(color: AppColors.errorRed, fontSize: 12)),
+              Text('Abre y cierra a la misma hora', style: TextStyle(color: AppColors.errorRed, fontSize: 13)),
           ],
           if (indice < 6) Padding(padding: const EdgeInsets.only(top: 4), child: Divider(height: 1, color: AppColors.overlay(0.06))),
         ],
@@ -302,7 +302,7 @@ class _SelectorHora extends StatelessWidget {
       children: [
         SizedBox(
           width: 48,
-          child: Text(etiqueta, style: TextStyle(color: AppColors.slate400, fontSize: 12)),
+          child: Text(etiqueta, style: TextStyle(color: AppColors.slate400, fontSize: 13)),
         ),
         _Lista<int>(
           clave: '$claveBase-hora',
@@ -312,7 +312,7 @@ class _SelectorHora extends StatelessWidget {
           habilitado: habilitado,
           onChanged: (h) => cambiar(h: h),
         ),
-        Text(':', style: TextStyle(color: AppColors.slate400, fontSize: 13)),
+        Text(':', style: TextStyle(color: AppColors.slate400, fontSize: 14)),
         _Lista<int>(
           clave: '$claveBase-minuto',
           valor: minuto,
@@ -367,7 +367,7 @@ class _Lista<T> extends StatelessWidget {
           value: valor,
           isDense: true,
           dropdownColor: AppColors.panelNavySoft,
-          style: TextStyle(color: AppColors.textPrimary, fontSize: 13),
+          style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
           icon: Icon(Icons.keyboard_arrow_down, size: 16, color: AppColors.slate400),
           items: [for (final o in opciones) DropdownMenuItem<T>(value: o, child: Text(texto(o)))],
           onChanged: habilitado
