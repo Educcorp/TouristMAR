@@ -89,31 +89,35 @@ model User {
 }
 
 model NegocioProfile {
-  id          String              @id @default(uuid()) @db.Uuid
-  userId      String              @map("user_id") @db.Uuid
-  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  nombre      String
-  categoria   String?
+  id              String              @id @default(uuid()) @db.Uuid
+  userId          String              @map("user_id") @db.Uuid
+  user            User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  nombre          String
+  categoria       String?
   /// Resumen corto (tarjetas de la app y marcador flotante de la RA).
-  descripcion String?
+  descripcion     String?
   /// Información detallada del lugar (guía completa al llegar en la RA).
-  detalle     String?
-  direccion   String?
-  telefono    String?
-  sitioWeb    String?             @map("sitio_web")
-  horario     String?
-  portada     String?
-  galeria     String[]            @default([])
-  archivo360  String?             @map("archivo_360")
-  arMarcador  String?             @map("ar_marcador_url")
-  arGeo       String?             @map("ar_geo_url")
-  latitud     Float?
-  longitud    Float?
-  estado      estado_negocio_enum @default(pendiente)
-  revisadoPor String?             @map("revisado_por") @db.Uuid
-  revisadoEn  DateTime?           @map("revisado_en")
-  createdAt   DateTime            @default(now()) @map("created_at")
-  updatedAt   DateTime            @updatedAt @map("updated_at")
+  detalle         String?
+  direccion       String?
+  telefono        String?
+  sitioWeb        String?             @map("sitio_web")
+  horario         String?
+  /// Opcionales: rango de precio por persona ("$150 – $300") y el menú
+  /// (texto libre o liga a un PDF/página).
+  costoPorPersona String?             @map("costo_por_persona")
+  menu            String?
+  portada         String?
+  galeria         String[]            @default([])
+  archivo360      String?             @map("archivo_360")
+  arMarcador      String?             @map("ar_marcador_url")
+  arGeo           String?             @map("ar_geo_url")
+  latitud         Float?
+  longitud        Float?
+  estado          estado_negocio_enum @default(pendiente)
+  revisadoPor     String?             @map("revisado_por") @db.Uuid
+  revisadoEn      DateTime?           @map("revisado_en")
+  createdAt       DateTime            @default(now()) @map("created_at")
+  updatedAt       DateTime            @updatedAt @map("updated_at")
 
   arMarcadores         ArMarcador[]
   recorridos360        Recorrido360[]

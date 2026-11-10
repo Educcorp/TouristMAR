@@ -32,7 +32,6 @@
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.0",
     "multer": "^2.0.1",
-    "node-cron": "^3.0.3",
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
     "passport-jwt": "^4.0.1",
@@ -40,7 +39,7 @@
     "prisma": "^6.19.3",
     "qrcode": "^1.5.4",
     "sharp": "^0.35.5",
-    "zod": "^3.24.2"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
@@ -50,7 +49,6 @@
     "@types/morgan": "^1.9.9",
     "@types/multer": "^1.4.12",
     "@types/node": "^22.10.2",
-    "@types/node-cron": "^3.0.11",
     "@types/passport": "^1.0.17",
     "@types/passport-google-oauth20": "^2.0.16",
     "@types/passport-jwt": "^4.0.1",
@@ -62,5 +60,9 @@
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.6.2",
     "vitest": "^5.0.0"
+  },
+  "overrides": {
+    "qs": "^6.17.1",
+    "deepmerge-ts": "^8.0.2"
   }
 }
