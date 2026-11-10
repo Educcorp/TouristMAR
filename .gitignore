@@ -12,3 +12,6 @@ apps/ar-module/README.md
 
 # Archivos de sistema de macOS
 .DS_Store
+
+# Configuración local de VS Code
+.vscode/
