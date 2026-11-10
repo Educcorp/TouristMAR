@@ -9,3 +9,6 @@ skills/
 # Notas/instrucciones locales de trabajo (no se versionan)
 notes.md
 apps/ar-module/README.md
+
+# Archivos de sistema de macOS
+.DS_Store

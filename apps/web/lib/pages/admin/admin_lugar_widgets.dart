@@ -52,6 +52,7 @@ class _LugarFormState extends State<LugarForm> {
   final _form = GlobalKey<FormState>();
   late final _nombre = TextEditingController(text: widget.lugar?.nombre);
   late final _descripcion = TextEditingController(text: widget.lugar?.descripcion);
+  late final _detalle = TextEditingController(text: widget.lugar?.detalle);
   late final _direccion = TextEditingController(text: widget.lugar?.direccion);
   late String? _categoria = widget.lugar?.categoria;
   late Coordenadas? _ubicacion = widget.lugar == null ? null : coordenadasDe(widget.lugar!);
@@ -66,6 +67,7 @@ class _LugarFormState extends State<LugarForm> {
   void dispose() {
     _nombre.dispose();
     _descripcion.dispose();
+    _detalle.dispose();
     _direccion.dispose();
     super.dispose();
   }
@@ -84,6 +86,7 @@ class _LugarFormState extends State<LugarForm> {
       'nombre': _nombre.text.trim(),
       'categoria': _categoria,
       'descripcion': _opcional(_descripcion),
+      'detalle': _opcional(_detalle),
       'direccion': _opcional(_direccion),
       'latitud': _ubicacion?.lat,
       'longitud': _ubicacion?.lng,
@@ -97,6 +100,7 @@ class _LugarFormState extends State<LugarForm> {
         // Listo para registrar otro.
         _nombre.clear();
         _descripcion.clear();
+        _detalle.clear();
         _direccion.clear();
         setState(() {
           _categoria = null;
@@ -174,13 +178,24 @@ class _LugarFormState extends State<LugarForm> {
           ),
           const SizedBox(height: AppSpacing.md),
           AppTextField(
-            label: 'Descripción',
-            icon: Icons.notes,
+            label: 'Resumen',
+            icon: Icons.short_text,
             controller: _descripcion,
             maxLines: 3,
             hintText: 'Ej. Playa de arena dorada y oleaje tranquilo, ideal para nadar.',
             accentColor: AppColors.adminViolet,
             validator: (v) => (v?.trim().length ?? 0) > 350 ? 'Máximo 350 caracteres' : null,
+          ),
+          const SizedBox(height: AppSpacing.md),
+          // Lo que se lee en la RA al llegar al lugar ("Ver información").
+          AppTextField(
+            label: 'Información detallada',
+            icon: Icons.notes,
+            controller: _detalle,
+            maxLines: 8,
+            hintText: 'Historia, qué hacer, horarios, recomendaciones…',
+            accentColor: AppColors.adminViolet,
+            validator: (v) => (v?.trim().length ?? 0) > 5000 ? 'Máximo 5000 caracteres' : null,
           ),
           if (_error != null) ...[
             const SizedBox(height: AppSpacing.md),

@@ -15,6 +15,7 @@ export interface LugarAdminInput {
   nombre: string
   categoria?: string | null
   descripcion?: string | null
+  detalle?: string | null
   direccion?: string | null
   // Contacto: lo manda la empresa en su solicitud y el admin lo puede
   // corregir desde el detalle de la solicitud.

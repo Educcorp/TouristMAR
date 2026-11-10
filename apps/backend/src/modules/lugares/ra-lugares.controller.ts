@@ -53,8 +53,8 @@ function puntoDelPin(n: NegocioProfile) {
   return {
     id: n.id,
     titulo: n.nombre,
-    resumen: recortar(descripcion, 140),
-    detalle: descripcion,
+    resumen: recortar(descripcion || (n.detalle ?? ''), 140),
+    detalle: n.detalle || descripcion,
     urlImagen: n.portada ?? '',
     urlAudio: '',
     latitud: n.latitud!,
@@ -67,7 +67,9 @@ function puntoDelPin(n: NegocioProfile) {
 /// Contrato con el equipo de Unity para la RA por geolocalización (GET
 /// /api/ra/lugares). Mismo estilo que marcadores y recorridos: nada de
 /// `null` (JsonUtility no los maneja), lo que falta va como "", y
-/// `textoParaMostrar` = nombre + "\n" + descripción. Coordenadas en grados
+/// `textoParaMostrar` = nombre + "\n" + descripción. `resumen` es la
+/// descripción corta del lugar y `detalle` su información completa (si el
+/// admin no la escribió, repite el resumen). Coordenadas en grados
 /// decimales (WGS84). `puntos` nunca viene vacío (ver [puntoDelPin]); cada
 /// punto funciona por capas: marcador flotante dentro de `radioVisible` y
 /// guía completa (o el paso a los marcadores de imagen del lugar, si
@@ -80,6 +82,8 @@ function toUnityLugar(n: LugarConPuntos) {
     nombre: n.nombre,
     categoria: n.categoria ?? '',
     textoParaMostrar: n.descripcion ? `${n.nombre}\n${n.descripcion}` : n.nombre,
+    resumen: n.descripcion ?? '',
+    detalle: n.detalle || (n.descripcion ?? ''),
     direccion: n.direccion ?? '',
     urlPortada: n.portada ?? '',
     latitud: n.latitud!,

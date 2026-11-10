@@ -92,7 +92,10 @@ model NegocioProfile {
   user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   nombre      String
   categoria   String?
+  /// Resumen corto (tarjetas de la app y marcador flotante de la RA).
   descripcion String?
+  /// Información detallada del lugar (guía completa al llegar en la RA).
+  detalle     String?
   direccion   String?
   telefono    String?
   sitioWeb    String?             @map("sitio_web")

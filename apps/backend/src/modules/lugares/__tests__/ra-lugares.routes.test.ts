@@ -16,6 +16,7 @@ const fila = (data: Record<string, unknown>) => ({
   nombre: 'Lugar',
   categoria: null,
   descripcion: null,
+  detalle: null,
   direccion: null,
   portada: null,
   latitud: 19,
@@ -58,6 +59,8 @@ describe('GET /api/ra/lugares (contrato con Unity)', () => {
         nombre: 'Facultad de ingenieria electromecanica',
         categoria: '',
         textoParaMostrar: 'Facultad de ingenieria electromecanica',
+        resumen: '',
+        detalle: '',
         direccion: '',
         urlPortada: '',
         latitud: 19.12397051892223,
@@ -134,6 +137,24 @@ describe('GET /api/ra/lugares (contrato con Unity)', () => {
   it('textoParaMostrar lleva el nombre y la descripción en dos líneas', async () => {
     const res = await request(buildApp()).get('/api/ra/lugares/otro')
     expect(res.body.lugar.textoParaMostrar).toBe('Mariscos El Faro\nMariscos frescos')
+  })
+
+  it('manda el resumen y la información detallada del lugar', async () => {
+    vi.mocked(prisma.negocioProfile.findMany).mockResolvedValue([
+      fila({ id: FIME_ID, descripcion: 'Facultad de ingeniería', detalle: 'Fundada en 1983, ofrece…' }),
+    ] as any)
+    const res = await request(buildApp()).get(`/api/ra/lugares/${FIME_ID}`)
+    expect(res.body.lugar.resumen).toBe('Facultad de ingeniería')
+    expect(res.body.lugar.detalle).toBe('Fundada en 1983, ofrece…')
+    // Sin puntos dados de alta, el punto del pin usa los mismos textos.
+    expect(res.body.lugar.puntos[0].resumen).toBe('Facultad de ingeniería')
+    expect(res.body.lugar.puntos[0].detalle).toBe('Fundada en 1983, ofrece…')
+  })
+
+  it('sin información detallada, detalle repite el resumen', async () => {
+    const res = await request(buildApp()).get('/api/ra/lugares/otro')
+    expect(res.body.lugar.resumen).toBe('Mariscos frescos')
+    expect(res.body.lugar.detalle).toBe('Mariscos frescos')
   })
 
   it('404 si el lugar no existe o no tiene pin', async () => {

@@ -48,6 +48,10 @@ namespace TouristMAR.AR
         public string categoria;
         /// <summary>Nombre y, en la siguiente línea, la descripción.</summary>
         public string textoParaMostrar;
+        /// <summary>Descripción corta del lugar (tarjeta y marcador flotante). "" si no tiene.</summary>
+        public string resumen;
+        /// <summary>Información detallada del lugar ("Ver información"). Si el admin no la escribió, repite el resumen.</summary>
+        public string detalle;
         public string direccion;
         /// <summary>Foto de portada (PNG/JPG público). "" si no tiene.</summary>
         public string urlPortada;

@@ -149,6 +149,8 @@ class NegocioSummary {
   final String nombre;
   final String? categoria;
   final String? descripcion;
+  /// Información detallada del lugar (la descripción es el resumen).
+  final String? detalle;
   final String? direccion;
   final String estado;
   final String email;
@@ -169,6 +171,7 @@ class NegocioSummary {
     required this.nombre,
     this.categoria,
     this.descripcion,
+    this.detalle,
     this.direccion,
     required this.estado,
     required this.email,
@@ -195,6 +198,7 @@ class NegocioSummary {
         nombre: json['nombre'] as String,
         categoria: json['categoria'] as String?,
         descripcion: json['descripcion'] as String?,
+        detalle: json['detalle'] as String?,
         direccion: json['direccion'] as String?,
         estado: json['estado'] as String? ?? 'pendiente',
         email: json['email'] as String,

@@ -29,3 +29,17 @@ android/
 ios/
 
 # Sí se versiona: Assets/, Packages/, ProjectSettings/, ProjectVersion.txt
+
+# Archivos de solución/proyecto que Unity regenera para el IDE
+*.csproj
+*.sln
+*.slnx
+
+# Comprimidos y copias de respaldo locales de los proyectos de RA
+*.zip
+Marcadores/marc/
+Marcadores/marcadores con diseño/
+Marcadores/marcadores mejorados temp/
+Marcadores/Marcadores con el ultimo cambio de diseño/
+AR superposicion con coordenadas/apicoordenadas/
+AR superposicion con coordenadas/coordenadas con diseño/
