@@ -70,31 +70,41 @@ class CascoLugar extends StatelessWidget {
                       style: AppTypography.h3.copyWith(fontSize: 18, fontWeight: FontWeight.w700, height: 1.2),
                     ),
                     const SizedBox(height: 6),
+                    // Categoría y experiencias a la izquierda; la calificación
+                    // siempre pegada a la esquina derecha. (Antes un Flexible
+                    // + Spacer se repartían el espacio libre y la estrella
+                    // quedaba en una posición distinta en cada tarjeta.)
                     Row(
                       children: [
-                        Icon(categoria.icon, size: 18, color: categoria.color),
-                        const SizedBox(width: 6),
-                        Flexible(
-                          child: Text(
-                            lugar.categoriaVisible,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: AppTypography.bodySmall.copyWith(color: AppColors.slate300),
+                        Expanded(
+                          child: Row(
+                            children: [
+                              Icon(categoria.icon, size: 18, color: categoria.color),
+                              const SizedBox(width: 6),
+                              Flexible(
+                                child: Text(
+                                  lugar.categoriaVisible,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: AppTypography.bodySmall.copyWith(color: AppColors.slate300),
+                                ),
+                              ),
+                              if (lugar.tieneExperiencias) ...[
+                                const SizedBox(width: 10),
+                                for (final tipo in ExperienciaTipo.values.where(lugar.tiene))
+                                  Padding(
+                                    padding: const EdgeInsets.only(right: 4),
+                                    child: Tooltip(
+                                      message: ExperienciaInfo.of(tipo).titulo,
+                                      child: Icon(ExperienciaInfo.of(tipo).icon, size: 18, color: ExperienciaInfo.of(tipo).color),
+                                    ),
+                                  ),
+                              ],
+                            ],
                           ),
                         ),
-                        if (lugar.tieneExperiencias) ...[
-                          const SizedBox(width: 10),
-                          for (final tipo in ExperienciaTipo.values.where(lugar.tiene))
-                            Padding(
-                              padding: const EdgeInsets.only(right: 4),
-                              child: Tooltip(
-                                message: ExperienciaInfo.of(tipo).titulo,
-                                child: Icon(ExperienciaInfo.of(tipo).icon, size: 18, color: ExperienciaInfo.of(tipo).color),
-                              ),
-                            ),
-                        ],
-                        const Spacer(),
                         if (lugar.totalResenas > 0) ...[
+                          const SizedBox(width: 8),
                           const Icon(Icons.star_rounded, size: 18, color: AppColors.amarillo),
                           const SizedBox(width: 2),
                           Text(

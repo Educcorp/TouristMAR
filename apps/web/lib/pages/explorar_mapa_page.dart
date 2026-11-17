@@ -429,7 +429,10 @@ class _ExplorarMapaPageState extends State<ExplorarMapaPage> {
       _ChipFiltro(
         label: 'Con RA / 360°',
         icon: Icons.view_in_ar_outlined,
-        color: AppColors.riel,
+        // Tinta: oscura en modo claro y casi blanca en modo oscuro, así el
+        // chip activo siempre contrasta con el fondo. (Con el riel fijo se
+        // veía igual que el chip apagado en modo oscuro.)
+        color: AppColors.tinta,
         activo: _soloConRa,
         onTap: () => setState(() => _soloConRa = !_soloConRa),
       ),

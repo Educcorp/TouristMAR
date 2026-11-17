@@ -39,11 +39,15 @@ class AppColors {
   static const amarillo = Color(0xFFF2B705);
   static const azul = Color(0xFF1F6FB2);
   static const rojo = Color(0xFFC8432B);
+  /// Hospedaje: morado, para que no se confunda con el riel ni con el fondo
+  /// oscuro (antes usaba la tinta marina y en modo oscuro casi no se veía).
+  static const morado = Color(0xFF7E4FD1);
 
   static Color get turquesaTexto => _dark ? const Color(0xFF3CCFCB) : const Color(0xFF00706F);
   static Color get amarilloTexto => _dark ? const Color(0xFFF2C94C) : const Color(0xFF805C00);
   static Color get azulTexto => _dark ? const Color(0xFF7DB3E6) : const Color(0xFF1A5E98);
   static Color get rojoTexto => _dark ? const Color(0xFFF08A73) : const Color(0xFFAE3520);
+  static Color get moradoTexto => _dark ? const Color(0xFFC3A8F7) : const Color(0xFF5B34A8);
 
   // ── Nombres heredados (mapean al sistema nuevo) ─────────────────────────
   static Color get brandTeal => turquesaTexto;
