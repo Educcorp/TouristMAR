@@ -15,7 +15,8 @@ Future<Uint8List?> recortarImagen(
   Uint8List bytes, {
   double aspecto = 16 / 9,
   String titulo = 'Ajusta la foto',
-  /// Ancho en píxeles de la imagen que se genera.
+  /// Ancho mínimo en píxeles de la imagen que se genera. Si la foto es más
+  /// grande, se usa su resolución real (ver [_RecortarDialogState._usar]).
   double anchoSalida = 1600,
 }) {
   return showDialog<Uint8List>(
@@ -51,7 +52,11 @@ class _RecortarDialogState extends State<_RecortarDialog> {
     setState(() => _procesando = true);
     try {
       final boundary = _marco.currentContext!.findRenderObject()! as RenderRepaintBoundary;
-      final imagen = await boundary.toImage(pixelRatio: widget.anchoSalida / boundary.size.width);
+      // Resolución real del recorte: la parte visible de la foto medida en
+      // píxeles del original (con BoxFit.cover y el zoom aplicado). Antes se
+      // fijaba en 1600 px y una foto de cámara salía más chica y borrosa.
+      final ancho = await _anchoNativo(boundary.size);
+      final imagen = await boundary.toImage(pixelRatio: ancho / boundary.size.width);
       final png = await imagen.toByteData(format: ui.ImageByteFormat.png);
       imagen.dispose();
       if (!mounted) return;
@@ -59,6 +64,28 @@ class _RecortarDialogState extends State<_RecortarDialog> {
     } catch (_) {
       // Si el navegador no deja leer el lienzo, se usa la foto tal cual.
       if (mounted) Navigator.of(context).pop(widget.bytes);
+    }
+  }
+
+  /// Tope de ancho (4K): el recorte sale en PNG sin pérdida y, más grande,
+  /// pasaría del límite de 25 MB del backend o de la textura de algunos
+  /// teléfonos.
+  static const _anchoMaximo = 4096.0;
+
+  Future<double> _anchoNativo(Size marco) async {
+    try {
+      final codec = await ui.instantiateImageCodec(widget.bytes);
+      final frame = await codec.getNextFrame();
+      final w = frame.image.width.toDouble(), h = frame.image.height.toDouble();
+      frame.image.dispose();
+      codec.dispose();
+      // BoxFit.cover: la foto se escala para cubrir el marco por completo.
+      final cubre = (marco.width / w) > (marco.height / h) ? marco.width / w : marco.height / h;
+      final zoom = _transform.value.getMaxScaleOnAxis();
+      final nativo = marco.width / (cubre * zoom);
+      return nativo.clamp(widget.anchoSalida, _anchoMaximo).toDouble();
+    } catch (_) {
+      return widget.anchoSalida;
     }
   }
 
@@ -92,7 +119,9 @@ class _RecortarDialogState extends State<_RecortarDialog> {
                         minScale: 1,
                         maxScale: 5,
                         constrained: true,
-                        child: SizedBox.expand(child: Image.memory(widget.bytes, fit: BoxFit.cover)),
+                        child: SizedBox.expand(
+                          child: Image.memory(widget.bytes, fit: BoxFit.cover, filterQuality: FilterQuality.high),
+                        ),
                       ),
                     ),
                   ),

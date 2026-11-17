@@ -734,7 +734,7 @@ class _EscenariosEditorState extends State<_EscenariosEditor> {
     }
     // Como stream (no `withData`): el navegador no carga todas las fotos en
     // memoria a la vez, las va leyendo mientras las sube.
-    final result = await FilePicker.platform.pickFiles(
+    final result = await FilePicker.platform.pickFiles(allowCompression: false, compressionQuality: 0, 
       type: FileType.custom,
       allowedExtensions: ['jpg', 'jpeg', 'png'],
       allowMultiple: true,
@@ -789,7 +789,7 @@ class _EscenariosEditorState extends State<_EscenariosEditor> {
   }
 
   Future<void> _reemplazarFoto(Escena360 escena) async {
-    final result = await FilePicker.platform.pickFiles(
+    final result = await FilePicker.platform.pickFiles(allowCompression: false, compressionQuality: 0, 
       type: FileType.custom,
       allowedExtensions: ['jpg', 'jpeg', 'png'],
       withReadStream: true,

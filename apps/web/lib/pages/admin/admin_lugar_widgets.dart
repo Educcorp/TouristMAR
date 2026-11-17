@@ -376,7 +376,7 @@ class _MarcadoresLugarSectionState extends State<MarcadoresLugarSection> {
   }
 
   Future<void> _elegirImagen() async {
-    final r = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['jpg', 'jpeg', 'png'], withData: true);
+    final r = await FilePicker.platform.pickFiles(allowCompression: false, compressionQuality: 0, type: FileType.custom, allowedExtensions: ['jpg', 'jpeg', 'png'], withData: true);
     final f = r?.files.single;
     if (f != null && f.bytes != null) setState(() => _imagen = f);
   }

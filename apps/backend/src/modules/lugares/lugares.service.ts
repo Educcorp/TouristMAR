@@ -136,6 +136,18 @@ export async function estadisticasNegocio(negocioId: string) {
   })
 }
 
+/// El marcador de RA que ve el visitante en la ficha: el primero activo de
+/// los que da de alta el admin en "Marcadores de RA" (tabla `ar_marcadores`).
+/// La columna vieja `negocio_profiles.ar_marcador_url` nadie la llena ya, así
+/// que solo queda como respaldo.
+export const MARCADOR_ACTIVO = {
+  arMarcadores: { where: { activo: true }, select: { imagenUrl: true }, orderBy: { createdAt: 'asc' as const }, take: 1 },
+}
+
+export function marcadorDeLugar(n: { arMarcador: string | null; arMarcadores?: { imagenUrl: string }[] }) {
+  return n.arMarcadores?.[0]?.imagenUrl ?? n.arMarcador
+}
+
 export async function listLugaresPublicos() {
   return withDbGuard(() =>
     prisma.negocioProfile.findMany({
@@ -144,6 +156,7 @@ export async function listLugaresPublicos() {
         latitud: { not: null },
         longitud: { not: null },
       },
+      include: MARCADOR_ACTIVO,
       orderBy: { createdAt: 'asc' },
     }),
   )

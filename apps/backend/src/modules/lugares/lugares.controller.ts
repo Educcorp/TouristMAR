@@ -1,5 +1,5 @@
 import { Request, Response } from 'express'
-import { listLugaresPublicos, registrarVisita } from './lugares.service'
+import { listLugaresPublicos, marcadorDeLugar, registrarVisita } from './lugares.service'
 import { esUuid } from '../resenas/resenas.service'
 import type { AuthedRequest } from '../auth/auth.middleware'
 import { resumenPorNegocios } from '../resenas/resenas.service'
@@ -26,7 +26,7 @@ export async function listPublicos(_req: Request, res: Response) {
         portada: n.portada,
         galeria: n.galeria,
         archivo360: n.archivo360,
-        arMarcador: n.arMarcador,
+        arMarcador: marcadorDeLugar(n),
         arGeo: n.arGeo,
         latitud: n.latitud,
         longitud: n.longitud,

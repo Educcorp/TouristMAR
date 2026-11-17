@@ -1,6 +1,7 @@
 import { Response } from 'express'
 import { addFavorito, esUuid, listFavoritos, removeFavorito } from './favoritos.service'
 import { resumenPorNegocios } from '../resenas/resenas.service'
+import { marcadorDeLugar } from '../lugares/lugares.service'
 import { DatabaseNotReadyError } from '../../config/db-guard'
 import type { AuthedRequest } from '../auth/auth.middleware'
 
@@ -32,7 +33,7 @@ export async function listMine(req: AuthedRequest, res: Response) {
         portada: n.portada,
         galeria: n.galeria,
         archivo360: n.archivo360,
-        arMarcador: n.arMarcador,
+        arMarcador: marcadorDeLugar(n),
         arGeo: n.arGeo,
         latitud: n.latitud,
         longitud: n.longitud,

@@ -25,10 +25,11 @@ import { requireAuth, requireRole } from '../auth/auth.middleware'
 
 export const adminRouter = Router()
 
-// Misma regla que la portada que sube el dueño (auth.routes.ts).
+// Misma regla que la portada que sube el dueño (auth.routes.ts): las fotos
+// se guardan sin comprimir, así que el límite deja pasar las de cámara.
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024 },
+  limits: { fileSize: 25 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     cb(null, file.mimetype.startsWith('image/'))
   },

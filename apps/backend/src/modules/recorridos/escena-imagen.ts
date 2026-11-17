@@ -69,7 +69,8 @@ export async function procesarEscena(buffer: Buffer): Promise<EscenaProcesada> {
       // sino sus optimizaciones de tamaño una por una. Sin metadatos
       // (EXIF/GPS) — no hacen falta.
       .jpeg({
-        quality: 82,
+        // Calidad alta: a 82 ya se notaban bloques al hacer zoom en el visor.
+        quality: 95,
         progressive: false,
         trellisQuantisation: true,
         overshootDeringing: true,

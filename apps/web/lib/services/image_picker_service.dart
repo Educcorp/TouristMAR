@@ -16,6 +16,10 @@ class PickedImage {
 /// vez de llamar a `FilePicker` directo, para que las pruebas automáticas
 /// puedan simular "el usuario eligió una foto" sin abrir el selector real del
 /// sistema (ver `test/correcciones_errores_test.dart`).
+///
+/// En Android `file_picker` comprime las fotos por defecto (calidad 30) y
+/// quedaban borrosas: todos los `pickFiles` de la app pasan
+/// `allowCompression: false, compressionQuality: 0` para subir el original.
 class ImagePickerService {
   ImagePickerService._();
 
@@ -27,7 +31,7 @@ class ImagePickerService {
   static Future<List<PickedImage>> Function() pickMany = _pickManyWithFilePicker;
 
   static Future<List<PickedImage>> _pickManyWithFilePicker() async {
-    final result = await FilePicker.platform.pickFiles(type: FileType.image, withData: true, allowMultiple: true);
+    final result = await FilePicker.platform.pickFiles(allowCompression: false, compressionQuality: 0, type: FileType.image, withData: true, allowMultiple: true);
     return [
       for (final f in result?.files ?? const <PlatformFile>[])
         if (f.bytes != null) PickedImage(f.bytes!, f.name),
@@ -35,7 +39,7 @@ class ImagePickerService {
   }
 
   static Future<PickedImage?> _pickWithFilePicker() async {
-    final result = await FilePicker.platform.pickFiles(type: FileType.image, withData: true);
+    final result = await FilePicker.platform.pickFiles(allowCompression: false, compressionQuality: 0, type: FileType.image, withData: true);
     final file = result?.files.single;
     if (file == null || file.bytes == null) return null;
     return PickedImage(file.bytes!, file.name);

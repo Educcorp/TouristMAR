@@ -19,11 +19,11 @@ export const marcadoresRouter = Router()
 marcadoresRouter.get('/', listMarcadoresPublic)
 marcadoresRouter.post('/:nombre/escaneo', optionalAuth, createEscaneo)
 
-// Imágenes grandes rastrean igual de bien que medianas y tardan más en
-// descargarse en el celular; 5 MB alcanza de sobra para ~1000–2000 px.
+// Las imágenes se guardan tal cual se suben (sin comprimir): 25 MB deja
+// pasar fotos de cámara a resolución completa.
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024 },
+  limits: { fileSize: 25 * 1024 * 1024 },
 })
 
 /// Gestión desde el panel web (se monta en /api/admin/ar).

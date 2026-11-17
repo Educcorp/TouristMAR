@@ -303,7 +303,7 @@ class _PortadaPicker extends StatelessWidget {
                       const SizedBox(height: 6),
                       Text('Elegir imagen', style: TextStyle(color: AppColors.slate300, fontSize: 14)),
                       const SizedBox(height: 2),
-                      Text('PNG, JPG o WEBP · máx. 5 MB', style: TextStyle(color: AppColors.slate500, fontSize: 13)),
+                      Text('PNG, JPG o WEBP · máx. 25 MB', style: TextStyle(color: AppColors.slate500, fontSize: 13)),
                     ],
                   ),
           ),

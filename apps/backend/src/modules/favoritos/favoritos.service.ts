@@ -1,4 +1,5 @@
 import { prisma } from '../../config/prisma'
+import { MARCADOR_ACTIVO } from '../lugares/lugares.service'
 import { withDbGuard } from '../../config/db-guard'
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -15,7 +16,7 @@ export async function listFavoritos(userId: string) {
     const filas = await prisma.favorito.findMany({
       where: { userId, negocio: { estado: 'aprobado' } },
       orderBy: { createdAt: 'desc' },
-      include: { negocio: true },
+      include: { negocio: { include: MARCADOR_ACTIVO } },
     })
     return filas.map((f) => f.negocio)
   })

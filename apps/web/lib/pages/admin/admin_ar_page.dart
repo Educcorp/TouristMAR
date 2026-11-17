@@ -334,15 +334,15 @@ class _MarcadorFormState extends State<_MarcadorForm> {
   Future<void> _pickImage() async {
     // Solo PNG/JPG: es lo que Unity puede decodificar en el celular (el
     // backend rechaza el resto de todos modos).
-    final result = await FilePicker.platform.pickFiles(
+    final result = await FilePicker.platform.pickFiles(allowCompression: false, compressionQuality: 0, 
       type: FileType.custom,
       allowedExtensions: ['png', 'jpg', 'jpeg'],
       withData: true,
     );
     final file = result?.files.single;
     if (file == null || file.bytes == null) return;
-    if (file.bytes!.length > 5 * 1024 * 1024) {
-      setState(() => _error = 'La imagen pesa más de 5 MB');
+    if (file.bytes!.length > 25 * 1024 * 1024) {
+      setState(() => _error = 'La imagen pesa más de 25 MB');
       return;
     }
     setState(() {
@@ -541,7 +541,7 @@ class _MarcadorFormState extends State<_MarcadorForm> {
                 onPressed: _saving ? null : _pickImage,
               ),
               const SizedBox(height: 4),
-              Text(_imagenNombre ?? 'PNG o JPG, máx. 5 MB', style: AppTypography.caption),
+              Text(_imagenNombre ?? 'PNG o JPG, máx. 25 MB', style: AppTypography.caption),
             ],
           ),
         ),
