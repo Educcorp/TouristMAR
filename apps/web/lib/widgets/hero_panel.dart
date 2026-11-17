@@ -36,14 +36,16 @@ class HeroPanel extends StatelessWidget {
                 top: 28,
                 child: Container(
                   padding: const EdgeInsets.fromLTRB(10, 8, 14, 8),
-                  decoration: BoxDecoration(color: AppColors.riel, borderRadius: BorderRadius.circular(AppRadius.button)),
+                  // La etiqueta del logo también sigue el tema: blanca en modo
+                  // claro y tinta marina en modo oscuro.
+                  decoration: BoxDecoration(color: AppColors.cubierta, borderRadius: BorderRadius.circular(AppRadius.button)),
                   child: Row(
                     children: [
-                      AppLogo(size: 30, sobreFoto: true),
+                      AppLogo(size: 30),
                       const SizedBox(width: 8),
-                      const Text(
+                      Text(
                         'TOURISTMAR',
-                        style: TextStyle(color: AppColors.sobreRiel, fontWeight: FontWeight.w700, letterSpacing: 2, fontSize: 14),
+                        style: TextStyle(color: AppColors.tinta, fontWeight: FontWeight.w700, letterSpacing: 2, fontSize: 14),
                       ),
                     ],
                   ),
