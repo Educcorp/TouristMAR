@@ -12,10 +12,14 @@ const _franjas = [
 ];
 
 /// Panel izquierdo del login en pantallas anchas: la foto de la bahía arriba
-/// de la línea de flotación y, abajo, el casco en tinta marina con lo que se
-/// puede hacer en la app.
+/// de la línea de flotación y, abajo, lo que se puede hacer en la app. La
+/// parte de abajo sigue el tema (blanca en modo claro, tinta en modo oscuro)
+/// para que combine con el formulario de la derecha.
 class HeroPanel extends StatelessWidget {
-  const HeroPanel({super.key});
+  // Sin `const` a propósito: build() lee AppColors (depende del tema); una
+  // instancia const no se reconstruiría al cambiar entre claro y oscuro.
+  // ignore: prefer_const_constructors_in_immutables
+  HeroPanel({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -50,22 +54,22 @@ class HeroPanel extends StatelessWidget {
         ),
         Row(children: [for (final f in _franjas) Expanded(child: Container(height: kFranja, color: f.$1))]),
         Container(
-          color: AppColors.riel,
+          color: AppColors.cubierta,
           padding: const EdgeInsets.fromLTRB(40, 32, 40, 40),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 'Manzanillo, lugar por lugar',
-                style: AppTypography.display.copyWith(color: AppColors.sobreRiel, fontSize: 44),
+                style: AppTypography.display.copyWith(color: AppColors.tinta, fontSize: 44),
               ),
               const SizedBox(height: 12),
               ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 460),
-                child: const Text(
+                child: Text(
                   'Playas, mariscos, miradores y cultura del puerto. Encuentra qué hay cerca '
                   'y vive cada lugar con realidad aumentada o en 360°.',
-                  style: TextStyle(color: AppColors.sobreRielSuave, fontSize: 17, height: 1.45),
+                  style: TextStyle(color: AppColors.slate400, fontSize: 17, height: 1.45),
                 ),
               ),
               const SizedBox(height: 24),
@@ -83,9 +87,9 @@ class HeroPanel extends StatelessWidget {
                           decoration: BoxDecoration(color: f.$1, borderRadius: BorderRadius.circular(2)),
                         ),
                         const SizedBox(width: 8),
-                        Icon(f.$2, size: 18, color: AppColors.sobreRiel),
+                        Icon(f.$2, size: 18, color: AppColors.tinta),
                         const SizedBox(width: 6),
-                        Text(f.$3, style: const TextStyle(color: AppColors.sobreRiel, fontSize: 15, fontWeight: FontWeight.w500)),
+                        Text(f.$3, style: TextStyle(color: AppColors.tinta, fontSize: 15, fontWeight: FontWeight.w500)),
                       ],
                     ),
                 ],

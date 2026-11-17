@@ -41,7 +41,7 @@ class LoginPage extends StatelessWidget {
 
               return Row(
                 children: [
-                  const Expanded(flex: 58, child: HeroPanel()),
+                  Expanded(flex: 58, child: HeroPanel()),
                   Expanded(
                     flex: 42,
                     child: LoginForm(
