@@ -299,4 +299,59 @@ void main() {
     expect(find.byType(HomePage), findsOneWidget);
     await _disposeTree(tester);
   });
+
+  testWidgets('recuperar contraseña: pide el código, cambia la contraseña y vuelve al login', (tester) async {
+    final peticiones = <String, Map<String, dynamic>>{};
+    final client = MockClient((request) async {
+      final path = request.url.path;
+      if (path.endsWith('/auth/forgot-password') || path.endsWith('/auth/reset-password')) {
+        peticiones[path.split('/').last] = jsonDecode(request.body) as Map<String, dynamic>;
+        return http.Response(jsonEncode({'ok': true}), 200);
+      }
+      return http.Response('{}', 404);
+    });
+    await _pumpLoginForm(tester, AuthService(client: client));
+
+    await _tapText(tester, '¿Olvidaste tu contraseña?');
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const ValueKey('recuperar-correo')), 'ana@correo.com');
+    await _tapText(tester, 'Enviar código');
+    await tester.pumpAndSettle();
+
+    expect(peticiones['forgot-password'], {'email': 'ana@correo.com'});
+    expect(find.text('Revisa tu correo'), findsOneWidget);
+
+    await tester.enterText(find.byKey(const ValueKey('recuperar-codigo')), '123456');
+    await tester.enterText(find.byKey(const ValueKey('recuperar-password')), _contrasenaSegura);
+    await _tapText(tester, 'Cambiar contraseña');
+    await tester.pumpAndSettle();
+
+    expect(peticiones['reset-password'], {'email': 'ana@correo.com', 'codigo': '123456', 'password': _contrasenaSegura});
+    expect(find.text('Listo, tu contraseña cambió. Ya puedes iniciar sesión.'), findsOneWidget);
+    expect(find.byKey(const ValueKey('password-field')), findsOneWidget);
+  });
+
+  testWidgets('recuperar contraseña: un código incorrecto muestra el error del servidor', (tester) async {
+    final client = MockClient((request) async {
+      if (request.url.path.endsWith('/auth/forgot-password')) return http.Response(jsonEncode({'ok': true}), 200);
+      if (request.url.path.endsWith('/auth/reset-password')) {
+        return http.Response(jsonEncode({'error': 'El código es incorrecto o ya caducó'}), 400);
+      }
+      return http.Response('{}', 404);
+    });
+    await _pumpLoginForm(tester, AuthService(client: client));
+
+    await _tapText(tester, '¿Olvidaste tu contraseña?');
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const ValueKey('recuperar-correo')), 'ana@correo.com');
+    await _tapText(tester, 'Enviar código');
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const ValueKey('recuperar-codigo')), '000000');
+    await tester.enterText(find.byKey(const ValueKey('recuperar-password')), _contrasenaSegura);
+    await _tapText(tester, 'Cambiar contraseña');
+    await tester.pumpAndSettle();
+
+    expect(find.text('El código es incorrecto o ya caducó'), findsOneWidget);
+    expect(find.text('Revisa tu correo'), findsOneWidget);
+  });
 }

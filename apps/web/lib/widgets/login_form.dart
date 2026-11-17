@@ -47,6 +47,19 @@ class _LoginFormState extends State<LoginForm> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
+  // Recuperar contraseña: código que llega por correo y la contraseña nueva.
+  final _forgotFormKey = GlobalKey<FormState>();
+  final _resetFormKey = GlobalKey<FormState>();
+  final _codeController = TextEditingController();
+  final _newPasswordController = TextEditingController();
+  bool _enviandoCodigo = false;
+  bool _cambiandoPassword = false;
+  bool _showNewPassword = false;
+  String? _recuperacionError;
+
+  /// Aviso en verde sobre el formulario (p. ej. "ya puedes iniciar sesión").
+  String? _info;
+
   _Mode _mode = _Mode.login;
   _LoginType _loginType = _LoginType.visitor;
   _Screen _screen = _Screen.credentials;
@@ -75,6 +88,8 @@ class _LoginFormState extends State<LoginForm> {
     _categoryController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _codeController.dispose();
+    _newPasswordController.dispose();
     super.dispose();
   }
 
@@ -156,6 +171,7 @@ class _LoginFormState extends State<LoginForm> {
 
     setState(() {
       _error = null;
+      _info = null;
       _isSubmitting = true;
     });
 
@@ -211,6 +227,7 @@ class _LoginFormState extends State<LoginForm> {
   void _toggleMode() {
     setState(() {
       _error = null;
+      _info = null;
       _mode = _mode == _Mode.login ? _Mode.register : _Mode.login;
     });
   }
@@ -526,7 +543,11 @@ class _LoginFormState extends State<LoginForm> {
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton(
-                      onPressed: () => setState(() => _screen = _Screen.forgot),
+                      onPressed: () => setState(() {
+                        _screen = _Screen.forgot;
+                        _recuperacionError = null;
+                        _info = null;
+                      }),
                       child: Text(
                         '¿Olvidaste tu contraseña?',
                         style: TextStyle(color: AppColors.brandTeal, fontSize: 14, fontWeight: FontWeight.w600),
@@ -557,6 +578,10 @@ class _LoginFormState extends State<LoginForm> {
                       ],
                     ),
                   ),
+                ],
+                if (_info != null && _error == null) ...[
+                  const SizedBox(height: 12),
+                  Text(_info!, style: TextStyle(color: AppColors.emerald, fontSize: 14, fontWeight: FontWeight.w600)),
                 ],
                 if (_error != null) ...[
                   const SizedBox(height: 12),
@@ -665,9 +690,81 @@ class _LoginFormState extends State<LoginForm> {
     );
   }
 
-  Widget _buildForgot() {
-    final isNarrow = !Breakpoints.isExpanded(MediaQuery.sizeOf(context).width);
+  /// Valida el correo de la pantalla "Recupera tu acceso".
+  String? _validarCorreo(String? v) {
+    final t = (v ?? '').trim();
+    if (t.isEmpty) return 'Ingresa tu correo';
+    if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(t)) return 'Ingresa un correo válido';
+    return null;
+  }
 
+  Future<void> _enviarCodigo({bool reenviar = false}) async {
+    if (!reenviar && !(_forgotFormKey.currentState?.validate() ?? false)) return;
+    setState(() {
+      _enviandoCodigo = true;
+      _recuperacionError = null;
+    });
+    try {
+      await widget.authService.requestPasswordReset(_emailController.text.trim());
+      if (!mounted) return;
+      setState(() {
+        _screen = _Screen.forgotSent;
+        _codeController.clear();
+        if (reenviar) _info = 'Te enviamos un código nuevo.';
+      });
+    } catch (err) {
+      if (!mounted) return;
+      setState(() => _recuperacionError = err is AuthError ? err.message : 'No se pudo conectar con el servidor');
+    } finally {
+      if (mounted) setState(() => _enviandoCodigo = false);
+    }
+  }
+
+  Future<void> _cambiarPassword() async {
+    if (!(_resetFormKey.currentState?.validate() ?? false)) return;
+    setState(() {
+      _cambiandoPassword = true;
+      _recuperacionError = null;
+    });
+    try {
+      await widget.authService.resetPassword(
+        email: _emailController.text.trim(),
+        code: _codeController.text.trim(),
+        password: _newPasswordController.text,
+      );
+      if (!mounted) return;
+      setState(() {
+        _screen = _Screen.credentials;
+        _mode = _Mode.login;
+        _error = null;
+        _passwordController.clear();
+        _codeController.clear();
+        _newPasswordController.clear();
+        _info = 'Listo, tu contraseña cambió. Ya puedes iniciar sesión.';
+        _cambiandoPassword = false;
+      });
+    } catch (err) {
+      if (!mounted) return;
+      setState(() {
+        _recuperacionError = err is AuthError ? err.message : 'No se pudo conectar con el servidor';
+        _cambiandoPassword = false;
+      });
+    }
+  }
+
+  Widget _iconoRecuperacion() => Container(
+        width: 48,
+        height: 48,
+        decoration: BoxDecoration(
+          color: AppColors.brandTeal.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.brandTeal.withValues(alpha: 0.2)),
+        ),
+        child: Icon(Icons.mail_outline, color: AppColors.brandTeal, size: 22),
+      );
+
+  Widget _marcoRecuperacion({required VoidCallback onVolver, required List<Widget> children}) {
+    final isNarrow = !Breakpoints.isExpanded(MediaQuery.sizeOf(context).width);
     return Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 48),
@@ -683,42 +780,13 @@ class _LoginFormState extends State<LoginForm> {
               Align(
                 alignment: Alignment.centerLeft,
                 child: TextButton.icon(
-                  onPressed: () => setState(() => _screen = _Screen.credentials),
+                  onPressed: onVolver,
                   icon: Icon(Icons.arrow_back, size: 15, color: AppColors.slate400),
                   label: Text('Volver', style: TextStyle(color: AppColors.slate400, fontSize: 14)),
                 ),
               ),
               const SizedBox(height: 12),
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: AppColors.brandTeal.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: AppColors.brandTeal.withValues(alpha: 0.2)),
-                ),
-                child: Icon(Icons.mail_outline, color: AppColors.brandTeal, size: 22),
-              ),
-              const SizedBox(height: 20),
-              Text('Recupera tu acceso', style: Theme.of(context).textTheme.headlineMedium),
-              const SizedBox(height: 6),
-              Text(
-                'Ingresa tu correo y te enviaremos un enlace para restablecer tu contraseña.',
-                style: TextStyle(color: AppColors.slate400, fontSize: 14, height: 1.4),
-              ),
-              const SizedBox(height: 24),
-              AppTextField(
-                label: 'Correo electrónico',
-                icon: Icons.mail_outline,
-                controller: _emailController,
-                hintText: 'tu@correo.com',
-                keyboardType: TextInputType.emailAddress,
-              ),
-              const SizedBox(height: 20),
-              AppButton(
-                onPressed: () => setState(() => _screen = _Screen.forgotSent),
-                child: const Text('Enviar enlace de recuperación'),
-              ),
+              ...children,
             ],
           ),
         ),
@@ -726,61 +794,144 @@ class _LoginFormState extends State<LoginForm> {
     );
   }
 
-  Widget _buildForgotSent() {
-    final isNarrow = !Breakpoints.isExpanded(MediaQuery.sizeOf(context).width);
-    final email = _emailController.text.trim();
+  Widget _buildForgot() {
+    return _marcoRecuperacion(
+      onVolver: () => setState(() {
+        _screen = _Screen.credentials;
+        _recuperacionError = null;
+      }),
+      children: [
+        _iconoRecuperacion(),
+        const SizedBox(height: 20),
+        Text('Recupera tu acceso', style: Theme.of(context).textTheme.headlineMedium),
+        const SizedBox(height: 6),
+        Text(
+          'Ingresa tu correo y te enviaremos un código de 6 dígitos para crear una contraseña nueva.',
+          style: TextStyle(color: AppColors.slate400, fontSize: 14, height: 1.4),
+        ),
+        const SizedBox(height: 24),
+        Form(
+          key: _forgotFormKey,
+          child: AppTextField(
+            fieldKey: const ValueKey('recuperar-correo'),
+            label: 'Correo electrónico',
+            icon: Icons.mail_outline,
+            controller: _emailController,
+            hintText: 'tu@correo.com',
+            keyboardType: TextInputType.emailAddress,
+            validator: _validarCorreo,
+          ),
+        ),
+        if (_recuperacionError != null) ...[
+          const SizedBox(height: 12),
+          Text(_recuperacionError!, style: TextStyle(color: AppColors.errorRed, fontSize: 14)),
+        ],
+        const SizedBox(height: 20),
+        AppButton(
+          key: const ValueKey('recuperar-enviar'),
+          onPressed: _enviandoCodigo ? null : () => _enviarCodigo(),
+          child: Text(_enviandoCodigo ? 'Enviando...' : 'Enviar código'),
+        ),
+      ],
+    );
+  }
 
-    return Center(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 48),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 420),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
+  /// Segundo paso: el código del correo y la contraseña nueva.
+  Widget _buildForgotSent() {
+    final email = _emailController.text.trim();
+    return _marcoRecuperacion(
+      onVolver: () => setState(() {
+        _screen = _Screen.forgot;
+        _recuperacionError = null;
+        _info = null;
+      }),
+      children: [
+        _iconoRecuperacion(),
+        const SizedBox(height: 20),
+        Text('Revisa tu correo', style: Theme.of(context).textTheme.headlineMedium),
+        const SizedBox(height: 6),
+        Text.rich(
+          TextSpan(
+            style: TextStyle(color: AppColors.slate400, fontSize: 14, height: 1.4),
             children: [
-              if (isNarrow) ...[
-                _buildLogo(),
-                const SizedBox(height: 32),
-              ],
-              Container(
-                width: 64,
-                height: 64,
-                decoration: BoxDecoration(
-                  color: AppColors.brandTeal.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: AppColors.brandTeal.withValues(alpha: 0.25)),
-                ),
-                child: Icon(Icons.mail_outline, color: AppColors.brandTeal, size: 28),
+              const TextSpan(text: 'Si existe una cuenta con '),
+              TextSpan(
+                text: email.isEmpty ? 'ese correo' : email,
+                style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600),
               ),
-              const SizedBox(height: 24),
-              Text('Revisa tu correo', style: Theme.of(context).textTheme.headlineMedium, textAlign: TextAlign.center),
-              const SizedBox(height: 12),
-              Text.rich(
-                TextSpan(
-                  style: TextStyle(color: AppColors.slate400, fontSize: 14, height: 1.4),
-                  children: [
-                    const TextSpan(text: 'Si existe una cuenta con '),
-                    TextSpan(
-                      text: email.isEmpty ? 'ese correo' : email,
-                      style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600),
-                    ),
-                    const TextSpan(text: ', recibirás un enlace en los próximos minutos.'),
-                  ],
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 28),
-              GestureDetector(
-                onTap: () => setState(() => _screen = _Screen.credentials),
-                child: Text(
-                  'Volver al inicio de sesión',
-                  style: TextStyle(color: AppColors.brandTeal, fontWeight: FontWeight.w600, fontSize: 14),
-                ),
+              const TextSpan(
+                text: ', te llegará un código de 6 dígitos en unos minutos. Caduca en 30 minutos. '
+                    'Si no lo ves, revisa tu carpeta de spam.',
               ),
             ],
           ),
         ),
-      ),
+        const SizedBox(height: 24),
+        Form(
+          key: _resetFormKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              AppTextField(
+                fieldKey: const ValueKey('recuperar-codigo'),
+                label: 'Código',
+                icon: Icons.pin_outlined,
+                controller: _codeController,
+                hintText: '123456',
+                keyboardType: TextInputType.number,
+                validator: (v) =>
+                    RegExp(r'^\d{6}$').hasMatch((v ?? '').trim()) ? null : 'El código son 6 dígitos',
+              ),
+              const SizedBox(height: 16),
+              AppTextField(
+                fieldKey: const ValueKey('recuperar-password'),
+                label: 'Contraseña nueva',
+                icon: Icons.lock_outline,
+                controller: _newPasswordController,
+                obscureText: !_showNewPassword,
+                hintText: 'Mínimo 8 caracteres',
+                validator: (v) {
+                  if (v == null || v.isEmpty) return 'Ingresa tu contraseña nueva';
+                  final resultado = evaluatePasswordStrength(v);
+                  return resultado.cumpleMinimo ? null : resultado.pendientes.first;
+                },
+                suffixIcon: IconButton(
+                  icon: Icon(_showNewPassword ? Icons.visibility_off : Icons.visibility, color: AppColors.slate500),
+                  onPressed: () => setState(() => _showNewPassword = !_showNewPassword),
+                ),
+              ),
+              ValueListenableBuilder<TextEditingValue>(
+                valueListenable: _newPasswordController,
+                builder: (context, value, _) => PasswordStrengthBar(password: value.text),
+              ),
+            ],
+          ),
+        ),
+        if (_info != null && _recuperacionError == null) ...[
+          const SizedBox(height: 12),
+          Text(_info!, style: TextStyle(color: AppColors.emerald, fontSize: 14, fontWeight: FontWeight.w600)),
+        ],
+        if (_recuperacionError != null) ...[
+          const SizedBox(height: 12),
+          Text(_recuperacionError!, style: TextStyle(color: AppColors.errorRed, fontSize: 14)),
+        ],
+        const SizedBox(height: 20),
+        AppButton(
+          key: const ValueKey('recuperar-cambiar'),
+          onPressed: _cambiandoPassword ? null : _cambiarPassword,
+          child: Text(_cambiandoPassword ? 'Guardando...' : 'Cambiar contraseña'),
+        ),
+        const SizedBox(height: 12),
+        Center(
+          child: TextButton(
+            onPressed: _enviandoCodigo ? null : () => _enviarCodigo(reenviar: true),
+            child: Text(
+              _enviandoCodigo ? 'Enviando...' : '¿No te llegó? Reenviar código',
+              style: TextStyle(color: AppColors.brandTeal, fontWeight: FontWeight.w600, fontSize: 14),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

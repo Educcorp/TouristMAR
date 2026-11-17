@@ -21,6 +21,8 @@ import {
 } from './auth.service'
 import type { AuthedRequest } from './auth.middleware'
 import { dominioDeCorreoExiste } from './email-domain'
+import { solicitarRecuperacion, restablecerPassword, CodigoInvalidoError } from './password-reset.service'
+import { MailNotConfiguredError, MailSendError } from '../../config/mail'
 import { estadisticasNegocio } from '../lugares/lugares.service'
 
 const credentialsSchema = z.object({
@@ -38,6 +40,16 @@ const registerSchema = credentialsSchema
     message: 'El nombre del negocio es requerido',
     path: ['name'],
   })
+
+const forgotPasswordSchema = z.object({
+  email: z.string().trim().email(),
+})
+
+const resetPasswordSchema = z.object({
+  email: z.string().trim().email(),
+  codigo: z.string().trim().regex(/^\d{6}$/, 'El código son 6 dígitos'),
+  password: z.string().min(8).max(72),
+})
 
 const googleMobileSchema = z.object({
   idToken: z.string().min(1),
@@ -146,6 +158,48 @@ export async function register(req: Request, res: Response) {
       return res.status(503).json({ error: err.message })
     }
     return res.status(400).json({ error: (err as Error).message })
+  }
+}
+
+/// POST /auth/forgot-password — manda un código de 6 dígitos al correo. La
+/// respuesta es la misma exista o no la cuenta (no revela qué correos están
+/// registrados).
+export async function forgotPassword(req: Request, res: Response) {
+  const parsed = forgotPasswordSchema.safeParse(req.body)
+  if (!parsed.success) {
+    return res.status(400).json({ error: 'Ingresa un correo válido' })
+  }
+  try {
+    await solicitarRecuperacion(parsed.data.email)
+    return res.json({ ok: true })
+  } catch (err) {
+    if (err instanceof DatabaseNotReadyError || err instanceof MailNotConfiguredError) {
+      return res.status(503).json({ error: 'La recuperación de contraseña no está disponible por ahora' })
+    }
+    if (err instanceof MailSendError) {
+      return res.status(502).json({ error: 'No se pudo enviar el correo. Intenta de nuevo en unos minutos' })
+    }
+    return res.status(500).json({ error: 'Error interno' })
+  }
+}
+
+/// POST /auth/reset-password — con el código del correo, fija la contraseña nueva.
+export async function resetPassword(req: Request, res: Response) {
+  const parsed = resetPasswordSchema.safeParse(req.body)
+  if (!parsed.success) {
+    return res.status(400).json({ error: 'Datos inválidos', details: parsed.error.flatten().fieldErrors })
+  }
+  try {
+    await restablecerPassword(parsed.data.email, parsed.data.codigo, parsed.data.password)
+    return res.json({ ok: true })
+  } catch (err) {
+    if (err instanceof CodigoInvalidoError) {
+      return res.status(400).json({ error: err.message })
+    }
+    if (err instanceof DatabaseNotReadyError) {
+      return res.status(503).json({ error: 'La recuperación de contraseña no está disponible por ahora' })
+    }
+    return res.status(500).json({ error: 'Error interno' })
   }
 }
 

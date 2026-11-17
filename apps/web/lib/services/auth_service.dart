@@ -434,6 +434,26 @@ class AuthService {
     });
   }
 
+  /// "¿Olvidaste tu contraseña?": el backend manda un código de 6 dígitos al
+  /// correo. Responde igual exista o no la cuenta.
+  Future<void> requestPasswordReset(String email) => _postPublico('/auth/forgot-password', {'email': email});
+
+  /// Con el código del correo, fija la contraseña nueva.
+  Future<void> resetPassword({required String email, required String code, required String password}) =>
+      _postPublico('/auth/reset-password', {'email': email, 'codigo': code, 'password': password});
+
+  Future<void> _postPublico(String path, Map<String, String> body) async {
+    final res = await _client.post(
+      Uri.parse('$apiUrl$path'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(body),
+    );
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      final data = _decode(res.body);
+      throw AuthError((data['error'] as String?) ?? 'No se pudo completar la solicitud');
+    }
+  }
+
   Future<AuthUser> getCurrentUser(String token) async {
     final res = await _client.get(
       Uri.parse('$apiUrl/auth/me'),

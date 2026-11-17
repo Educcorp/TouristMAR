@@ -84,6 +84,7 @@ model User {
   resenas                       Resena[]
   visitas                       VisitaLugar[]
   solicitudesRecorridoAtendidas SolicitudRecorrido360[] @relation("SolicitudAtendidaPor")
+  recuperaciones                RecuperacionPassword[]
 
   @@map("users")
 }
@@ -418,4 +419,21 @@ model CategoriaNegocio {
   createdAt DateTime @default(now()) @map("created_at")
 
   @@map("categorias_negocio")
+}
+
+/// "¿Olvidaste tu contraseña?": un código de 6 dígitos que se manda por
+/// correo (Brevo). Se guarda solo su hash; caduca a los 30 minutos, sirve una
+/// sola vez y se invalida tras 5 intentos fallidos.
+model RecuperacionPassword {
+  id         String    @id @default(uuid()) @db.Uuid
+  userId     String    @map("user_id") @db.Uuid
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  codigoHash String    @map("codigo_hash")
+  expiraEn   DateTime  @map("expira_en")
+  usadoEn    DateTime? @map("usado_en")
+  intentos   Int       @default(0)
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  @@index([userId, createdAt])
+  @@map("recuperaciones_password")
 }

@@ -17,6 +17,11 @@ const envSchema = z.object({
   GOOGLE_CALLBACK_URL: z.string().trim().optional(),
   SUPABASE_URL: z.string().trim().min(1, 'SUPABASE_URL es requerido'),
   SUPABASE_SERVICE_ROLE_KEY: z.string().trim().min(1, 'SUPABASE_SERVICE_ROLE_KEY es requerido'),
+  // Correo (recuperar contraseña) por la API HTTP de Brevo: Railway bloquea
+  // SMTP en los planes Free/Hobby. Sin estas dos, el envío responde 503.
+  BREVO_API_KEY: z.string().trim().optional(),
+  MAIL_FROM: z.string().trim().optional(),
+  MAIL_FROM_NAME: z.string().trim().default('TouristMAR'),
 })
 
 const parsed = envSchema.safeParse(process.env)
@@ -38,4 +43,5 @@ export const env = {
   PORT: parsed.data.PORT ?? (esProduccion ? '5173' : '5174'),
   HOST: parsed.data.HOST ?? (esProduccion ? '0.0.0.0' : '127.0.0.1'),
 }
+export const isMailEnabled = Boolean(env.BREVO_API_KEY && env.MAIL_FROM)
 export const isGoogleAuthEnabled = Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET)

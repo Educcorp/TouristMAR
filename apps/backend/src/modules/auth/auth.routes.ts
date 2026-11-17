@@ -13,6 +13,8 @@ import {
   deleteGaleriaImage,
   createNegocioSuggestion,
   googleMobileLogin,
+  forgotPassword,
+  resetPassword,
 } from './auth.controller'
 import { requireAuth } from './auth.middleware'
 import { estadoRecorrido, crearSolicitud } from '../recorridos/solicitudes.controller'
@@ -33,6 +35,8 @@ const upload = multer({
 
 authRouter.post('/register', register)
 authRouter.post('/login', login)
+authRouter.post('/forgot-password', forgotPassword)
+authRouter.post('/reset-password', resetPassword)
 authRouter.get('/me', requireAuth, me)
 authRouter.patch('/profile', requireAuth, updateProfile)
 authRouter.post('/profile/avatar', requireAuth, upload.single('file'), uploadAvatar)
