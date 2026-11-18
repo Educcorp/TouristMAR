@@ -13,6 +13,7 @@ import '../../widgets/admin/ds_card.dart';
 import '../../widgets/admin/ds_states.dart';
 import '../../widgets/app_text_field.dart';
 import '../../widgets/aviso.dart';
+import 'marcador_imprimible_page.dart';
 
 /// Contenido de la sección "Realidad aumentada" embebido en [AdminShell]:
 /// alta, edición y baja de los marcadores que reconoce la cámara de la app
@@ -801,6 +802,16 @@ class _MarcadorRow extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       IconButton(
+                        tooltip: 'Ver para imprimir',
+                        onPressed: () => MarcadorImprimiblePage.abrir(
+                          context,
+                          imagenUrl: marcador.imagenUrl,
+                          lugar: marcador.negocioNombre ?? marcador.titulo,
+                          titulo: marcador.titulo,
+                        ),
+                        icon: Icon(Icons.print_outlined, size: 18, color: AppColors.slate300),
+                      ),
+                      IconButton(
                         tooltip: 'Editar',
                         onPressed: onEdit,
                         icon: Icon(Icons.edit_outlined, size: 18, color: AppColors.slate300),
@@ -874,10 +885,12 @@ class _VistaPreviaMarcador extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // `contain`: el marcador se ve completo (con `cover` se recortaba y la
+    // tarjeta de abajo lo tapaba).
     final Widget fondo = imagen != null
-        ? Image.memory(imagen!, fit: BoxFit.cover)
+        ? Image.memory(imagen!, fit: BoxFit.contain)
         : (imagenUrl != null
-            ? Image.network(imagenUrl!, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const SizedBox.shrink())
+            ? Image.network(imagenUrl!, fit: BoxFit.contain, errorBuilder: (_, __, ___) => const SizedBox.shrink())
             : Center(child: Icon(Icons.photo_camera_outlined, size: 40, color: Colors.white.withValues(alpha: 0.5))));
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -888,15 +901,16 @@ class _VistaPreviaMarcador extends StatelessWidget {
           aspectRatio: 3 / 4,
           child: ClipRRect(
             borderRadius: BorderRadius.circular(AppRadius.card),
-            child: Stack(
-              fit: StackFit.expand,
+            // El marcador arriba y la ventana de información debajo, cada uno
+            // en su espacio: el texto ya no se encima sobre la imagen.
+            child: ColoredBox(
+              color: const Color(0xFF1B2B33),
+              child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const ColoredBox(color: Color(0xFF1B2B33)),
-                Opacity(opacity: 0.85, child: fondo),
-                Positioned(
-                  left: 12,
-                  right: 12,
-                  bottom: 12,
+                Expanded(child: Padding(padding: const EdgeInsets.all(12), child: fondo)),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
                   child: Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
@@ -921,7 +935,7 @@ class _VistaPreviaMarcador extends StatelessWidget {
                         const SizedBox(height: 4),
                         Text(
                           texto.isEmpty ? 'Aquí aparecerá la información.' : texto,
-                          maxLines: 5,
+                          maxLines: 4,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(color: texto.isEmpty ? Colors.black38 : Colors.black87, fontSize: 13.5, height: 1.3),
                         ),
@@ -930,6 +944,7 @@ class _VistaPreviaMarcador extends StatelessWidget {
                   ),
                 ),
               ],
+              ),
             ),
           ),
         ),

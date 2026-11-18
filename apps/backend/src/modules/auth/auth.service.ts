@@ -569,10 +569,24 @@ export async function adminUploadNegocioPortada(negocioId: string, file: { buffe
   return getNegocioAdmin(negocioId)
 }
 
+/// Cuántas experiencias tiene configuradas cada lugar, con el mismo criterio
+/// con el que se publican en la app: marcadores activos, recorridos activos
+/// con al menos un escenario y puntos de RA por ubicación activos.
+export const CONTEO_EXPERIENCIAS = {
+  select: {
+    arMarcadores: { where: { activo: true } },
+    recorridos360: { where: { activo: true, escenas: { some: {} } } },
+    puntosRaGeo: { where: { activo: true } },
+  },
+} as const
+
 export async function listNegociosAll() {
   return withDbGuard(() =>
     prisma.negocioProfile.findMany({
-      include: { user: { select: { id: true, email: true, nombres: true, createdAt: true } } },
+      include: {
+        user: { select: { id: true, email: true, nombres: true, createdAt: true } },
+        _count: CONTEO_EXPERIENCIAS,
+      },
       orderBy: { createdAt: 'desc' },
     }),
   )

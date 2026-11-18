@@ -74,7 +74,22 @@ export async function listPendingNegocios(_req: AuthedRequest, res: Response) {
   }
 }
 
-type NegocioConDueño = NegocioProfile & { user: { email: string; nombres: string } }
+type NegocioConDueño = NegocioProfile & {
+  user: { email: string; nombres: string }
+  /// Solo lo trae la lista (GET /admin/negocios); ver CONTEO_EXPERIENCIAS.
+  _count?: { arMarcadores: number; recorridos360: number; puntosRaGeo: number }
+}
+
+/// Qué experiencias tiene el lugar. Se cuentan en sus tablas (lo que se da
+/// de alta en "Mapa y RA"); las columnas viejas del negocio (`archivo360`,
+/// `arMarcador`, `arGeo`) cuentan también, por los lugares configurados antes.
+function experienciasDe(n: NegocioConDueño) {
+  return {
+    recorrido360: (n._count?.recorridos360 ?? 0) > 0 || n.archivo360 != null,
+    arMarcador: (n._count?.arMarcadores ?? 0) > 0 || n.arMarcador != null,
+    arGeo: (n._count?.puntosRaGeo ?? 0) > 0 || n.arGeo != null,
+  }
+}
 
 function toAdminNegocio(n: NegocioConDueño) {
   return {
@@ -93,6 +108,7 @@ function toAdminNegocio(n: NegocioConDueño) {
     archivo360: n.archivo360,
     arMarcador: n.arMarcador,
     arGeo: n.arGeo,
+    experiencias: experienciasDe(n),
     latitud: n.latitud,
     longitud: n.longitud,
   }

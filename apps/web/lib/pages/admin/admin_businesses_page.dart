@@ -338,11 +338,11 @@ class _BusinessCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.md),
           Row(
             children: [
-              _AssetDot(tipo: ExperienciaTipo.recorrido360, active: negocio.archivo360 != null),
+              _AssetDot(tipo: ExperienciaTipo.recorrido360, active: negocio.tieneRecorrido360),
               const SizedBox(width: 4),
-              _AssetDot(tipo: ExperienciaTipo.arMarcador, active: negocio.arMarcador != null),
+              _AssetDot(tipo: ExperienciaTipo.arMarcador, active: negocio.tieneArMarcador),
               const SizedBox(width: 4),
-              _AssetDot(tipo: ExperienciaTipo.arGeo, active: negocio.arGeo != null),
+              _AssetDot(tipo: ExperienciaTipo.arGeo, active: negocio.tieneArGeo),
               const Spacer(),
               IconButton(
                 tooltip: 'Eliminar negocio',

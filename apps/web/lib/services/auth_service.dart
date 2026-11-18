@@ -166,6 +166,12 @@ class NegocioSummary {
   final String? archivo360;
   final String? arMarcador;
   final String? arGeo;
+  /// Experiencias que el lugar ya tiene configuradas (`experiencias` de
+  /// GET /admin/negocios, contadas en sus tablas). Sin ese dato, las columnas
+  /// viejas del negocio.
+  final bool tieneRecorrido360;
+  final bool tieneArMarcador;
+  final bool tieneArGeo;
   final bool esAdicional;
   final String? portada;
   /// Pin del lugar en el mapa público (null = no aparece en el mapa).
@@ -187,11 +193,16 @@ class NegocioSummary {
     this.archivo360,
     this.arMarcador,
     this.arGeo,
+    bool? tieneRecorrido360,
+    bool? tieneArMarcador,
+    bool? tieneArGeo,
     this.esAdicional = false,
     this.portada,
     this.latitud,
     this.longitud,
-  });
+  })  : tieneRecorrido360 = tieneRecorrido360 ?? archivo360 != null,
+        tieneArMarcador = tieneArMarcador ?? arMarcador != null,
+        tieneArGeo = tieneArGeo ?? arGeo != null;
 
   bool get tieneUbicacion => latitud != null && longitud != null;
 
@@ -214,6 +225,9 @@ class NegocioSummary {
         archivo360: json['archivo360'] as String?,
         arMarcador: json['arMarcador'] as String?,
         arGeo: json['arGeo'] as String?,
+        tieneRecorrido360: (json['experiencias'] as Map?)?['recorrido360'] as bool?,
+        tieneArMarcador: (json['experiencias'] as Map?)?['arMarcador'] as bool?,
+        tieneArGeo: (json['experiencias'] as Map?)?['arGeo'] as bool?,
         esAdicional: json['esAdicional'] as bool? ?? false,
         portada: json['portada'] as String?,
         latitud: (json['latitud'] as num?)?.toDouble(),
