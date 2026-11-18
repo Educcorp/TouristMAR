@@ -59,7 +59,7 @@ class _Deteccion {
 /// marcador encima.
 ///
 /// Los marcadores salen del endpoint público de siempre:
-/// GET /api/marcadores?negocioId={lugarId} → {nombre, urlImagen, textoParaMostrar}.
+/// GET /api/marcadores → {nombre, urlImagen, textoParaMostrar}, todos (globales).
 /// Para saber qué número ArUco es cada uno, se lee la imagen que subió el
 /// admin (el mismo ArUco); si no se puede, el número que traiga el nombre
 /// (p. ej. "aruco-3" o "fime 7").
@@ -77,11 +77,15 @@ class _ArucoPageState extends State<ArucoPage> with SingleTickerProviderStateMix
   /// las versiones _50/_100/_250/_1000, así que con la de 1000 se leen todos.
   /// El mismo número (p. ej. 0) es un marcador distinto en cada tamaño.
   late final List<_Diccionario> _diccionarios = [
-    _Diccionario('4x4', cv.PredefinedDictionaryType.DICT_4X4_1000),
-    _Diccionario('5x5', cv.PredefinedDictionaryType.DICT_5X5_1000),
-    _Diccionario('6x6', cv.PredefinedDictionaryType.DICT_6X6_1000),
+    // Orden: de más bits a menos. Un 6x6 se puede "leer" por error como 4x4
+    // (el diccionario 4x4 de 1000 códigos corrige tantos bits que encuentra
+    // coincidencias falsas: el 6x6 #59 sale como 4x4 #423), pero no al revés.
+    // Ante el mismo cuadro detectado por dos diccionarios gana el primero.
     _Diccionario('7x7', cv.PredefinedDictionaryType.DICT_7X7_1000),
+    _Diccionario('6x6', cv.PredefinedDictionaryType.DICT_6X6_1000),
+    _Diccionario('5x5', cv.PredefinedDictionaryType.DICT_5X5_1000),
     _Diccionario('original', cv.PredefinedDictionaryType.DICT_ARUCO_ORIGINAL),
+    _Diccionario('4x4', cv.PredefinedDictionaryType.DICT_4X4_1000),
   ];
 
   /// Los que se buscan en la cámara: solo los de los marcadores registrados
@@ -115,6 +119,12 @@ class _ArucoPageState extends State<ArucoPage> with SingleTickerProviderStateMix
   final Set<String> _escaneosRegistrados = {};
   Timer? _limpiador;
 
+  /// Diagnóstico en logcat (`adb logcat | grep ArUco`): qué marcadores se
+  /// cargaron, cuáles se pudieron leer y qué ve la cámara.
+  final Set<String> _vistos = {};
+  int _erroresCuadro = 0;
+  static void _log(String texto) => debugPrint('[ArUco] $texto');
+
   @override
   void initState() {
     super.initState();
@@ -136,7 +146,7 @@ class _ArucoPageState extends State<ArucoPage> with SingleTickerProviderStateMix
       final m = _buscar(a);
       _memoria = m != null
           ? (m.titulo, m.texto, true)
-          : ('Marcador ${a.diccionario} #${a.id}', 'Este marcador no está registrado para este lugar.', false);
+          : ('Marcador ${a.diccionario} #${a.id}', 'Este marcador no está registrado en TouristMAR.', false);
       _perdidoEn = null;
     } else if (_memoria != null) {
       _perdidoEn ??= ahora;
@@ -203,11 +213,18 @@ class _ArucoPageState extends State<ArucoPage> with SingleTickerProviderStateMix
     try {
       final deteccion = _detectar(imagen);
       if (deteccion != null && mounted) {
+        final clave = '${deteccion.diccionario}:${deteccion.id}';
+        if (_vistos.add(clave)) {
+          final m = _buscar(deteccion);
+          _log('cámara ve $clave → ${m == null ? 'NO registrado' : m.nombre} '
+              '(cuadro ${imagen.width}x${imagen.height}, registrados: ${_marcadores.keys.join(', ')})');
+        }
         setState(() => _actual = deteccion);
         _registrarEscaneo(deteccion);
       }
-    } catch (_) {
+    } catch (e) {
       // Un cuadro dañado no debe tumbar la cámara.
+      if (_erroresCuadro++ < 3) _log('error al analizar un cuadro: $e');
     } finally {
       _procesando = false;
     }
@@ -237,6 +254,7 @@ class _ArucoPageState extends State<ArucoPage> with SingleTickerProviderStateMix
     try {
       _Deteccion? mejor;
       var mejorArea = 0.0;
+      var mejorRegistrado = false;
       final rotacion = _camara?.description.sensorOrientation ?? 90;
       for (final dic in _activos) {
         final (esquinas, ids, rechazados) = dic.detector.detectMarkers(mat);
@@ -244,8 +262,13 @@ class _ArucoPageState extends State<ArucoPage> with SingleTickerProviderStateMix
           for (var i = 0; i < ids.length; i++) {
             final p = esquinas[i];
             final area = ((p[0].x - p[2].x) * (p[1].y - p[3].y)).abs();
-            if (area <= mejorArea) continue;
+            // Primero los registrados (una lectura falsa de otro diccionario
+            // casi nunca coincide con uno), luego el más grande en pantalla.
+            final registrado = _marcadores.containsKey('${dic.nombre}:${ids[i]}') || _porNumero.containsKey(ids[i]);
+            if (mejorRegistrado && !registrado) continue;
+            if (registrado == mejorRegistrado && area <= mejorArea) continue;
             mejorArea = area;
+            mejorRegistrado = registrado;
             mejor = _Deteccion(
               dic.nombre,
               ids[i],
@@ -277,24 +300,29 @@ class _ArucoPageState extends State<ArucoPage> with SingleTickerProviderStateMix
 
   Future<void> _cargarMarcadores() async {
     try {
-      var lista = await _pedirMarcadores(widget.lugar.id);
-      // Lugares de demostración (id que no es de la base) o sin marcadores
-      // propios: se usan los marcadores generales.
-      if (lista.isEmpty) lista = await _pedirMarcadores(null);
+      // Globales: se reconocen todos los marcadores registrados, no solo los
+      // del lugar desde el que se abrió (cualquier marcador que el visitante
+      // escanee muestra su información).
+      final lista = await _pedirMarcadores(null);
+      _log('API $apiUrl/marcadores → ${lista.length} marcadores (lugar: ${widget.lugar.nombre})');
+
+      // Las imágenes se bajan todas a la vez (más rápido que una por una).
+      final leidos = await Future.wait([for (final m in lista) _leerImagen(m)]);
 
       final mapa = <String, MarcadorAruco>{};
       final porNumero = <int, MarcadorAruco>{};
-      for (final m in lista) {
+      for (final (i, m) in lista.indexed) {
         final nombre = (m['nombre'] as String?) ?? '';
         final texto = (m['textoParaMostrar'] as String?) ?? '';
         final lineas = texto.split('\n');
         final titulo = lineas.first.trim().isEmpty ? nombre : lineas.first.trim();
         final cuerpo = lineas.skip(1).join('\n').trim();
 
-        final leido = await _leerImagen(m['urlImagen'] as String?);
+        final leido = leidos[i];
         if (leido != null) {
-          mapa['${leido.$1}:${leido.$2}'] = MarcadorAruco(
-            id: leido.$2, diccionario: leido.$1, nombre: nombre, titulo: titulo, texto: cuerpo);
+          final clave = '${leido.$1}:${leido.$2}';
+          if (mapa.containsKey(clave)) _log('OJO: $nombre y ${mapa[clave]!.nombre} son el mismo ArUco ($clave)');
+          mapa[clave] = MarcadorAruco(id: leido.$2, diccionario: leido.$1, nombre: nombre, titulo: titulo, texto: cuerpo);
           continue;
         }
         final id = _idDelNombre(nombre);
@@ -302,6 +330,8 @@ class _ArucoPageState extends State<ArucoPage> with SingleTickerProviderStateMix
           porNumero[id] = MarcadorAruco(id: id, diccionario: null, nombre: nombre, titulo: titulo, texto: cuerpo);
         }
       }
+      _log('listos: ${mapa.length} leídos de su imagen, ${porNumero.length} por nombre, '
+          '${lista.length - mapa.length - porNumero.length} sin reconocer');
       final usados = {for (final m in mapa.values) m.diccionario};
       final activos = porNumero.isNotEmpty || usados.isEmpty
           ? _diccionarios
@@ -313,7 +343,8 @@ class _ArucoPageState extends State<ArucoPage> with SingleTickerProviderStateMix
         });
       }
       if (mounted) setState(() => _marcadores = mapa);
-    } catch (_) {
+    } catch (e) {
+      _log('no se pudieron cargar los marcadores: $e');
       if (mounted) setState(() => _errorCarga = 'No se pudieron cargar los marcadores. Revisa tu conexión.');
     } finally {
       if (mounted) {
@@ -331,19 +362,31 @@ class _ArucoPageState extends State<ArucoPage> with SingleTickerProviderStateMix
       queryParameters: negocioId == null ? null : {'negocioId': negocioId},
     );
     final res = await http.get(uri);
-    if (res.statusCode != 200) return const [];
+    if (res.statusCode != 200) {
+      _log('GET $uri respondió ${res.statusCode}');
+      return const [];
+    }
     final data = jsonDecode(res.body) as Map<String, dynamic>;
     return ((data['marcadores'] as List?) ?? const []).cast<Map<String, dynamic>>();
   }
 
   /// Lee de la imagen que subió el admin qué ArUco es: (diccionario, número).
-  Future<(String, int)?> _leerImagen(String? url) async {
-    if (url == null || url.isEmpty) return null;
+  Future<(String, int)?> _leerImagen(Map<String, dynamic> marcador) async {
+    final nombre = marcador['nombre'];
+    final url = marcador['urlImagen'] as String?;
+    if (url == null || url.isEmpty) {
+      _log('$nombre: sin imagen');
+      return null;
+    }
     try {
       final res = await http.get(Uri.parse(url));
-      if (res.statusCode != 200) return null;
+      if (res.statusCode != 200) {
+        _log('$nombre: la imagen respondió ${res.statusCode}');
+        return null;
+      }
       final imagen = cv.imdecode(res.bodyBytes, cv.IMREAD_GRAYSCALE);
       if (imagen.isEmpty) {
+        _log('$nombre: OpenCV no pudo abrir la imagen (${res.bodyBytes.length} bytes)');
         imagen.dispose();
         return null;
       }
@@ -362,22 +405,29 @@ class _ArucoPageState extends State<ArucoPage> with SingleTickerProviderStateMix
             esquinas.dispose();
             ids.dispose();
             rechazados.dispose();
-            if (id != null) return (dic.nombre, id);
+            if (id != null) {
+              _log('$nombre → ${dic.nombre}:$id');
+              return (dic.nombre, id);
+            }
           }
         }
+        _log('$nombre: no se encontró ningún ArUco en su imagen (${imagen.cols}x${imagen.rows})');
         return null;
       } finally {
         conMargen.dispose();
         imagen.dispose();
       }
-    } catch (_) {
+    } catch (e) {
+      _log('$nombre: error al leer la imagen: $e');
       return null;
     }
   }
 
-  /// Respaldo: el número que traiga el nombre ("aruco-3" → 3).
+  /// Respaldo: el número que traiga el nombre, solo si dice "aruco"
+  /// ("aruco-3" → 3). Los nombres del panel terminan en "_01" ("playa_azul_01"):
+  /// tomar cualquier número haría que todos fueran el ArUco 1.
   static int? _idDelNombre(String nombre) {
-    final m = RegExp(r'(\d+)').firstMatch(nombre);
+    final m = RegExp(r'aruco\D{0,3}(\d+)', caseSensitive: false).firstMatch(nombre);
     return m == null ? null : int.tryParse(m.group(1)!);
   }
 

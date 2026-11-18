@@ -92,6 +92,30 @@ class RaGeoLugar {
   const RaGeoLugar({required this.puntos, this.tieneMarcadores = false});
 }
 
+/// Un lugar con pin, para la sección "Historias de RA" del admin.
+class LugarConHistoria {
+  final String id;
+  final String nombre;
+  final String categoria;
+  final Coordenadas ubicacion;
+
+  /// Solo los puntos dados de alta (sin el pin que manda el backend de respaldo).
+  final List<PuntoRaGeo> puntos;
+
+  const LugarConHistoria({
+    required this.id,
+    required this.nombre,
+    required this.categoria,
+    required this.ubicacion,
+    required this.puntos,
+  });
+
+  bool get tienePuntos => puntos.isNotEmpty;
+
+  /// Al menos un punto con historia escrita.
+  bool get tieneHistoria => puntos.any((p) => p.detalle.trim().isNotEmpty);
+}
+
 /// Puntos de interés de la RA por geolocalización: lectura pública para la
 /// app (`GET /api/ra/lugares/:id`) y gestión del admin (`/api/admin/ra-geo`).
 class RaGeoService {
@@ -110,6 +134,29 @@ class RaGeoService {
       puntos: puntos.map((p) => PuntoRaGeo.fromJson(p as Map<String, dynamic>)).toList(),
       tieneMarcadores: lugar['tieneMarcadores'] as bool? ?? false,
     );
+  }
+
+  /// Público: todos los lugares aprobados con pin y sus puntos activos (lo
+  /// mismo que baja la app). Un lugar sin puntos propios trae su pin como
+  /// punto único, con el mismo id que el lugar ([LugarConHistoria.tienePuntos]).
+  Future<List<LugarConHistoria>> lugaresPublicos() async {
+    final res = await _client.get(Uri.parse('$apiUrl/ra/lugares'));
+    final data = _check(res, 'No se pudieron cargar los lugares');
+    return ((data['lugares'] as List?) ?? const []).map((l) {
+      final j = l as Map<String, dynamic>;
+      final id = j['id'] as String;
+      final puntos = ((j['puntos'] as List?) ?? const [])
+          .map((p) => PuntoRaGeo.fromJson(p as Map<String, dynamic>))
+          .where((p) => p.id != id)
+          .toList();
+      return LugarConHistoria(
+        id: id,
+        nombre: j['nombre'] as String? ?? '',
+        categoria: j['categoria'] as String? ?? '',
+        ubicacion: Coordenadas((j['latitud'] as num).toDouble(), (j['longitud'] as num).toDouble()),
+        puntos: puntos,
+      );
+    }).toList();
   }
 
   Future<List<PuntoRaGeo>> listar(String token, String lugarId) async {

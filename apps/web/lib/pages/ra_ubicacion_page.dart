@@ -9,9 +9,9 @@ import '../services/brujula.dart';
 import '../services/experiencias_launcher.dart';
 import '../services/ra_geo_service.dart';
 import '../services/ubicacion_dispositivo.dart';
-import '../theme/app_theme.dart';
 import '../widgets/cover_image.dart';
 import '../widgets/aviso.dart';
+import '../widgets/ra/vidrio_ra.dart';
 
 /// RA por geolocalización (Location-based AR) hecha en Flutter, sin Unity:
 /// cámara de fondo + GPS + brújula sobre los puntos de interés del lugar
@@ -275,16 +275,16 @@ class _RaUbicacionPageState extends State<RaUbicacionPage> with WidgetsBindingOb
                   padding: const EdgeInsets.all(12),
                   child: Row(
                     children: [
-                      _BotonCircular(
+                      BotonCircularRa(
                           icon: Icons.close, tooltip: 'Cerrar', onTap: () => Navigator.of(context).maybePop()),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: 10),
                       Flexible(
                         child: _Pildora(
                           child: Text(
-                            'RA por geolocalización · ${widget.lugar.nombre}',
+                            _yo == null || _guiaAbierta ? 'RA por geolocalización' : 'Mira a tu alrededor con la cámara',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14),
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14.5),
                           ),
                         ),
                       ),
@@ -306,6 +306,8 @@ class _RaUbicacionPageState extends State<RaUbicacionPage> with WidgetsBindingOb
                         constraints: BoxConstraints(maxHeight: c.biggest.height * 0.75),
                         child: _GuiaCompleta(
                           punto: _cerca!,
+                          distancia: _distancia(_cerca!),
+                          categoria: widget.lugar.categoriaVisible,
                           onCerrar: _cerrarGuia,
                           onMarcadores: _tieneMarcadores ? _abrirMarcadores : null,
                         ),
@@ -423,69 +425,84 @@ class _RaUbicacionPageState extends State<RaUbicacionPage> with WidgetsBindingOb
     );
   }
 
+  /// Tarjeta de vidrio de abajo (diseño de la tarjeta de Unity,
+  /// ControladorPlayas + VisorLiquidGlass): chip de estado, categoría, nombre
+  /// del lugar, qué hacer, y la acción como botón píldora.
   Widget _panel() {
-    final color = ExperienciaInfo.of(ExperienciaTipo.arGeo).color;
     final String texto;
-    Widget? accion;
-    IconData icono = Icons.radar;
+    String? chip;
+    var colorChip = RaEstilo.lejos;
+    var latido = false;
+    final acciones = <Widget>[];
 
     if (_puntos.isEmpty) {
       texto = 'Este lugar todavía no tiene puntos de RA.';
     } else if (_yo == null) {
+      chip = _buscandoUbicacion ? 'Obteniendo ubicación…' : 'Sin ubicación';
+      colorChip = _buscandoUbicacion ? Colors.white : RaEstilo.lejos;
+      latido = _buscandoUbicacion;
       texto = _buscandoUbicacion
           ? 'Buscando tu ubicación…'
           : 'Activa tu ubicación y permite el acceso para ver los puntos de interés.';
       if (!_buscandoUbicacion) {
-        accion = _BotonPanel(icon: Icons.location_searching, label: 'Usar mi ubicación', onTap: _iniciarSensores);
+        acciones.add(BotonPildoraRa(
+            icon: Icons.location_searching, label: 'Usar mi ubicación', onTap: _iniciarSensores, activo: true));
       }
     } else if (_cerca != null) {
       // Cerró la guía a mano: puede volver a abrirla.
-      icono = Icons.check_circle;
+      chip = 'Estás aquí';
+      colorChip = RaEstilo.acento;
+      latido = true;
       texto = 'Estás en ${_cerca!.titulo}.';
-      accion = Wrap(
-        spacing: AppSpacing.sm,
-        runSpacing: AppSpacing.sm,
-        children: [
-          _BotonPanel(icon: Icons.menu_book_outlined, label: 'Ver guía', onTap: _abrirGuia),
-          if (_tieneMarcadores)
-            _BotonPanel(icon: Icons.qr_code_scanner, label: 'Abrir RA con marcadores', onTap: _abrirMarcadores),
-        ],
-      );
+      acciones.add(BotonPildoraRa(icon: Icons.menu_book_outlined, label: 'Ver guía', onTap: _abrirGuia, activo: true));
+      if (_tieneMarcadores) {
+        acciones.add(
+            BotonPildoraRa(icon: Icons.qr_code_scanner, label: 'Abrir RA con marcadores', onTap: _abrirMarcadores));
+      }
     } else {
       final ordenados = [..._puntos]..sort((a, b) => _distancia(a).compareTo(_distancia(b)));
       final masCercano = ordenados.first;
       final visibles = ordenados.where((p) => _capa(p) == CapaRa.visible).length;
       final d = _distancia(masCercano);
       if (visibles > 0) {
+        chip = 'Cerca · ${formatoDistancia(d)}';
+        colorChip = RaEstilo.acento;
         texto = visibles == 1
             ? 'Hay un punto de interés cerca. Apunta la cámara y acércate a menos de '
                 '${masCercano.radioCercano.round()} m para abrir su guía.'
             : 'Hay $visibles puntos de interés cerca. Apunta la cámara para verlos.';
       } else {
+        chip = 'A ${formatoDistancia(d)} de ti';
         texto = 'El punto más cercano, ${masCercano.titulo}, está a ${formatoDistancia(d)} hacia el '
             '${_puntoCardinal(rumboHacia(_yo!, masCercano.ubicacion))}. Su marcador aparece a '
             '${masCercano.radioVisible.round()} m.';
       }
-      if (_rumbo == null) {
-        accion = _BotonPanel(icon: Icons.explore_outlined, label: 'Activar brújula', onTap: _activarBrujula);
-      }
+      acciones.add(_rumbo == null
+          ? BotonPildoraRa(icon: Icons.explore_outlined, label: 'Activar brújula', onTap: _activarBrujula)
+          : const BotonPildoraRa(label: 'Acércate para ver más'));
     }
 
-    return _Pildora(
-      radio: AppRadius.card,
-      padding: const EdgeInsets.all(AppSpacing.md),
+    return VidrioRa(
+      padding: const EdgeInsets.fromLTRB(24, 22, 24, 20),
       child: Column(
         mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Icon(icono, color: _cerca != null ? AppColors.emerald : color, size: 18),
-              const SizedBox(width: 8),
-              Expanded(child: Text(texto, style: const TextStyle(color: Colors.white, fontSize: 14))),
-            ],
-          ),
-          if (accion != null) ...[const SizedBox(height: AppSpacing.sm), accion],
+          if (chip != null) ...[
+            ChipEstadoRa(texto: chip, color: colorChip, latido: latido),
+            const SizedBox(height: 14),
+          ],
+          CategoriaRa(widget.lugar.categoriaVisible),
+          const SizedBox(height: 6),
+          TituloRa(widget.lugar.nombre, maxLineas: 2, tamano: 24),
+          const SizedBox(height: 10),
+          Text(texto, style: const TextStyle(color: RaEstilo.cuerpo, fontSize: 15, height: 1.3)),
+          if (acciones.isNotEmpty) ...[
+            const SizedBox(height: 18),
+            const DivisorRa(),
+            const SizedBox(height: 16),
+            for (final (i, a) in acciones.indexed) ...[if (i > 0) const SizedBox(height: 10), a],
+          ],
         ],
       ),
     );
@@ -497,10 +514,10 @@ class _RaUbicacionPageState extends State<RaUbicacionPage> with WidgetsBindingOb
   }
 }
 
-/// Capa "visible": letrero flotante del punto con su pin debajo, apuntando
-/// al lugar real.
+/// Capa "visible": letrero de vidrio del punto (distancia, título y resumen)
+/// con su pin debajo, apuntando al lugar real.
 class _MarcadorFlotante extends StatelessWidget {
-  static const ancho = 220.0;
+  static const ancho = 232.0;
 
   final PuntoRaGeo punto;
   final double distancia;
@@ -509,58 +526,78 @@ class _MarcadorFlotante extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = ExperienciaInfo.of(ExperienciaTipo.arGeo).color;
     return SizedBox(
       width: ancho,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.6),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: color, width: 2),
-              boxShadow: [BoxShadow(color: color.withValues(alpha: 0.45), blurRadius: 16)],
-            ),
+          VidrioRa(
+            radio: 24,
+            padding: const EdgeInsets.fromLTRB(14, 12, 16, 14),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(formatoDistancia(distancia),
-                    style: TextStyle(color: color, fontWeight: FontWeight.w800, fontSize: 13)),
-                const SizedBox(height: 2),
-                Text(punto.titulo,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14)),
+                ChipEstadoRa(texto: formatoDistancia(distancia), color: RaEstilo.acento),
+                const SizedBox(height: 9),
+                TituloRa(punto.titulo, maxLineas: 2, tamano: 17),
                 if (punto.resumen.isNotEmpty) ...[
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 5),
                   Text(punto.resumen,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                      style: const TextStyle(color: RaEstilo.cuerpo, fontSize: 13, height: 1.3)),
                 ],
               ],
             ),
           ),
-          Container(width: 3, height: 28, color: color),
-          Icon(Icons.location_on, color: color, size: 30),
+          // Tallo que se desvanece hacia el pin
+          Container(
+            width: 2,
+            height: 30,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Color(0x73FFFFFF), RaEstilo.acento],
+              ),
+            ),
+          ),
+          Container(
+            width: 16,
+            height: 16,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: RaEstilo.acento,
+              border: Border.all(color: Colors.white, width: 2.5),
+              boxShadow: [BoxShadow(color: RaEstilo.acento.withValues(alpha: 0.6), blurRadius: 14)],
+            ),
+          ),
         ],
       ),
     );
   }
 }
 
-/// Capa "cercana": la guía completa del punto (información, imagen y audio).
+/// Capa "cercana": la guía completa del punto, en la tarjeta de vidrio:
+/// "Estás aquí", categoría, título, resumen, la historia ([PuntoRaGeo.detalle],
+/// la escribe el admin), imagen y audio.
 class _GuiaCompleta extends StatefulWidget {
   final PuntoRaGeo punto;
+  final double distancia;
+  final String categoria;
   final VoidCallback onCerrar;
 
   /// null = el lugar no tiene marcadores de imagen.
   final VoidCallback? onMarcadores;
 
-  const _GuiaCompleta({required this.punto, required this.onCerrar, this.onMarcadores});
+  const _GuiaCompleta({
+    required this.punto,
+    required this.distancia,
+    required this.categoria,
+    required this.onCerrar,
+    this.onMarcadores,
+  });
 
   @override
   State<_GuiaCompleta> createState() => _GuiaCompletaState();
@@ -611,99 +648,94 @@ class _GuiaCompletaState extends State<_GuiaCompleta> {
   @override
   Widget build(BuildContext context) {
     final p = widget.punto;
-    final color = AppColors.emerald;
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xF20B2A3A),
-        borderRadius: BorderRadius.circular(AppRadius.card),
-        border: Border.all(color: color, width: 2),
-        boxShadow: [BoxShadow(color: color.withValues(alpha: 0.35), blurRadius: 24)],
-      ),
-      clipBehavior: Clip.antiAlias,
+    return VidrioRa(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (p.imagenUrl.isNotEmpty) SizedBox(height: 160, child: CoverImage(source: p.imagenUrl)),
           Flexible(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(AppSpacing.md),
+              padding: const EdgeInsets.fromLTRB(24, 22, 24, 8),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Icon(Icons.check_circle, color: color, size: 18),
-                      const SizedBox(width: 6),
-                      Text('¡Llegaste!', style: TextStyle(color: color, fontWeight: FontWeight.w800)),
-                    ],
+                  ChipEstadoRa(
+                    texto: 'Estás aquí · ${formatoDistancia(widget.distancia)}',
+                    color: RaEstilo.acento,
+                    latido: true,
                   ),
-                  const SizedBox(height: 6),
-                  Text(p.titulo,
-                      style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800)),
-                  if (p.resumen.isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    Text(p.resumen, style: const TextStyle(color: Colors.white70, fontSize: 14)),
+                  const SizedBox(height: 14),
+                  if (widget.categoria.trim().isNotEmpty) ...[
+                    CategoriaRa(widget.categoria),
+                    const SizedBox(height: 6),
                   ],
-                  if (widget.onMarcadores != null) ...[
-                    const SizedBox(height: AppSpacing.md),
-                    Container(
-                      padding: const EdgeInsets.all(AppSpacing.sm),
-                      decoration: BoxDecoration(
-                        color: AppColors.brandTeal.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(AppRadius.button),
-                        border: Border.all(color: AppColors.brandTeal.withValues(alpha: 0.5)),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          const Text(
-                            'Aquí hay marcadores de realidad aumentada: apunta la cámara a las imágenes del lugar.',
-                            style: TextStyle(color: Colors.white, fontSize: 14),
-                          ),
-                          const SizedBox(height: AppSpacing.sm),
-                          FilledButton.icon(
-                            onPressed: () {
-                              _pararAudio();
-                              widget.onMarcadores!();
-                            },
-                            icon: const Icon(Icons.qr_code_scanner, size: 18),
-                            label: const Text('Abrir RA con marcadores', style: TextStyle(fontWeight: FontWeight.w700)),
-                            style: FilledButton.styleFrom(
-                                backgroundColor: AppColors.brandTeal, foregroundColor: Colors.white),
-                          ),
-                        ],
-                      ),
+                  TituloRa(p.titulo),
+                  if (p.resumen.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text(p.resumen, style: const TextStyle(color: RaEstilo.cuerpo, fontSize: 15, height: 1.3)),
+                  ],
+                  if (p.imagenUrl.isNotEmpty) ...[
+                    const SizedBox(height: 16),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(20),
+                      child: SizedBox(height: 150, width: double.infinity, child: CoverImage(source: p.imagenUrl)),
                     ),
                   ],
                   if (p.audioUrl.isNotEmpty) ...[
-                    const SizedBox(height: AppSpacing.md),
-                    FilledButton.icon(
-                      onPressed: _alternarAudio,
-                      icon: Icon(_reproduciendo ? Icons.pause : Icons.headphones, size: 18),
-                      label: Text(_reproduciendo ? 'Pausar guía de audio' : 'Escuchar guía de audio'),
-                      style: FilledButton.styleFrom(backgroundColor: color, foregroundColor: Colors.white),
+                    const SizedBox(height: 14),
+                    BotonPildoraRa(
+                      icon: _reproduciendo ? Icons.pause : Icons.headphones,
+                      label: _reproduciendo ? 'Pausar guía de audio' : 'Escuchar guía de audio',
+                      onTap: _alternarAudio,
                     ),
                   ],
                   if (p.detalle.isNotEmpty) ...[
-                    const SizedBox(height: AppSpacing.md),
-                    Text(p.detalle, style: const TextStyle(color: Colors.white, fontSize: 14, height: 1.45)),
+                    const SizedBox(height: 18),
+                    const Text(
+                      'HISTORIA',
+                      style: TextStyle(
+                          color: RaEstilo.secundario, fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 1.6),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(p.detalle, style: const TextStyle(color: Color(0xE6FFFFFF), fontSize: 15, height: 1.5)),
+                  ],
+                  if (widget.onMarcadores != null) ...[
+                    const SizedBox(height: 18),
+                    const Text(
+                      'Aquí hay marcadores de realidad aumentada: apunta la cámara a las imágenes del lugar.',
+                      style: TextStyle(color: RaEstilo.cuerpo, fontSize: 14, height: 1.35),
+                    ),
+                    const SizedBox(height: 10),
+                    BotonPildoraRa(
+                      icon: Icons.qr_code_scanner,
+                      label: 'Abrir RA con marcadores',
+                      onTap: () {
+                        _pararAudio();
+                        widget.onMarcadores!();
+                      },
+                    ),
                   ],
                 ],
               ),
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(AppSpacing.md, 0, AppSpacing.md, AppSpacing.md),
-            child: OutlinedButton.icon(
-              onPressed: () {
-                _pararAudio();
-                widget.onCerrar();
-              },
-              icon: const Icon(Icons.photo_camera_outlined, size: 16),
-              label: const Text('Volver a la cámara'),
-              style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.white, side: const BorderSide(color: Colors.white54)),
+            padding: const EdgeInsets.fromLTRB(24, 8, 24, 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const DivisorRa(),
+                const SizedBox(height: 16),
+                BotonPildoraRa(
+                  icon: Icons.photo_camera_outlined,
+                  label: 'Volver a la cámara',
+                  activo: true,
+                  onTap: () {
+                    _pararAudio();
+                    widget.onCerrar();
+                  },
+                ),
+              ],
             ),
           ),
         ],
@@ -712,63 +744,18 @@ class _GuiaCompletaState extends State<_GuiaCompleta> {
   }
 }
 
-class _BotonPanel extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  const _BotonPanel({required this.icon, required this.label, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return OutlinedButton.icon(
-      onPressed: onTap,
-      icon: Icon(icon, size: 16),
-      label: Text(label),
-      style: OutlinedButton.styleFrom(foregroundColor: Colors.white, side: const BorderSide(color: Colors.white54)),
-    );
-  }
-}
-
+/// Píldora de vidrio (instrucción de arriba, "Gira a la derecha…").
 class _Pildora extends StatelessWidget {
   final Widget child;
-  final double radio;
-  final EdgeInsets padding;
 
-  const _Pildora(
-      {required this.child, this.radio = 999, this.padding = const EdgeInsets.symmetric(horizontal: 14, vertical: 10)});
+  const _Pildora({required this.child});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: padding,
-      decoration:
-          BoxDecoration(color: Colors.black.withValues(alpha: 0.55), borderRadius: BorderRadius.circular(radio)),
+    return VidrioRa(
+      radio: 23,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
       child: child,
-    );
-  }
-}
-
-class _BotonCircular extends StatelessWidget {
-  final IconData icon;
-  final String tooltip;
-  final VoidCallback onTap;
-
-  const _BotonCircular({required this.icon, required this.tooltip, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return Tooltip(
-      message: tooltip,
-      child: Material(
-        color: Colors.black.withValues(alpha: 0.55),
-        shape: const CircleBorder(),
-        child: InkWell(
-          customBorder: const CircleBorder(),
-          onTap: onTap,
-          child: SizedBox(width: 42, height: 42, child: Icon(icon, color: Colors.white, size: 20)),
-        ),
-      ),
     );
   }
 }

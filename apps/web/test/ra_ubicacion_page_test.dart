@@ -109,7 +109,7 @@ void main() {
     expect(find.text('Entrada principal'), findsOneWidget);
     expect(find.text('Acceso por la carretera Manzanillo-Cihuatlán'), findsOneWidget);
     expect(find.text('60 m'), findsOneWidget);
-    expect(find.text('¡Llegaste!'), findsNothing);
+    expect(find.textContaining('Estás aquí ·'), findsNothing);
   });
 
   testWidgets('en el radio visible pero viendo a otro lado indica hacia dónde girar', (tester) async {
@@ -126,18 +126,18 @@ void main() {
     s.gps.add(_alSur(6));
     await _dibujar(tester);
 
-    expect(find.text('¡Llegaste!'), findsOneWidget);
+    expect(find.textContaining('Estás aquí ·'), findsOneWidget);
     expect(find.text('Aquí se encuentra la caseta de acceso al campus.'), findsOneWidget);
 
     // A 13 m (radio 10 + 5 de margen) la guía sigue abierta: el GPS tiembla.
     s.gps.add(_alSur(13));
     await _dibujar(tester);
-    expect(find.text('¡Llegaste!'), findsOneWidget);
+    expect(find.textContaining('Estás aquí ·'), findsOneWidget);
 
     // Ya lejos se cierra y vuelve el marcador.
     s.gps.add(_alSur(40));
     await _dibujar(tester);
-    expect(find.text('¡Llegaste!'), findsNothing);
+    expect(find.textContaining('Estás aquí ·'), findsNothing);
   });
 
   testWidgets('al cerrar la guía se puede volver a abrir sin moverse', (tester) async {
@@ -151,7 +151,7 @@ void main() {
 
     await tester.tap(find.text('Ver guía'));
     await _dibujar(tester);
-    expect(find.text('¡Llegaste!'), findsOneWidget);
+    expect(find.textContaining('Estás aquí ·'), findsOneWidget);
   });
 
   testWidgets('con varios puntos dentro del radio visible los cuenta', (tester) async {
@@ -182,7 +182,7 @@ void main() {
       s.gps.add(_alSur(4));
       await _dibujar(tester);
 
-      expect(find.text('¡Llegaste!'), findsOneWidget);
+      expect(find.textContaining('Estás aquí ·'), findsOneWidget);
       expect(find.text('Abrir RA con marcadores'), findsNothing);
     });
 
@@ -236,7 +236,7 @@ void main() {
     s.gps.add(_alSur(4));
     await _dibujar(tester);
     final volver = tester.getRect(find.text('Volver a la cámara'));
-    final llegaste = tester.getRect(find.text('¡Llegaste!'));
+    final llegaste = tester.getRect(find.textContaining('Estás aquí ·'));
     expect(volver.bottom, lessThanOrEqualTo(800));
     expect(volver.top, greaterThan(llegaste.bottom), reason: 'el botón va debajo del título, no encima');
     expect(llegaste.top, greaterThanOrEqualTo(0));

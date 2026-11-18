@@ -14,6 +14,7 @@ import '../../widgets/notification_bell.dart';
 import '../../widgets/themed_builder.dart';
 import 'admin_admins_page.dart';
 import 'admin_ar_page.dart';
+import 'admin_historias_ra_page.dart';
 import 'admin_businesses_page.dart';
 import 'admin_mapa_page.dart';
 import 'admin_negocio_detalle_page.dart';
@@ -117,6 +118,8 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
         return AdminMapaPage(admin: widget.admin, authService: widget.authService, lugarId: widget.lugarId);
       case AdminSection.realidadAumentada:
         return AdminArPage(authService: widget.authService);
+      case AdminSection.historiasRa:
+        return AdminHistoriasRaPage();
       case AdminSection.admins:
         return AdminAdminsPage(currentAdmin: widget.admin, authService: widget.authService);
       case AdminSection.reportes:
