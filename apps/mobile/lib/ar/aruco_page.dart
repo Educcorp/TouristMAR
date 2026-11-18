@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
@@ -70,7 +72,7 @@ class ArucoPage extends StatefulWidget {
   State<ArucoPage> createState() => _ArucoPageState();
 }
 
-class _ArucoPageState extends State<ArucoPage> {
+class _ArucoPageState extends State<ArucoPage> with SingleTickerProviderStateMixin {
   /// Los diccionarios de chev.me. En cada tamaño, los IDs bajos son iguales en
   /// las versiones _50/_100/_250/_1000, así que con la de 1000 se leen todos.
   /// El mismo número (p. ej. 0) es un marcador distinto en cada tamaño.
@@ -98,6 +100,16 @@ class _ArucoPageState extends State<ArucoPage> {
   String? _errorCarga;
 
   _Deteccion? _actual;
+
+  /// Memoria de 10 s (igual que el visor de Unity, MarcadorConMemoria): si el
+  /// marcador sale de cuadro, la información se queda con cuenta regresiva.
+  static const _segundosMemoria = 10;
+  (String, String, bool)? _memoria; // (título, texto, registrado)
+  DateTime? _perdidoEn;
+
+  /// "Respiración" del recuadro de escaneo mientras busca.
+  late final AnimationController _respira =
+      AnimationController(vsync: this, duration: const Duration(milliseconds: 2850))..repeat();
   bool _procesando = false;
   DateTime _ultimoCuadro = DateTime.fromMillisecondsSinceEpoch(0);
   final Set<String> _escaneosRegistrados = {};
@@ -108,18 +120,39 @@ class _ArucoPageState extends State<ArucoPage> {
     super.initState();
     _iniciarCamara();
     _cargarMarcadores();
-    // Si el marcador sale de cuadro, la tarjeta se queda un momento y luego se quita.
-    _limpiador = Timer.periodic(const Duration(milliseconds: 400), (_) {
-      final actual = _actual;
-      if (actual != null && DateTime.now().difference(actual.vista) > const Duration(milliseconds: 1500)) {
-        if (mounted) setState(() => _actual = null);
+    _limpiador = Timer.periodic(const Duration(milliseconds: 100), (_) => _actualizarEstado());
+  }
+
+  bool get _detectado {
+    final a = _actual;
+    return a != null && DateTime.now().difference(a.vista) < const Duration(milliseconds: 700);
+  }
+
+  void _actualizarEstado() {
+    if (!mounted) return;
+    final ahora = DateTime.now();
+    if (_detectado) {
+      final a = _actual!;
+      final m = _buscar(a);
+      _memoria = m != null
+          ? (m.titulo, m.texto, true)
+          : ('Marcador ${a.diccionario} #${a.id}', 'Este marcador no está registrado para este lugar.', false);
+      _perdidoEn = null;
+    } else if (_memoria != null) {
+      _perdidoEn ??= ahora;
+      if (ahora.difference(_perdidoEn!) > const Duration(seconds: _segundosMemoria)) {
+        _memoria = null;
+        _perdidoEn = null;
+        _actual = null;
       }
-    });
+    }
+    setState(() {});
   }
 
   @override
   void dispose() {
     _limpiador?.cancel();
+    _respira.dispose();
     final camara = _camara;
     _camara = null;
     if (camara != null) {
@@ -361,116 +394,323 @@ class _ArucoPageState extends State<ArucoPage> {
   MarcadorAruco? _buscar(_Deteccion d) => _marcadores['${d.diccionario}:${d.id}'] ?? _porNumero[d.id];
 
   // -------------------------------------------------------------------- UI
+  // Diseño "Liquid Glass" del visor de Unity (VisorARResponsive.cs): cámara a
+  // pantalla completa, píldora de instrucción arriba, recuadro de escaneo que
+  // respira y una tarjeta de vidrio oscuro abajo.
+
+  static const _acento = Color(0xFF63E6E2); // menta
+  static const _vidrioCuerpo = Color(0x8C0E1016); // (14,16,22) al 55 %
+  static const _vidrioFilo = Color(0x46FFFFFF); // filo que capta la luz
+  static const _textoSecundario = Color(0xD2EBF0F5);
 
   @override
   Widget build(BuildContext context) {
     final camara = _camara;
-    final actual = _actual;
-    final marcador = actual == null ? null : _buscar(actual);
-
     return Scaffold(
       backgroundColor: Colors.black,
-      appBar: AppBar(
-        backgroundColor: Colors.black,
-        foregroundColor: Colors.white,
-        title: Text('RA · ${widget.lugar.nombre}', maxLines: 1, overflow: TextOverflow.ellipsis),
-      ),
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          if (_sinCamara)
-            const Center(
-              child: Padding(
-                padding: EdgeInsets.all(24),
-                child: Text(
-                  'No se pudo abrir la cámara. Revisa que la app tenga permiso de cámara.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.white70, fontSize: 16),
+      body: LayoutBuilder(
+        builder: (context, c) {
+          final w = c.maxWidth;
+          final h = c.maxHeight;
+          final pad = MediaQuery.paddingOf(context);
+          final cardH = math.max(200.0, math.min(h * 0.36, 320.0));
+          final arriba = pad.top + 12 + 48 + 24; // debajo de la píldora
+          final abajo = pad.bottom + 12 + cardH + 24; // encima de la tarjeta
+          final lado = math.min(w * 0.64, math.max(0.0, h - arriba - abajo) * 0.8);
+          final centroY = arriba + (h - arriba - abajo) / 2;
+
+          return Stack(
+            fit: StackFit.expand,
+            children: [
+              // Cámara a pantalla completa
+              if (_sinCamara)
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(32),
+                    child: Text(
+                      'No se pudo abrir la cámara. Revisa que la app tenga permiso de cámara.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.white70, fontSize: 16),
+                    ),
+                  ),
+                )
+              else if (camara != null && camara.value.isInitialized)
+                ClipRect(
+                  child: FittedBox(
+                    fit: BoxFit.cover,
+                    child: SizedBox(
+                      width: camara.value.previewSize?.height ?? w,
+                      height: camara.value.previewSize?.width ?? h,
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          CameraPreview(camara),
+                          if (_detectado)
+                            CustomPaint(
+                              painter: _MarcoMarcador(_actual!.esquinas, conocido: _buscar(_actual!) != null),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                )
+              else
+                const Center(child: CircularProgressIndicator(color: Colors.white)),
+
+              // Viñeta inferior para dar contraste a la tarjeta
+              const Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                height: 420,
+                child: IgnorePointer(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.bottomCenter,
+                        end: Alignment.topCenter,
+                        colors: [Color(0x47000000), Color(0x00000000)],
+                      ),
+                    ),
+                  ),
                 ),
               ),
-            )
-          else if (camara == null || !camara.value.isInitialized)
-            const Center(child: CircularProgressIndicator(color: Colors.white))
-          else
-            Center(
-              child: AspectRatio(
-                aspectRatio: 1 / camara.value.aspectRatio,
-                child: Stack(
-                  fit: StackFit.expand,
+
+              // Recuadro de escaneo
+              if (lado > 40)
+                Positioned(
+                  left: (w - lado) / 2 - 20,
+                  top: centroY - lado / 2 - 20,
+                  width: lado + 40,
+                  height: lado + 40,
+                  child: IgnorePointer(
+                    child: AnimatedBuilder(
+                      animation: _respira,
+                      builder: (context, _) {
+                        final escala = _detectado ? 0.93 : 1 + 0.015 * math.sin(_respira.value * 2 * math.pi);
+                        return TweenAnimationBuilder<Color?>(
+                          tween: ColorTween(end: _detectado ? _acento : Colors.white.withValues(alpha: 0.9)),
+                          duration: const Duration(milliseconds: 250),
+                          builder: (context, color, _) => AnimatedScale(
+                            scale: escala,
+                            duration: const Duration(milliseconds: 120),
+                            child: CustomPaint(painter: _EsquinasEscaneo(color ?? Colors.white, lado)),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+
+              // Arriba: atrás + píldora de instrucción
+              Positioned(
+                top: pad.top + 12,
+                left: 16,
+                right: 16,
+                height: 48,
+                child: Row(
                   children: [
-                    CameraPreview(camara),
-                    if (actual != null)
-                      CustomPaint(painter: _MarcoMarcador(actual.esquinas, conocido: marcador != null)),
+                    _Vidrio(
+                      radio: 24,
+                      child: SizedBox(
+                        width: 48,
+                        height: 48,
+                        child: IconButton(
+                          onPressed: () => Navigator.of(context).maybePop(),
+                          icon: const Icon(Icons.arrow_back, color: Colors.white),
+                          tooltip: 'Volver',
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Center(
+                        child: _Vidrio(
+                          radio: 24,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 22),
+                            child: SizedBox(
+                              height: 48,
+                              child: Center(
+                                child: Text(
+                                  _sinCamara ? widget.lugar.nombre : 'Apunta la cámara al marcador',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 58),
                   ],
                 ),
               ),
-            ),
-          Positioned(
-            left: 16,
-            right: 16,
-            bottom: 24,
-            child: SafeArea(child: _tarjeta(actual, marcador)),
-          ),
-        ],
+
+              // Abajo: tarjeta de vidrio
+              Positioned(
+                left: 12,
+                right: 12,
+                bottom: pad.bottom + 12,
+                height: cardH,
+                child: _tarjeta(),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
 
-  Widget _tarjeta(_Deteccion? actual, MarcadorAruco? marcador) {
-    var titulo = '';
-    var texto = '';
-    var icono = Icons.place;
-    if (_errorCarga != null) {
-      (titulo, texto, icono) = ('Sin conexión', _errorCarga!, Icons.wifi_off);
+  Widget _tarjeta() {
+    final detectado = _detectado;
+    final memoria = _memoria;
+    final perdido = _perdidoEn;
+    final restante = perdido == null
+        ? 0.0
+        : (_segundosMemoria - DateTime.now().difference(perdido).inMilliseconds / 1000).clamp(0.0, 10.0);
+    final enMemoria = !detectado && memoria != null && perdido != null;
+
+    // Título y texto: lo detectado (o en memoria) o el estado de la pantalla.
+    String titulo;
+    String texto;
+    if (memoria != null) {
+      titulo = memoria.$1;
+      texto = memoria.$2;
+    } else if (_errorCarga != null) {
+      (titulo, texto) = ('Sin conexión', _errorCarga!);
     } else if (_cargando) {
-      (titulo, texto, icono) = ('Preparando la cámara…', 'Cargando los marcadores de este lugar.', Icons.hourglass_top);
-    } else if (actual == null) {
-      (titulo, texto, icono) = (
-        'Apunta a un marcador',
-        _marcadores.isEmpty && _porNumero.isEmpty
-            ? 'Este lugar todavía no tiene marcadores registrados.'
-            : 'Encuadra el código blanco y negro y mantén el teléfono quieto.',
-        Icons.qr_code_scanner,
-      );
-    } else if (marcador == null) {
-      (titulo, texto, icono) = ('Marcador ${actual.diccionario} #${actual.id}', 'Este marcador no está registrado para este lugar.', Icons.help_outline);
+      (titulo, texto) = ('Preparando la cámara…', 'Cargando los marcadores de este lugar.');
+    } else if (_marcadores.isEmpty && _porNumero.isEmpty) {
+      (titulo, texto) = ('Escanea el marcador', 'Este lugar todavía no tiene marcadores registrados.');
     } else {
-      (titulo, texto, icono) = (marcador.titulo, marcador.texto, Icons.place);
+      (titulo, texto) = ('Escanea el marcador', 'Centra el marcador en el recuadro y mantén el teléfono quieto.');
     }
 
-    return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 200),
-      child: Container(
-        key: ValueKey('$titulo|$texto'),
-        constraints: const BoxConstraints(maxHeight: 280),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.black.withValues(alpha: 0.78),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: marcador != null ? const Color(0xFF34D3C6) : Colors.white24),
-        ),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(icono, color: marcador != null ? const Color(0xFF34D3C6) : Colors.white70),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      titulo,
-                      style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700),
-                    ),
+    // Etiqueta de estado: punto de color + texto
+    final String etiqueta;
+    final Color punto;
+    if (detectado) {
+      etiqueta = (memoria?.$3 ?? true) ? 'Marcador detectado' : 'Marcador no registrado';
+      punto = (memoria?.$3 ?? true) ? _acento : Colors.amber;
+    } else if (enMemoria) {
+      etiqueta = 'Se oculta en ${restante.ceil()} s';
+      punto = _acento;
+    } else {
+      etiqueta = 'Buscando marcador';
+      final t = DateTime.now().millisecondsSinceEpoch / 1000;
+      punto = Colors.white.withValues(alpha: 0.35 + 0.65 * (0.5 + 0.5 * math.sin(t * 3.5)));
+    }
+
+    return _Vidrio(
+      radio: 28,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(22, 20, 22, 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
+                  width: 7,
+                  height: 7,
+                  decoration: BoxDecoration(color: punto, shape: BoxShape.circle),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  etiqueta,
+                  style: const TextStyle(
+                    color: _textoSecundario,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.3,
                   ),
-                ],
-              ),
-              if (texto.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Text(texto, style: const TextStyle(color: Colors.white70, fontSize: 15, height: 1.35)),
+                ),
               ],
-            ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              titulo,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 22,
+                fontWeight: FontWeight.w600,
+                letterSpacing: -0.2,
+              ),
+            ),
+            const SizedBox(height: 8),
+            // Descripción con scroll y desvanecido abajo si no cabe
+            Expanded(
+              child: ShaderMask(
+                shaderCallback: (r) => const LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Colors.white, Colors.white, Colors.transparent],
+                  stops: [0, 0.82, 1],
+                ).createShader(r),
+                blendMode: BlendMode.dstIn,
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: Text(
+                    texto,
+                    style: const TextStyle(color: _textoSecundario, fontSize: 15, height: 1.45),
+                  ),
+                ),
+              ),
+            ),
+            // Barra de tiempo de la memoria
+            AnimatedOpacity(
+              opacity: enMemoria ? 1 : 0,
+              duration: const Duration(milliseconds: 200),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(2),
+                child: LinearProgressIndicator(
+                  value: restante / _segundosMemoria,
+                  minHeight: 3,
+                  backgroundColor: Colors.white.withValues(alpha: 0.16),
+                  valueColor: const AlwaysStoppedAnimation(_acento),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Panel de vidrio: desenfoca lo que hay detrás (la cámara), tinte oscuro
+/// translúcido y un filo fino que capta la luz.
+class _Vidrio extends StatelessWidget {
+  final double radio;
+  final Widget child;
+
+  const _Vidrio({required this.radio, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    final borde = BorderRadius.circular(radio);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: borde,
+        boxShadow: const [BoxShadow(color: Color(0x24000000), blurRadius: 20, offset: Offset(0, 10))],
+      ),
+      child: ClipRRect(
+        borderRadius: borde,
+        child: BackdropFilter(
+          filter: ui.ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+          child: Container(
+            decoration: BoxDecoration(
+              color: _ArucoPageState._vidrioCuerpo,
+              borderRadius: borde,
+              border: Border.all(color: _ArucoPageState._vidrioFilo, width: 1),
+            ),
+            child: Material(type: MaterialType.transparency, child: child),
           ),
         ),
       ),
@@ -478,7 +718,45 @@ class _ArucoPageState extends State<ArucoPage> {
   }
 }
 
-/// Recuadro sobre el marcador detectado.
+/// Las 4 esquinas redondeadas del recuadro de escaneo.
+class _EsquinasEscaneo extends CustomPainter {
+  final Color color;
+  final double lado;
+
+  _EsquinasEscaneo(this.color, this.lado);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final l = lado;
+    final x0 = (size.width - l) / 2;
+    final y0 = (size.height - l) / 2;
+    final largo = math.min(36.0, l * 0.22);
+    const radio = 18.0;
+    final pincel = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 4
+      ..strokeCap = StrokeCap.round;
+
+    void esquina(double x, double y, double dx, double dy) {
+      final p = Path()
+        ..moveTo(x, y + dy * largo)
+        ..lineTo(x, y + dy * radio)
+        ..quadraticBezierTo(x, y, x + dx * radio, y)
+        ..lineTo(x + dx * largo, y);
+      canvas.drawPath(p, pincel);
+    }
+
+    esquina(x0, y0, 1, 1);
+    esquina(x0 + l, y0, -1, 1);
+    esquina(x0, y0 + l, 1, -1);
+    esquina(x0 + l, y0 + l, -1, -1);
+  }
+
+  @override
+  bool shouldRepaint(_EsquinasEscaneo old) => old.color != color || old.lado != lado;
+}
+
 class _MarcoMarcador extends CustomPainter {
   final List<Offset> esquinas;
   final bool conocido;
@@ -492,7 +770,7 @@ class _MarcoMarcador extends CustomPainter {
       path.lineTo(p.dx * size.width, p.dy * size.height);
     }
     path.close();
-    final color = conocido ? const Color(0xFF34D3C6) : Colors.amber;
+    final color = conocido ? const Color(0xFF63E6E2) : Colors.amber;
     canvas.drawPath(path, Paint()..color = color.withValues(alpha: 0.18));
     canvas.drawPath(
       path,
