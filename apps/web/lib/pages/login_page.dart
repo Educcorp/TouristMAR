@@ -63,9 +63,16 @@ class LoginPage extends StatelessWidget {
                 tooltip: ThemeController.isDark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro',
                 icon: Icon(
                   ThemeController.isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
-                  color: AppColors.slate300,
+                  color: AppColors.tinta,
                 ),
-                style: IconButton.styleFrom(backgroundColor: AppColors.overlay(0.05)),
+                // Fondo sólido: en el celular el botón queda encima de la foto
+                // de la bahía y con un fondo casi transparente no se veía.
+                style: IconButton.styleFrom(
+                  backgroundColor: AppColors.cubierta,
+                  side: BorderSide(color: AppColors.overlay(0.12)),
+                  elevation: 2,
+                  shadowColor: Colors.black26,
+                ),
               ),
             ),
           ),

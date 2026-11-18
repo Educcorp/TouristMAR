@@ -100,15 +100,16 @@ class _ProfilePageState extends State<ProfilePage> {
       children: [
         Container(
           width: double.infinity,
-          color: AppColors.riel,
+          // Sigue el tema: blanca en modo claro, tinta marina en modo oscuro.
+          color: AppColors.cubierta,
           padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
           child: Column(
             children: [
               UserAvatar(imageUrl: profile.avatarUrl, fallbackLetter: profile.name, radius: 44),
               const SizedBox(height: 14),
-              Text(profile.name, style: AppTypography.h1.copyWith(color: AppColors.sobreRiel, fontSize: 26)),
+              Text(profile.name, style: AppTypography.h1.copyWith(color: AppColors.tinta, fontSize: 26)),
               const SizedBox(height: 4),
-              Text(profile.email, style: const TextStyle(color: AppColors.sobreRielSuave, fontSize: 15)),
+              Text(profile.email, style: TextStyle(color: AppColors.slate400, fontSize: 15)),
             ],
           ),
         ),

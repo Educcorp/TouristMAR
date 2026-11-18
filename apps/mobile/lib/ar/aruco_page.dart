@@ -11,25 +11,45 @@ import 'package:touristmar_web/services/auth_service.dart' show apiUrl;
 /// Un marcador del lugar, ya con el número ArUco que trae impreso.
 class MarcadorAruco {
   final int id;
+
+  /// Diccionario ArUco ("4x4", "6x6"…); null si el número salió del nombre.
+  final String? diccionario;
   final String nombre;
   final String titulo;
   final String texto;
 
-  const MarcadorAruco({required this.id, required this.nombre, required this.titulo, required this.texto});
+  const MarcadorAruco({
+    required this.id,
+    required this.diccionario,
+    required this.nombre,
+    required this.titulo,
+    required this.texto,
+  });
+}
+
+/// Un diccionario de ArUco con su detector.
+class _Diccionario {
+  final String nombre;
+  final cv.ArucoDetector detector;
+
+  _Diccionario(this.nombre, cv.PredefinedDictionaryType tipo)
+      : detector = cv.ArucoDetector.create(cv.ArucoDictionary.predefined(tipo), cv.ArucoDetectorParameters.empty());
 }
 
 /// Lo que se ve ahora mismo en la cámara.
 class _Deteccion {
+  final String diccionario;
   final int id;
 
   /// Esquinas del marcador en la vista previa (0..1, vertical).
   final List<Offset> esquinas;
   final DateTime vista;
 
-  _Deteccion(this.id, this.esquinas, this.vista);
+  _Deteccion(this.diccionario, this.id, this.esquinas, this.vista);
 }
 
-/// RA con marcadores **ArUco** (diccionario 4x4, los de https://chev.me/arucogen/).
+/// RA con marcadores **ArUco** (los de https://chev.me/arucogen/, de
+/// cualquier tamaño: 4x4, 5x5, 6x6, 7x7 u "Original ArUco").
 ///
 /// ARCore (lo que usaba Unity) no reconoce los ArUco: tienen muy pocos
 /// "puntos de detalle" para su algoritmo de imágenes. Aquí los detecta OpenCV
@@ -51,24 +71,36 @@ class ArucoPage extends StatefulWidget {
 }
 
 class _ArucoPageState extends State<ArucoPage> {
-  /// 4x4: los IDs 0-49 son iguales en DICT_4X4_50/100/250/1000, así que con el
-  /// de 1000 se leen todos los de chev.me (opción "4x4 (50, 100, 250, 1000)").
-  late final cv.ArucoDetector _detector = cv.ArucoDetector.create(
-    cv.ArucoDictionary.predefined(cv.PredefinedDictionaryType.DICT_4X4_1000),
-    cv.ArucoDetectorParameters.empty(),
-  );
+  /// Los diccionarios de chev.me. En cada tamaño, los IDs bajos son iguales en
+  /// las versiones _50/_100/_250/_1000, así que con la de 1000 se leen todos.
+  /// El mismo número (p. ej. 0) es un marcador distinto en cada tamaño.
+  late final List<_Diccionario> _diccionarios = [
+    _Diccionario('4x4', cv.PredefinedDictionaryType.DICT_4X4_1000),
+    _Diccionario('5x5', cv.PredefinedDictionaryType.DICT_5X5_1000),
+    _Diccionario('6x6', cv.PredefinedDictionaryType.DICT_6X6_1000),
+    _Diccionario('7x7', cv.PredefinedDictionaryType.DICT_7X7_1000),
+    _Diccionario('original', cv.PredefinedDictionaryType.DICT_ARUCO_ORIGINAL),
+  ];
+
+  /// Los que se buscan en la cámara: solo los de los marcadores registrados
+  /// (más rápido). Si alguno no se pudo leer de su imagen, se buscan todos.
+  List<_Diccionario> _activos = const [];
 
   CameraController? _camara;
   bool _sinCamara = false;
 
-  Map<int, MarcadorAruco> _marcadores = {};
+  /// Por "diccionario:id" (p. ej. "6x6:12").
+  Map<String, MarcadorAruco> _marcadores = {};
+
+  /// Los que no se pudieron leer de su imagen: solo por número (del nombre).
+  Map<int, MarcadorAruco> _porNumero = {};
   bool _cargando = true;
   String? _errorCarga;
 
   _Deteccion? _actual;
   bool _procesando = false;
   DateTime _ultimoCuadro = DateTime.fromMillisecondsSinceEpoch(0);
-  final Set<int> _escaneosRegistrados = {};
+  final Set<String> _escaneosRegistrados = {};
   Timer? _limpiador;
 
   @override
@@ -94,7 +126,9 @@ class _ArucoPageState extends State<ArucoPage> {
       if (camara.value.isStreamingImages) camara.stopImageStream().catchError((_) {});
       camara.dispose();
     }
-    _detector.dispose();
+    for (final d in _diccionarios) {
+      d.detector.dispose();
+    }
     super.dispose();
   }
 
@@ -137,7 +171,7 @@ class _ArucoPageState extends State<ArucoPage> {
       final deteccion = _detectar(imagen);
       if (deteccion != null && mounted) {
         setState(() => _actual = deteccion);
-        _registrarEscaneo(deteccion.id);
+        _registrarEscaneo(deteccion);
       }
     } catch (_) {
       // Un cuadro dañado no debe tumbar la cámara.
@@ -168,30 +202,31 @@ class _ArucoPageState extends State<ArucoPage> {
 
     final mat = cv.Mat.fromList(h, w, cv.MatType.CV_8UC1, gris);
     try {
-      final (esquinas, ids, rechazados) = _detector.detectMarkers(mat);
-      try {
-        if (ids.isEmpty) return null;
-        var mejor = -1;
-        var mejorArea = 0.0;
-        for (var i = 0; i < ids.length; i++) {
-          final p = esquinas[i];
-          final area = ((p[0].x - p[2].x) * (p[1].y - p[3].y)).abs();
-          if (area > mejorArea) {
+      _Deteccion? mejor;
+      var mejorArea = 0.0;
+      final rotacion = _camara?.description.sensorOrientation ?? 90;
+      for (final dic in _activos) {
+        final (esquinas, ids, rechazados) = dic.detector.detectMarkers(mat);
+        try {
+          for (var i = 0; i < ids.length; i++) {
+            final p = esquinas[i];
+            final area = ((p[0].x - p[2].x) * (p[1].y - p[3].y)).abs();
+            if (area <= mejorArea) continue;
             mejorArea = area;
-            mejor = i;
+            mejor = _Deteccion(
+              dic.nombre,
+              ids[i],
+              [for (var k = 0; k < 4; k++) _aVistaPrevia(p[k].x / w, p[k].y / h, rotacion)],
+              DateTime.now(),
+            );
           }
+        } finally {
+          esquinas.dispose();
+          ids.dispose();
+          rechazados.dispose();
         }
-        final p = esquinas[mejor];
-        final rotacion = _camara?.description.sensorOrientation ?? 90;
-        final puntos = [
-          for (var k = 0; k < 4; k++) _aVistaPrevia(p[k].x / w, p[k].y / h, rotacion),
-        ];
-        return _Deteccion(ids[mejor], puntos, DateTime.now());
-      } finally {
-        esquinas.dispose();
-        ids.dispose();
-        rechazados.dispose();
       }
+      return mejor;
     } finally {
       mat.dispose();
     }
@@ -214,25 +249,47 @@ class _ArucoPageState extends State<ArucoPage> {
       // propios: se usan los marcadores generales.
       if (lista.isEmpty) lista = await _pedirMarcadores(null);
 
-      final mapa = <int, MarcadorAruco>{};
+      final mapa = <String, MarcadorAruco>{};
+      final porNumero = <int, MarcadorAruco>{};
       for (final m in lista) {
         final nombre = (m['nombre'] as String?) ?? '';
         final texto = (m['textoParaMostrar'] as String?) ?? '';
-        final id = await _idDeLaImagen(m['urlImagen'] as String?) ?? _idDelNombre(nombre);
-        if (id == null) continue;
         final lineas = texto.split('\n');
-        mapa[id] = MarcadorAruco(
-          id: id,
-          nombre: nombre,
-          titulo: lineas.first.trim().isEmpty ? nombre : lineas.first.trim(),
-          texto: lineas.skip(1).join('\n').trim(),
-        );
+        final titulo = lineas.first.trim().isEmpty ? nombre : lineas.first.trim();
+        final cuerpo = lineas.skip(1).join('\n').trim();
+
+        final leido = await _leerImagen(m['urlImagen'] as String?);
+        if (leido != null) {
+          mapa['${leido.$1}:${leido.$2}'] = MarcadorAruco(
+            id: leido.$2, diccionario: leido.$1, nombre: nombre, titulo: titulo, texto: cuerpo);
+          continue;
+        }
+        final id = _idDelNombre(nombre);
+        if (id != null) {
+          porNumero[id] = MarcadorAruco(id: id, diccionario: null, nombre: nombre, titulo: titulo, texto: cuerpo);
+        }
+      }
+      final usados = {for (final m in mapa.values) m.diccionario};
+      final activos = porNumero.isNotEmpty || usados.isEmpty
+          ? _diccionarios
+          : _diccionarios.where((d) => usados.contains(d.nombre)).toList();
+      if (mounted) {
+        setState(() {
+          _porNumero = porNumero;
+          _activos = activos;
+        });
       }
       if (mounted) setState(() => _marcadores = mapa);
     } catch (_) {
       if (mounted) setState(() => _errorCarga = 'No se pudieron cargar los marcadores. Revisa tu conexión.');
     } finally {
-      if (mounted) setState(() => _cargando = false);
+      if (mounted) {
+        setState(() {
+          _cargando = false;
+          // Sin datos (p. ej. sin conexión) se buscan todos los tamaños.
+          if (_activos.isEmpty) _activos = _diccionarios;
+        });
+      }
     }
   }
 
@@ -246,8 +303,8 @@ class _ArucoPageState extends State<ArucoPage> {
     return ((data['marcadores'] as List?) ?? const []).cast<Map<String, dynamic>>();
   }
 
-  /// Lee el número ArUco de la imagen que subió el admin.
-  Future<int?> _idDeLaImagen(String? url) async {
+  /// Lee de la imagen que subió el admin qué ArUco es: (diccionario, número).
+  Future<(String, int)?> _leerImagen(String? url) async {
     if (url == null || url.isEmpty) return null;
     try {
       final res = await http.get(Uri.parse(url));
@@ -266,12 +323,14 @@ class _ArucoPageState extends State<ArucoPage> {
       );
       try {
         for (final mat in [conMargen, imagen]) {
-          final (esquinas, ids, rechazados) = _detector.detectMarkers(mat);
-          final id = ids.isEmpty ? null : ids.first;
-          esquinas.dispose();
-          ids.dispose();
-          rechazados.dispose();
-          if (id != null) return id;
+          for (final dic in _diccionarios) {
+            final (esquinas, ids, rechazados) = dic.detector.detectMarkers(mat);
+            final id = ids.isEmpty ? null : ids.first;
+            esquinas.dispose();
+            ids.dispose();
+            rechazados.dispose();
+            if (id != null) return (dic.nombre, id);
+          }
         }
         return null;
       } finally {
@@ -290,13 +349,16 @@ class _ArucoPageState extends State<ArucoPage> {
   }
 
   /// Estadística de escaneos (POST /api/marcadores/:nombre/escaneo), una vez por marcador.
-  void _registrarEscaneo(int id) {
-    final marcador = _marcadores[id];
-    if (marcador == null || !_escaneosRegistrados.add(id)) return;
+  void _registrarEscaneo(_Deteccion d) {
+    final marcador = _buscar(d);
+    if (marcador == null || !_escaneosRegistrados.add(marcador.nombre)) return;
     http
         .post(Uri.parse('$apiUrl/marcadores/${Uri.encodeComponent(marcador.nombre)}/escaneo'))
         .catchError((_) => http.Response('', 500));
   }
+
+  /// El marcador registrado que corresponde a lo que se ve en la cámara.
+  MarcadorAruco? _buscar(_Deteccion d) => _marcadores['${d.diccionario}:${d.id}'] ?? _porNumero[d.id];
 
   // -------------------------------------------------------------------- UI
 
@@ -304,7 +366,7 @@ class _ArucoPageState extends State<ArucoPage> {
   Widget build(BuildContext context) {
     final camara = _camara;
     final actual = _actual;
-    final marcador = actual == null ? null : _marcadores[actual.id];
+    final marcador = actual == null ? null : _buscar(actual);
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -365,13 +427,13 @@ class _ArucoPageState extends State<ArucoPage> {
     } else if (actual == null) {
       (titulo, texto, icono) = (
         'Apunta a un marcador',
-        _marcadores.isEmpty
+        _marcadores.isEmpty && _porNumero.isEmpty
             ? 'Este lugar todavía no tiene marcadores registrados.'
             : 'Encuadra el código blanco y negro y mantén el teléfono quieto.',
         Icons.qr_code_scanner,
       );
     } else if (marcador == null) {
-      (titulo, texto, icono) = ('Marcador #${actual.id}', 'Este marcador no está registrado para este lugar.', Icons.help_outline);
+      (titulo, texto, icono) = ('Marcador ${actual.diccionario} #${actual.id}', 'Este marcador no está registrado para este lugar.', Icons.help_outline);
     } else {
       (titulo, texto, icono) = (marcador.titulo, marcador.texto, Icons.place);
     }

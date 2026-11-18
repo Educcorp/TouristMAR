@@ -356,18 +356,19 @@ class _LoginFormState extends State<LoginForm> {
               top: 12,
               child: Container(
                 padding: const EdgeInsets.fromLTRB(8, 6, 12, 6),
+                // Sigue el tema, igual que en la versión de computadora.
                 decoration: BoxDecoration(
-                  color: AppColors.riel.withValues(alpha: 0.88),
+                  color: AppColors.cubierta.withValues(alpha: 0.94),
                   borderRadius: BorderRadius.circular(AppRadius.button),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    AppLogo(size: 26, sobreFoto: true),
+                    AppLogo(size: 26),
                     const SizedBox(width: 8),
-                    const Text(
+                    Text(
                       'TOURISTMAR',
-                      style: TextStyle(color: AppColors.sobreRiel, fontWeight: FontWeight.w700, letterSpacing: 2, fontSize: 13),
+                      style: TextStyle(color: AppColors.tinta, fontWeight: FontWeight.w700, letterSpacing: 2, fontSize: 13),
                     ),
                   ],
                 ),
