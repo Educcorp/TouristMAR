@@ -37,26 +37,11 @@ dependencies:
   google_sign_in: ^7.2.0
   http: ^1.6.0
   shared_preferences: ^2.3.0
-  # RA con marcadores ArUco (lib/ar/aruco_page.dart): cámara + OpenCV.
-  camera: ^0.12.1
-  opencv_dart: ^2.2.2
 
   # Páginas, widgets, tema y modelos de la web: la app móvil los reutiliza tal
   # cual para que un cambio de diseño en apps/web se vea también en el móvil.
   touristmar_web:
     path: ../web
-
-# Módulos de OpenCV que se incluyen en el APK (por defecto solo trae core,
-# imgproc e imgcodecs). aruco/objdetect son los del detector de marcadores.
-hooks:
-  user_defines:
-    dartcv4:
-      include_modules:
-        - calib3d
-        - features2d
-        - flann
-        - objdetect
-        - aruco
 
 dev_dependencies:
   flutter_test:

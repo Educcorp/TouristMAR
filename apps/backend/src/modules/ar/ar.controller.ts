@@ -90,7 +90,8 @@ const nombreSchema = z
 const marcadorBaseSchema = z.object({
   nombre: nombreSchema,
   titulo: z.string().trim().min(1).max(80),
-  texto: z.string().trim().min(1).max(500),
+  /// La historia del lugar que se lee al escanear (puede ser larga).
+  texto: z.string().trim().min(1).max(4000),
   anchoMetros: z.coerce.number().positive().max(20).nullable().optional(),
   negocioId: uuid.nullable().optional(),
   tipoContenido: z.enum(['texto', 'imagen', 'modelo_3d', 'video']).optional(),
