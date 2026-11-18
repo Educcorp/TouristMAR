@@ -13,7 +13,6 @@ import '../../widgets/admin/ds_card.dart';
 import '../../widgets/notification_bell.dart';
 import '../../widgets/themed_builder.dart';
 import 'admin_admins_page.dart';
-import 'admin_businesses_page.dart';
 import 'admin_mapa_page.dart';
 import 'admin_negocio_detalle_page.dart';
 import 'admin_resenas_page.dart';
@@ -108,8 +107,6 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
         return AdminRequestsPage(key: ValueKey(_versionSolicitudes), authService: widget.authService);
       case AdminSection.usuarios:
         return AdminUsersPage(authService: widget.authService);
-      case AdminSection.negocios:
-        return AdminBusinessesPage(authService: widget.authService);
       case AdminSection.resenas:
         return AdminResenasPage();
       case AdminSection.mapa:
@@ -339,8 +336,7 @@ class _SectionsGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     final items = [
       (Icons.pending_actions_outlined, 'Solicitudes', 'Aprueba o rechaza negocios nuevos', AdminSection.solicitudes),
-      (Icons.apartment_outlined, 'Negocios', 'Catálogo, categorías y fichas', AdminSection.negocios),
-      (Icons.map_outlined, 'Lugares y experiencias', 'Pins del mapa, RA y recorridos 360°', AdminSection.mapa),
+      (Icons.map_outlined, 'Lugares y experiencias', 'Fichas, categorías, RA y recorridos 360°', AdminSection.mapa),
       (Icons.group_outlined, 'Usuarios', 'Edita o bloquea cuentas', AdminSection.usuarios),
     ];
 

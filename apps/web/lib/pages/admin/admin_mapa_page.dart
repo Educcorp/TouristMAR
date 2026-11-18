@@ -9,13 +9,13 @@ import '../../services/lugares_service.dart';
 import '../../services/recorridos_service.dart';
 import '../../services/session_storage.dart';
 import '../../theme/app_theme.dart';
-import '../../widgets/admin/ds_badge.dart';
 import '../../widgets/admin/ds_button.dart';
 import '../../widgets/admin/ds_card.dart';
 import '../../widgets/admin/ds_states.dart';
 import '../../widgets/admin/seccion_desplegable.dart';
 import '../../widgets/cover_image.dart';
 import '../../widgets/mapa/mapa_lugares.dart';
+import 'admin_categorias_dialog.dart';
 import 'admin_lugar_page.dart';
 import 'admin_lugar_widgets.dart';
 import '../../widgets/aviso.dart';
@@ -386,9 +386,26 @@ class _AdminMapaPageState extends State<AdminMapaPage> {
           runSpacing: AppSpacing.sm,
           children: [
             Text('Lugares', style: AppTypography.h2),
-            Text(
-              q.isEmpty ? '${_lugares.length} lugares' : '${lugares.length} de ${_lugares.length}',
-              style: AppTypography.bodySmall,
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  q.isEmpty ? '${_lugares.length} lugares' : '${lugares.length} de ${_lugares.length}',
+                  style: AppTypography.bodySmall,
+                ),
+                const SizedBox(width: AppSpacing.md),
+                DsButton(
+                  label: 'Categorías',
+                  icon: Icons.category_outlined,
+                  size: DsButtonSize.sm,
+                  variant: DsButtonVariant.secondary,
+                  accent: AppColors.adminViolet,
+                  onPressed: () async {
+                    await mostrarCategoriasAdmin(context);
+                    if (mounted) _load();
+                  },
+                ),
+              ],
             ),
           ],
         ),
@@ -606,14 +623,18 @@ class _TarjetaLugar extends StatelessWidget {
                   style: AppTypography.caption,
                 ),
                 const SizedBox(height: 6),
-                Wrap(
-                  spacing: AppSpacing.xs,
-                  runSpacing: AppSpacing.xs,
+                // Las tres experiencias: el ícono a color si el lugar ya la
+                // tiene, apagado si no. La RA por geolocalización sale del pin.
+                Row(
                   children: [
-                    n.tieneUbicacion
-                        ? const DsBadge(text: 'Con pin', tone: BadgeTone.success, icon: Icons.location_on)
-                        : const DsBadge(text: 'Sin coordenadas', tone: BadgeTone.warning, icon: Icons.location_off_outlined),
-                    if (recorridos > 0) DsBadge(text: '$recorridos 360°', tone: BadgeTone.info, icon: Icons.threesixty),
+                    _ExperienciaPunto(tipo: ExperienciaTipo.arGeo, activa: n.tieneUbicacion),
+                    const SizedBox(width: 4),
+                    _ExperienciaPunto(tipo: ExperienciaTipo.arMarcador, activa: n.tieneArMarcador),
+                    const SizedBox(width: 4),
+                    _ExperienciaPunto(
+                      tipo: ExperienciaTipo.recorrido360,
+                      activa: recorridos > 0 || n.tieneRecorrido360,
+                    ),
                   ],
                 ),
                 const SizedBox(height: AppSpacing.xs),
@@ -657,6 +678,34 @@ class _TarjetaLugar extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Una experiencia del lugar: su ícono a color cuando ya está configurada y
+/// apagado cuando no, con la explicación al pasar el cursor.
+class _ExperienciaPunto extends StatelessWidget {
+  final ExperienciaTipo tipo;
+  final bool activa;
+
+  const _ExperienciaPunto({required this.tipo, required this.activa});
+
+  @override
+  Widget build(BuildContext context) {
+    final info = ExperienciaInfo.of(tipo);
+    return Tooltip(
+      message: '${info.titulo}: ${activa ? 'configurada' : 'sin configurar'}',
+      child: Container(
+        width: 30,
+        height: 30,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: activa ? info.color.withValues(alpha: 0.16) : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: activa ? info.color.withValues(alpha: 0.45) : AppColors.borderSubtle),
+        ),
+        child: Icon(info.icon, size: 17, color: activa ? info.color : AppColors.slate500.withValues(alpha: 0.5)),
       ),
     );
   }

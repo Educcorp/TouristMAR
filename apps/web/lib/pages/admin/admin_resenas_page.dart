@@ -9,8 +9,12 @@ import '../../widgets/admin/ds_states.dart';
 import '../../widgets/resenas/resenas_widgets.dart';
 import '../../widgets/aviso.dart';
 
-/// Contenido de la sección "Reseñas" embebido en [AdminShell]: todas las
-/// reseñas de los lugares, para quitar las que sean ofensivas o spam.
+/// Cómo se ordenan las reseñas dentro de cada lugar.
+enum _Orden { recientes, peores, mejores }
+
+/// Contenido de la sección "Reseñas" embebido en [AdminShell]: las reseñas
+/// agrupadas por lugar (o las de un solo lugar), para quitar las que sean
+/// ofensivas o spam.
 class AdminResenasPage extends StatefulWidget {
   final ResenasService service;
 
@@ -26,6 +30,9 @@ class _AdminResenasPageState extends State<AdminResenasPage> {
   bool _cargando = true;
   String? _error;
   final Set<String> _eliminando = {};
+  /// Lugar elegido (null = todos, agrupados por lugar).
+  String? _lugarId;
+  _Orden _orden = _Orden.recientes;
 
   @override
   void initState() {
@@ -96,14 +103,34 @@ class _AdminResenasPageState extends State<AdminResenasPage> {
 
   List<ResenaAdmin> get _filtradas {
     final q = _busqueda.text.trim().toLowerCase();
-    if (q.isEmpty) return _resenas;
-    return _resenas
-        .where((r) =>
-            r.lugarNombre.toLowerCase().contains(q) ||
-            r.autorNombre.toLowerCase().contains(q) ||
-            r.autorEmail.toLowerCase().contains(q) ||
-            (r.comentario ?? '').toLowerCase().contains(q))
-        .toList();
+    final lista = _resenas.where((r) {
+      if (_lugarId != null && r.lugarId != _lugarId) return false;
+      if (q.isEmpty) return true;
+      return r.lugarNombre.toLowerCase().contains(q) ||
+          r.autorNombre.toLowerCase().contains(q) ||
+          r.autorEmail.toLowerCase().contains(q) ||
+          (r.comentario ?? '').toLowerCase().contains(q);
+    }).toList();
+    lista.sort((a, b) => switch (_orden) {
+          _Orden.recientes => b.createdAt.compareTo(a.createdAt),
+          _Orden.peores => a.estrellas != b.estrellas
+              ? a.estrellas.compareTo(b.estrellas)
+              : b.createdAt.compareTo(a.createdAt),
+          _Orden.mejores => a.estrellas != b.estrellas
+              ? b.estrellas.compareTo(a.estrellas)
+              : b.createdAt.compareTo(a.createdAt),
+        });
+    return lista;
+  }
+
+  /// Cada lugar con reseñas: nombre, cuántas tiene y su promedio, por nombre.
+  List<_LugarResenas> get _lugares {
+    final porLugar = <String, List<ResenaAdmin>>{};
+    for (final r in _resenas) {
+      porLugar.putIfAbsent(r.lugarId, () => []).add(r);
+    }
+    return porLugar.entries.map((e) => _LugarResenas(e.key, e.value)).toList()
+      ..sort((a, b) => a.nombre.toLowerCase().compareTo(b.nombre.toLowerCase()));
   }
 
   @override
@@ -127,7 +154,33 @@ class _AdminResenasPageState extends State<AdminResenasPage> {
             const SizedBox(height: 4),
             Text('Revisa las reseñas de los lugares y elimina las que no cumplan las reglas.', style: AppTypography.body),
             const SizedBox(height: AppSpacing.lg),
-            _Busqueda(controller: _busqueda),
+            Wrap(
+              spacing: AppSpacing.md,
+              runSpacing: AppSpacing.md,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                _Busqueda(controller: _busqueda),
+                _Selector<String?>(
+                  key: const ValueKey('filtro-lugar'),
+                  valor: _lugarId,
+                  opciones: [
+                    (null, 'Todos los lugares (${_resenas.length})'),
+                    for (final l in _lugares) (l.id, '${l.nombre} (${l.resenas.length})'),
+                  ],
+                  onChanged: (v) => setState(() => _lugarId = v),
+                ),
+                _Selector<_Orden>(
+                  key: const ValueKey('orden'),
+                  valor: _orden,
+                  opciones: const [
+                    (_Orden.recientes, 'Más recientes'),
+                    (_Orden.peores, 'Menor calificación'),
+                    (_Orden.mejores, 'Mayor calificación'),
+                  ],
+                  onChanged: (v) => setState(() => _orden = v ?? _Orden.recientes),
+                ),
+              ],
+            ),
             const SizedBox(height: AppSpacing.xl),
             _contenido(),
           ],
@@ -155,17 +208,104 @@ class _AdminResenasPageState extends State<AdminResenasPage> {
       );
     }
 
+    Widget tarjeta(ResenaAdmin r) => Padding(
+          padding: const EdgeInsets.only(bottom: AppSpacing.md),
+          child: _ResenaCard(
+            resena: r,
+            eliminando: _eliminando.contains(r.id),
+            onEliminar: () => _eliminar(r),
+          ),
+        );
+
+    // Un lugar elegido: solo sus reseñas.
+    if (_lugarId != null) return Column(children: lista.map(tarjeta).toList());
+
+    // Todos: un bloque por lugar, con su encabezado (cuántas y promedio).
+    final ids = lista.map((r) => r.lugarId).toSet();
     return Column(
-      children: lista
-          .map((r) => Padding(
-                padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                child: _ResenaCard(
-                  resena: r,
-                  eliminando: _eliminando.contains(r.id),
-                  onEliminar: () => _eliminar(r),
-                ),
-              ))
-          .toList(),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (final l in _lugares.where((l) => ids.contains(l.id))) ...[
+          _EncabezadoLugar(lugar: l, onVerSolo: () => setState(() => _lugarId = l.id)),
+          const SizedBox(height: AppSpacing.sm),
+          ...lista.where((r) => r.lugarId == l.id).map(tarjeta),
+          const SizedBox(height: AppSpacing.lg),
+        ],
+      ],
+    );
+  }
+}
+
+class _LugarResenas {
+  final String id;
+  final List<ResenaAdmin> resenas;
+
+  _LugarResenas(this.id, this.resenas);
+
+  String get nombre => resenas.first.lugarNombre;
+  double get promedio => resenas.fold<int>(0, (s, r) => s + r.estrellas) / resenas.length;
+}
+
+class _EncabezadoLugar extends StatelessWidget {
+  final _LugarResenas lugar;
+  final VoidCallback onVerSolo;
+
+  const _EncabezadoLugar({required this.lugar, required this.onVerSolo});
+
+  @override
+  Widget build(BuildContext context) {
+    final n = lugar.resenas.length;
+    return Row(
+      children: [
+        Icon(Icons.place_outlined, size: 18, color: AppColors.adminViolet),
+        const SizedBox(width: AppSpacing.sm),
+        Flexible(
+          child: Text(lugar.nombre,
+              maxLines: 1, overflow: TextOverflow.ellipsis, style: AppTypography.h3),
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        Icon(Icons.star_rounded, size: 16, color: AppColors.amber),
+        const SizedBox(width: 2),
+        Text('${lugar.promedio.toStringAsFixed(1)} · $n ${n == 1 ? 'reseña' : 'reseñas'}',
+            style: AppTypography.bodySmall),
+        const Spacer(),
+        TextButton(
+          onPressed: onVerSolo,
+          child: Text('Ver solo este', style: TextStyle(color: AppColors.adminViolet)),
+        ),
+      ],
+    );
+  }
+}
+
+class _Selector<T> extends StatelessWidget {
+  final T valor;
+  final List<(T, String)> opciones;
+  final ValueChanged<T?> onChanged;
+
+  const _Selector({super.key, required this.valor, required this.opciones, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.buttonLg),
+        border: Border.all(color: AppColors.borderSubtle),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<T>(
+          value: valor,
+          dropdownColor: AppColors.panelNavySoft,
+          style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
+          icon: Icon(Icons.keyboard_arrow_down, color: AppColors.slate400),
+          items: [
+            for (final (v, texto) in opciones) DropdownMenuItem<T>(value: v, child: Text(texto)),
+          ],
+          onChanged: onChanged,
+        ),
+      ),
     );
   }
 }
