@@ -580,8 +580,8 @@ class _MarcadorFlotante extends StatelessWidget {
 }
 
 /// Capa "cercana": la guía completa del punto, en la tarjeta de vidrio:
-/// "Estás aquí", categoría, título, resumen, la historia ([PuntoRaGeo.detalle],
-/// la escribe el admin), imagen y audio.
+/// "Estás aquí", categoría, título, resumen, la información detallada del lugar ([PuntoRaGeo.detalle],
+/// sale de la ficha del lugar), imagen y audio.
 class _GuiaCompleta extends StatefulWidget {
   final PuntoRaGeo punto;
   final double distancia;
@@ -692,7 +692,7 @@ class _GuiaCompletaState extends State<_GuiaCompleta> {
                   if (p.detalle.isNotEmpty) ...[
                     const SizedBox(height: 18),
                     const Text(
-                      'HISTORIA',
+                      'INFORMACIÓN DEL LUGAR',
                       style: TextStyle(
                           color: RaEstilo.secundario, fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 1.6),
                     ),
