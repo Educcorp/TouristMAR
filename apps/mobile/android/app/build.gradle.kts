@@ -59,6 +59,14 @@ android {
             isShrinkResources = false
         }
     }
+
+    // Unity y OpenCV (opencv_dart, RA con ArUco) traen cada uno su
+    // libc++_shared.so: se queda una sola copia para que no choquen.
+    packaging {
+        jniLibs {
+            pickFirsts += "**/libc++_shared.so"
+        }
+    }
 }
 
 kotlin {

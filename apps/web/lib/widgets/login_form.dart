@@ -752,7 +752,10 @@ class _LoginFormState extends State<LoginForm> {
     }
   }
 
-  Widget _iconoRecuperacion() => Container(
+  // Align: dentro de una columna con `stretch` el cuadrito se estiraba a lo ancho.
+  Widget _iconoRecuperacion() => Align(
+        alignment: Alignment.centerLeft,
+        child: Container(
         width: 48,
         height: 48,
         decoration: BoxDecoration(
@@ -761,6 +764,7 @@ class _LoginFormState extends State<LoginForm> {
           border: Border.all(color: AppColors.brandTeal.withValues(alpha: 0.2)),
         ),
         child: Icon(Icons.mail_outline, color: AppColors.brandTeal, size: 22),
+        ),
       );
 
   Widget _marcoRecuperacion({required VoidCallback onVolver, required List<Widget> children}) {

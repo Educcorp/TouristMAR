@@ -29,8 +29,23 @@ include(":app")
 // versiona (pesa cientos de MB y depende del SO donde se generó): se genera
 // con apps/ar-module → ExportarLibreria y queda en builds/android/ar-marcadores.
 // Sin él la app compila igual y la RA aparece como "no disponible".
-val unityExport = file("../../ar-module/builds/android/ar-marcadores/unityLibrary")
-if (unityExport.resolve("build.gradle").exists()) {
+// En Windows esa ruta puede pasar del límite de 260 caracteres: se puede
+// poner otra más corta en android/unity.local.properties (no se sube a git;
+// Flutter no lo toca, a diferencia de local.properties), p. ej.
+//   touristmar.unityExport=C:/ar/salida/ar-marcadores
+// (lo escribe scripts/exportar-unity.ps1).
+val propsUnity = java.util.Properties().apply {
+    for (nombre in listOf("local.properties", "unity.local.properties")) {
+        file(nombre).takeIf { it.exists() }?.inputStream()?.use { load(it) }
+    }
+}
+val unityExport = (propsUnity.getProperty("touristmar.unityExport")?.let { file(it) }
+    ?: file("../../ar-module/builds/android/ar-marcadores")).resolve("unityLibrary")
+// Solo si el export está completo (una copia a medias no debe romper el build).
+if (unityExport.resolve("build.gradle").exists() &&
+    unityExport.resolve("xrmanifest.androidlib/build.gradle").exists() &&
+    unityExport.resolve("src/main/AndroidManifest.xml").exists()
+) {
     include(":unityLibrary")
     project(":unityLibrary").projectDir = unityExport
     include(":unityLibrary:xrmanifest.androidlib")
