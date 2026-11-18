@@ -27,14 +27,12 @@ AdminSection? adminSectionForNotification(String tipo) {
 }
 
 /// Destinos disponibles en el panel admin. Los recorridos 360° viven dentro
-/// de "Mapa y RA" (en cada lugar), ya no son una sección aparte.
-enum AdminSection { inicio, solicitudes, usuarios, negocios, resenas, mapa, realidadAumentada, historiasRa, admins, reportes }
+/// de "Lugares y experiencias" (en cada lugar), igual que los marcadores de RA.
+enum AdminSection { inicio, solicitudes, usuarios, negocios, resenas, mapa, admins, reportes }
 
 /// Nombre de cada sección en la URL (`/admin/<slug>`).
 extension AdminSectionSlug on AdminSection {
   String get slug => switch (this) {
-        AdminSection.realidadAumentada => 'ra',
-        AdminSection.historiasRa => 'historias',
         _ => name,
       };
 
@@ -62,8 +60,6 @@ const _adminNavItems = [
   _AdminNavLeaf(AdminSection.negocios, Icons.apartment_outlined, 'Negocios'),
   _AdminNavLeaf(AdminSection.resenas, Icons.forum_outlined, 'Reseñas'),
   _AdminNavLeaf(AdminSection.mapa, Icons.map_outlined, 'Lugares y experiencias'),
-  _AdminNavLeaf(AdminSection.realidadAumentada, Icons.qr_code_scanner, 'Marcadores de RA'),
-  _AdminNavLeaf(AdminSection.historiasRa, Icons.auto_stories_outlined, 'Historias de RA'),
   _AdminNavLeaf(AdminSection.admins, Icons.shield_outlined, 'Admins'),
   _AdminNavLeaf(AdminSection.reportes, Icons.bar_chart_outlined, 'Reportes'),
 ];

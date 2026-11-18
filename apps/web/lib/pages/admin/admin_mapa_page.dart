@@ -14,6 +14,7 @@ import '../../widgets/admin/ds_button.dart';
 import '../../widgets/admin/ds_card.dart';
 import '../../widgets/admin/ds_states.dart';
 import '../../widgets/admin/seccion_desplegable.dart';
+import '../../widgets/cover_image.dart';
 import '../../widgets/mapa/mapa_lugares.dart';
 import 'admin_lugar_page.dart';
 import 'admin_lugar_widgets.dart';
@@ -54,7 +55,7 @@ class _AdminMapaPageState extends State<AdminMapaPage> {
   bool _loading = true;
   String? _error;
   String? _seleccionadoId;
-  String? _editandoId;
+  String _buscar = '';
   final Set<String> _busy = {};
 
   @override
@@ -205,7 +206,7 @@ class _AdminMapaPageState extends State<AdminMapaPage> {
               Text('Lugares y experiencias', style: AppTypography.h1),
               const SizedBox(height: 4),
               Text(
-                'Para activar o desactivar la RA y el recorrido 360° de un lugar, entra a "Experiencias" en su fila.',
+                'Toca un lugar (o "Experiencias") para gestionar su RA por geolocalización, su RA con marcador y su recorrido 360°.',
                 style: AppTypography.body,
               ),
               const SizedBox(height: AppSpacing.xl),
@@ -257,23 +258,15 @@ class _AdminMapaPageState extends State<AdminMapaPage> {
       if (n.id == _seleccionadoId) seleccionado = n;
     }
 
-    return DsCard(
-      padding: EdgeInsets.zero,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            child: Row(
-              children: [
-                Icon(Icons.map_outlined, color: AppColors.adminViolet),
-                const SizedBox(width: AppSpacing.md),
-                Expanded(child: Text('Mapa de lugares', style: AppTypography.h3)),
-                Text('${pines.length} de ${_lugares.length} con pin', style: AppTypography.bodySmall),
-              ],
-            ),
-          ),
-          SizedBox(
+    // Cerrado por defecto: abierto, la rueda del mouse hace zoom en el mapa
+    // en lugar de bajar por la página.
+    return SeccionDesplegable(
+      icon: Icons.map_outlined,
+      titulo: 'Mapa de lugares',
+      subtitulo: '${pines.length} de ${_lugares.length} con pin · toca para verlo',
+      child: ClipRRect(
+          borderRadius: BorderRadius.circular(AppRadius.button),
+          child: SizedBox(
             height: 420,
             child: Stack(
               children: [
@@ -329,43 +322,127 @@ class _AdminMapaPageState extends State<AdminMapaPage> {
               ],
             ),
           ),
-        ],
       ),
     );
   }
 
+  static String _normalizar(String s) {
+    const de = 'áéíóúüñ';
+    const a = 'aeiouun';
+    final b = StringBuffer();
+    for (final c in s.toLowerCase().split('')) {
+      final i = de.indexOf(c);
+      b.write(i >= 0 ? a[i] : c);
+    }
+    return b.toString();
+  }
+
+  Future<void> _editar(NegocioSummary n) async {
+    final guardado = await showDialog<NegocioSummary>(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: AppColors.panelNavySoft,
+        insetPadding: const EdgeInsets.all(AppSpacing.lg),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 720),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text('Editar "${n.nombre}"', style: AppTypography.h2),
+                const SizedBox(height: AppSpacing.lg),
+                LugarForm(
+                  lugar: n,
+                  authService: widget.authService,
+                  onGuardado: (g) => Navigator.of(context).pop(g),
+                  onCancelar: () => Navigator.of(context).pop(),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    if (guardado == null) return;
+    _snack('Lugar guardado');
+    _load();
+  }
+
   Widget _buildLugares() {
+    final q = _normalizar(_buscar);
+    final lugares = q.isEmpty
+        ? _lugares
+        : _lugares
+            .where((n) => _normalizar('${n.nombre} ${n.categoria ?? ''} ${n.direccion ?? ''}').contains(q))
+            .toList();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('Lugares', style: AppTypography.h2),
+        Wrap(
+          alignment: WrapAlignment.spaceBetween,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: AppSpacing.md,
+          runSpacing: AppSpacing.sm,
+          children: [
+            Text('Lugares', style: AppTypography.h2),
+            Text(
+              q.isEmpty ? '${_lugares.length} lugares' : '${lugares.length} de ${_lugares.length}',
+              style: AppTypography.bodySmall,
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.md),
+        TextField(
+          onChanged: (v) => setState(() => _buscar = v.trim()),
+          decoration: InputDecoration(
+            prefixIcon: Icon(Icons.search, color: AppColors.slate400),
+            hintText: 'Buscar por nombre, categoría o dirección',
+            hintStyle: TextStyle(color: AppColors.slate400),
+            filled: true,
+            fillColor: AppColors.cubierta,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppRadius.button),
+              borderSide: BorderSide(color: AppColors.borderSubtle),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppRadius.button),
+              borderSide: BorderSide(color: AppColors.borderSubtle),
+            ),
+          ),
+          style: TextStyle(color: AppColors.textPrimary),
+        ),
         const SizedBox(height: AppSpacing.md),
         if (_lugares.isEmpty)
-          const DsEmptyState(
-            icon: Icons.place_outlined,
-            title: 'Sin lugares',
-            subtitle: '',
-          )
+          const DsEmptyState(icon: Icons.place_outlined, title: 'Sin lugares', subtitle: '')
+        else if (lugares.isEmpty)
+          DsEmptyState(icon: Icons.search_off, title: 'Sin resultados', subtitle: 'Nada coincide con "$_buscar".')
         else
-          for (final n in _lugares)
-            Padding(
-              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-              child: _FilaLugar(
-                lugar: n,
-                recorridos: _recorridos.where((r) => r.negocioId == n.id).length,
-                busy: _busy.contains(n.id),
-                editando: _editandoId == n.id,
-                authService: widget.authService,
-                onRevisar: () => _revisar(n),
-                onEditar: () => setState(() => _editandoId = _editandoId == n.id ? null : n.id),
-                onGuardado: (_) {
-                  setState(() => _editandoId = null);
-                  _snack('Lugar guardado');
-                  _load();
-                },
-                onEliminar: () => _eliminar(n),
-              ),
-            ),
+          LayoutBuilder(
+            builder: (context, c) {
+              const espacio = AppSpacing.md;
+              final columnas = (c.maxWidth / 250).floor().clamp(1, 5);
+              final ancho = (c.maxWidth - espacio * (columnas - 1)) / columnas;
+              return Wrap(
+                spacing: espacio,
+                runSpacing: espacio,
+                children: [
+                  for (final n in lugares)
+                    SizedBox(
+                      width: ancho,
+                      child: _TarjetaLugar(
+                        lugar: n,
+                        recorridos: _recorridos.where((r) => r.negocioId == n.id).length,
+                        busy: _busy.contains(n.id),
+                        onRevisar: () => _revisar(n),
+                        onEditar: () => _editar(n),
+                        onEliminar: () => _eliminar(n),
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
       ],
     );
   }
@@ -444,28 +521,22 @@ class _AdminMapaPageState extends State<AdminMapaPage> {
   }
 }
 
-/// Un lugar de la lista: su nombre y datos, y "Revisar", editar (el
-/// formulario se despliega debajo) y eliminar.
-class _FilaLugar extends StatelessWidget {
+/// Un lugar en la cuadrícula: portada, nombre, categoría y estado, con
+/// "Experiencias" (sus tres experiencias completas), editar datos y eliminar.
+class _TarjetaLugar extends StatelessWidget {
   final NegocioSummary lugar;
   final int recorridos;
   final bool busy;
-  final bool editando;
-  final AuthService authService;
   final VoidCallback onRevisar;
   final VoidCallback onEditar;
-  final ValueChanged<NegocioSummary> onGuardado;
   final VoidCallback onEliminar;
 
-  const _FilaLugar({
+  const _TarjetaLugar({
     required this.lugar,
     required this.recorridos,
     required this.busy,
-    required this.editando,
-    required this.authService,
     required this.onRevisar,
     required this.onEditar,
-    required this.onGuardado,
     required this.onEliminar,
   });
 
@@ -473,83 +544,117 @@ class _FilaLugar extends StatelessWidget {
   Widget build(BuildContext context) {
     final n = lugar;
     final cat = CategoriaLugarDetector.detectar(n.categoria);
+    final portada = n.portada?.trim() ?? '';
     return DsCard(
-      padding: const EdgeInsets.all(AppSpacing.md),
+      padding: EdgeInsets.zero,
+      onTap: onRevisar,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(color: cat.color, shape: BoxShape.circle),
-                child: Icon(cat.icon, size: 18, color: Colors.white),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(n.nombre, style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
-                    const SizedBox(height: 2),
-                    Text(
-                      [n.categoria ?? 'Sin categoría', if (n.direccion?.isNotEmpty ?? false) n.direccion!].join(' · '),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTypography.bodySmall,
-                    ),
-                    const SizedBox(height: 6),
-                    Wrap(
-                      spacing: AppSpacing.xs,
-                      runSpacing: AppSpacing.xs,
+          AspectRatio(
+            aspectRatio: 16 / 10,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                ClipRRect(
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(AppRadius.card)),
+                  child: portada.isEmpty
+                      ? ColoredBox(
+                          color: cat.color.withValues(alpha: 0.18),
+                          child: Icon(cat.icon, size: 36, color: cat.color),
+                        )
+                      : CoverImage(source: portada),
+                ),
+                Positioned(
+                  left: 8,
+                  top: 8,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(color: cat.color, borderRadius: BorderRadius.circular(999)),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        n.tieneUbicacion
-                            ? const DsBadge(text: 'Con pin', tone: BadgeTone.success, icon: Icons.location_on)
-                            : const DsBadge(text: 'Sin coordenadas', tone: BadgeTone.warning, icon: Icons.location_off_outlined),
-                        if (recorridos > 0)
-                          DsBadge(text: '$recorridos 360°', tone: BadgeTone.info, icon: Icons.threesixty),
+                        Icon(cat.icon, size: 12, color: Colors.white),
+                        const SizedBox(width: 4),
+                        Text(
+                          n.categoria ?? 'Sin categoría',
+                          style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700),
+                        ),
                       ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.sm, AppSpacing.sm, AppSpacing.sm),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  n.nombre,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700, fontSize: 14),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  (n.direccion?.isNotEmpty ?? false) ? n.direccion! : 'Sin dirección',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.caption,
+                ),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: AppSpacing.xs,
+                  runSpacing: AppSpacing.xs,
+                  children: [
+                    n.tieneUbicacion
+                        ? const DsBadge(text: 'Con pin', tone: BadgeTone.success, icon: Icons.location_on)
+                        : const DsBadge(text: 'Sin coordenadas', tone: BadgeTone.warning, icon: Icons.location_off_outlined),
+                    if (recorridos > 0) DsBadge(text: '$recorridos 360°', tone: BadgeTone.info, icon: Icons.threesixty),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Row(
+                  children: [
+                    Expanded(
+                      child: busy
+                          ? Align(
+                              alignment: Alignment.centerLeft,
+                              child: SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.adminViolet),
+                              ),
+                            )
+                          : Align(
+                              alignment: Alignment.centerLeft,
+                              child: DsButton(
+                                label: 'Experiencias',
+                                icon: Icons.view_in_ar_outlined,
+                                size: DsButtonSize.sm,
+                                variant: DsButtonVariant.primary,
+                                accent: AppColors.adminViolet,
+                                onPressed: onRevisar,
+                              ),
+                            ),
+                    ),
+                    IconButton(
+                      tooltip: 'Editar datos',
+                      onPressed: busy ? null : onEditar,
+                      icon: Icon(Icons.edit_outlined, size: 18, color: AppColors.slate300),
+                    ),
+                    IconButton(
+                      tooltip: 'Eliminar',
+                      onPressed: busy ? null : onEliminar,
+                      icon: Icon(Icons.delete_outline, size: 18, color: AppColors.errorRed),
                     ),
                   ],
                 ),
-              ),
-              if (busy)
-                Padding(
-                  padding: const EdgeInsets.all(AppSpacing.md),
-                  child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.adminViolet)),
-                )
-              else ...[
-                DsButton(
-                  label: 'Experiencias',
-                  icon: Icons.view_in_ar_outlined,
-                  size: DsButtonSize.sm,
-                  variant: DsButtonVariant.primary,
-                  accent: AppColors.adminViolet,
-                  onPressed: onRevisar,
-                ),
-                IconButton(
-                  tooltip: editando ? 'Cerrar edición' : 'Editar datos',
-                  onPressed: onEditar,
-                  icon: Icon(editando ? Icons.expand_less : Icons.edit_outlined, size: 18, color: AppColors.slate300),
-                ),
-                IconButton(
-                  tooltip: 'Eliminar',
-                  onPressed: onEliminar,
-                  icon: Icon(Icons.delete_outline, size: 18, color: AppColors.errorRed),
-                ),
               ],
-            ],
-          ),
-          AnimatedSize(
-            duration: const Duration(milliseconds: 200),
-            alignment: Alignment.topCenter,
-            child: editando
-                ? Padding(
-                    padding: const EdgeInsets.only(top: AppSpacing.lg),
-                    child: LugarForm(lugar: n, authService: authService, onGuardado: onGuardado, onCancelar: onEditar),
-                  )
-                : const SizedBox(width: double.infinity),
+            ),
           ),
         ],
       ),

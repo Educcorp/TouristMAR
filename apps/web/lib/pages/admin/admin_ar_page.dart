@@ -23,7 +23,12 @@ class AdminArPage extends StatefulWidget {
   final AuthService authService;
   final ArService arService;
 
-  AdminArPage({super.key, AuthService? authService, ArService? arService})
+  /// Dentro de la ficha de un lugar ("Lugares y experiencias" → RA con
+  /// marcador): solo sus marcadores, sin encabezado ni scroll propio, y los
+  /// nuevos quedan ligados a él.
+  final NegocioSummary? lugar;
+
+  AdminArPage({super.key, AuthService? authService, ArService? arService, this.lugar})
       : authService = authService ?? AuthService(),
         arService = arService ?? ArService();
 
@@ -56,13 +61,17 @@ class _AdminArPageState extends State<AdminArPage> {
       _error = null;
     });
     try {
+      final lugar = widget.lugar;
       final results = await Future.wait([
         widget.arService.listMarcadores(token),
-        widget.authService.adminListNegocios(token),
+        if (lugar == null) widget.authService.adminListNegocios(token) else Future.value([lugar]),
       ]);
       if (!mounted) return;
       setState(() {
-        _marcadores = results[0] as List<ArMarcador>;
+        _marcadores = [
+          for (final m in results[0] as List<ArMarcador>)
+            if (lugar == null || m.negocioId == lugar.id) m,
+        ];
         // Solo negocios aprobados: el endpoint público oculta los marcadores
         // de negocios pendientes/rechazados, así que ligarlos no serviría.
         _negocios = (results[1] as List<NegocioSummary>).where((n) => n.aprobado).toList()
@@ -169,6 +178,7 @@ class _AdminArPageState extends State<AdminArPage> {
   @override
   Widget build(BuildContext context) {
     final activos = _marcadores.where((m) => m.activo).length;
+    if (widget.lugar != null) return _buildEmbebido(activos);
     return RefreshIndicator(
       onRefresh: _load,
       color: AppColors.adminViolet,
@@ -235,6 +245,52 @@ class _AdminArPageState extends State<AdminArPage> {
     );
   }
 
+  /// Versión dentro de la ficha del lugar.
+  Widget _buildEmbebido(int activos) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                _loading
+                    ? ''
+                    : _marcadores.isEmpty
+                        ? 'Sube una foto o imagen del lugar: al escanearla, la app muestra su historia.'
+                        : '${_marcadores.length} ${_marcadores.length == 1 ? 'marcador' : 'marcadores'} · $activos visibles en la app',
+                style: AppTypography.bodySmall,
+              ),
+            ),
+            if (!_showForm)
+              DsButton(
+                label: 'Nuevo marcador',
+                icon: Icons.add,
+                size: DsButtonSize.sm,
+                variant: DsButtonVariant.primary,
+                accent: AppColors.adminViolet,
+                onPressed: _loading ? null : () => _openForm(),
+              ),
+          ],
+        ),
+        if (_showForm) ...[
+          const SizedBox(height: AppSpacing.md),
+          _MarcadorForm(
+            key: ValueKey(_editing?.id ?? 'nuevo'),
+            marcador: _editing,
+            negocios: _negocios,
+            lugarFijoId: widget.lugar!.id,
+            arService: widget.arService,
+            onCancel: _closeForm,
+            onSaved: _onSaved,
+          ),
+        ],
+        const SizedBox(height: AppSpacing.md),
+        if (_marcadores.isEmpty && !_loading && _error == null) const SizedBox.shrink() else _buildList(),
+      ],
+    );
+  }
+
   Widget _buildList() {
     if (_loading) return DsLoadingState(accent: AppColors.adminViolet);
     if (_error != null) return DsErrorState(message: _error!, onRetry: _load);
@@ -265,6 +321,10 @@ class _AdminArPageState extends State<AdminArPage> {
 class _MarcadorForm extends StatefulWidget {
   final ArMarcador? marcador;
   final List<NegocioSummary> negocios;
+
+  /// Abierto desde la ficha de un lugar: el marcador es de ese lugar (sin
+  /// selector de lugar).
+  final String? lugarFijoId;
   final ArService arService;
   final VoidCallback onCancel;
   final ValueChanged<ArMarcador> onSaved;
@@ -273,6 +333,7 @@ class _MarcadorForm extends StatefulWidget {
     super.key,
     required this.marcador,
     required this.negocios,
+    this.lugarFijoId,
     required this.arService,
     required this.onCancel,
     required this.onSaved,
@@ -291,7 +352,7 @@ class _MarcadorFormState extends State<_MarcadorForm> {
   late final _anchoCm = TextEditingController(
     text: widget.marcador?.anchoMetros == null ? '' : _formatCm(widget.marcador!.anchoMetros! * 100),
   );
-  late String? _negocioId = widget.marcador?.negocioId;
+  late String? _negocioId = widget.marcador?.negocioId ?? widget.lugarFijoId;
 
   Uint8List? _imagen;
   String? _imagenNombre;
@@ -564,13 +625,13 @@ class _MarcadorFormState extends State<_MarcadorForm> {
         ),
         const SizedBox(height: AppSpacing.md),
         AppTextField(
-          label: 'Información',
-          icon: Icons.notes,
+          label: 'Historia del lugar',
+          icon: Icons.menu_book_outlined,
           controller: _texto,
-          maxLines: 4,
-          hintText: 'Lo que el visitante leerá sobre la imagen (máx. 500 caracteres)',
+          maxLines: 8,
+          hintText: 'La historia del lugar: se lee al escanear la imagen (máx. 4000 caracteres)',
           accentColor: AppColors.adminViolet,
-          validator: (v) => _required(v, 500),
+          validator: (v) => _required(v, 4000),
         ),
       ],
     );
@@ -580,6 +641,27 @@ class _MarcadorFormState extends State<_MarcadorForm> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        if (widget.lugarFijoId == null) ..._selectorLugar(),
+        AppTextField(
+          label: 'Tamaño impreso en centímetros (opcional)',
+          icon: Icons.straighten,
+          controller: _anchoCm,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          hintText: 'Ej. 30 — el ancho del letrero o cartel',
+          accentColor: AppColors.adminViolet,
+          validator: (v) {
+            final raw = (v ?? '').trim().replaceAll(',', '.');
+            if (raw.isEmpty) return null;
+            final cm = double.tryParse(raw);
+            if (cm == null || cm <= 0 || cm > 2000) return 'Ingresa un número entre 1 y 2000';
+            return null;
+          },
+        ),
+      ],
+    );
+  }
+
+  List<Widget> _selectorLugar() => [
         Text('Lugar al que pertenece', style: TextStyle(color: AppColors.slate300, fontSize: 14)),
         const SizedBox(height: 8),
         DropdownButtonFormField<String?>(
@@ -615,24 +697,7 @@ class _MarcadorFormState extends State<_MarcadorForm> {
           style: AppTypography.caption,
         ),
         const SizedBox(height: AppSpacing.md),
-        AppTextField(
-          label: 'Tamaño impreso en centímetros (opcional)',
-          icon: Icons.straighten,
-          controller: _anchoCm,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          hintText: 'Ej. 30 — el ancho del letrero o cartel',
-          accentColor: AppColors.adminViolet,
-          validator: (v) {
-            final raw = (v ?? '').trim().replaceAll(',', '.');
-            if (raw.isEmpty) return null;
-            final cm = double.tryParse(raw);
-            if (cm == null || cm <= 0 || cm > 2000) return 'Ingresa un número entre 1 y 2000';
-            return null;
-          },
-        ),
-      ],
-    );
-  }
+      ];
 
   /// El identificador técnico (lo usa Unity) se arma solo a partir del
   /// título; aquí se puede cambiar si hace falta.

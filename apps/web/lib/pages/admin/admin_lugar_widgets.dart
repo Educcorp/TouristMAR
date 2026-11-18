@@ -1,13 +1,10 @@
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
 import '../../models/lugar.dart';
-import '../../services/ar_service.dart';
 import '../../services/auth_service.dart';
 import '../../services/session_storage.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/admin/ds_button.dart';
-import '../../widgets/admin/ds_card.dart';
 import '../../widgets/app_text_field.dart';
 import '../../widgets/mapa/ubicacion_lugar.dart';
 import '../../widgets/aviso.dart';
@@ -35,7 +32,8 @@ Coordenadas? coordenadasDe(NegocioSummary n) => n.tieneUbicacion ? Coordenadas(n
 const categoriasLugar = ['Playa', 'Mirador', 'Restaurante', 'Hotel', 'Recreación', 'Cultura y educación', 'Otro'];
 
 /// Formulario del lugar: nombre, categoría, dirección, coordenadas (con el
-/// pin en el mapa) y descripción. Sin [lugar] registra uno nuevo.
+/// pin en el mapa) y resumen. Sin [lugar] registra uno nuevo. La información
+/// detallada se edita en "RA por geolocalización" ([InformacionRaGeoSection]).
 class LugarForm extends StatefulWidget {
   final NegocioSummary? lugar;
   final AuthService authService;
@@ -52,7 +50,6 @@ class _LugarFormState extends State<LugarForm> {
   final _form = GlobalKey<FormState>();
   late final _nombre = TextEditingController(text: widget.lugar?.nombre);
   late final _descripcion = TextEditingController(text: widget.lugar?.descripcion);
-  late final _detalle = TextEditingController(text: widget.lugar?.detalle);
   late final _direccion = TextEditingController(text: widget.lugar?.direccion);
   late String? _categoria = widget.lugar?.categoria;
   late Coordenadas? _ubicacion = widget.lugar == null ? null : coordenadasDe(widget.lugar!);
@@ -67,7 +64,6 @@ class _LugarFormState extends State<LugarForm> {
   void dispose() {
     _nombre.dispose();
     _descripcion.dispose();
-    _detalle.dispose();
     _direccion.dispose();
     super.dispose();
   }
@@ -86,7 +82,6 @@ class _LugarFormState extends State<LugarForm> {
       'nombre': _nombre.text.trim(),
       'categoria': _categoria,
       'descripcion': _opcional(_descripcion),
-      'detalle': _opcional(_detalle),
       'direccion': _opcional(_direccion),
       'latitud': _ubicacion?.lat,
       'longitud': _ubicacion?.lng,
@@ -100,7 +95,6 @@ class _LugarFormState extends State<LugarForm> {
         // Listo para registrar otro.
         _nombre.clear();
         _descripcion.clear();
-        _detalle.clear();
         _direccion.clear();
         setState(() {
           _categoria = null;
@@ -185,17 +179,6 @@ class _LugarFormState extends State<LugarForm> {
             hintText: 'Ej. Playa de arena dorada y oleaje tranquilo, ideal para nadar.',
             accentColor: AppColors.adminViolet,
             validator: (v) => (v?.trim().length ?? 0) > 350 ? 'Máximo 350 caracteres' : null,
-          ),
-          const SizedBox(height: AppSpacing.md),
-          // Lo que se lee en la RA al llegar al lugar ("Ver información").
-          AppTextField(
-            label: 'Información detallada',
-            icon: Icons.notes,
-            controller: _detalle,
-            maxLines: 8,
-            hintText: 'Historia, qué hacer, horarios, recomendaciones…',
-            accentColor: AppColors.adminViolet,
-            validator: (v) => (v?.trim().length ?? 0) > 5000 ? 'Máximo 5000 caracteres' : null,
           ),
           if (_error != null) ...[
             const SizedBox(height: AppSpacing.md),
@@ -321,317 +304,99 @@ class _UbicacionLugarSectionState extends State<UbicacionLugarSection> {
 // --- RA con marcador -------------------------------------------------------------
 
 /// Marcadores (imágenes que reconoce la cámara) del lugar: verlos,
-/// activarlos/desactivarlos, borrarlos y agregar nuevos.
-class MarcadoresLugarSection extends StatefulWidget {
-  final NegocioSummary lugar;
-  final ArService arService;
-  final VoidCallback? onCambio;
 
-  MarcadoresLugarSection({super.key, required this.lugar, ArService? arService, this.onCambio})
-      : arService = arService ?? ArService();
+/// Lo que despliega la RA por geolocalización al llegar al lugar: la
+/// información detallada (campo `detalle` del lugar). Desde lejos se lee el
+/// resumen de "Datos del lugar".
+class InformacionRaGeoSection extends StatefulWidget {
+  final NegocioSummary lugar;
+  final AuthService authService;
+  final ValueChanged<NegocioSummary> onGuardado;
+
+  const InformacionRaGeoSection({super.key, required this.lugar, required this.authService, required this.onGuardado});
 
   @override
-  State<MarcadoresLugarSection> createState() => _MarcadoresLugarSectionState();
+  State<InformacionRaGeoSection> createState() => _InformacionRaGeoSectionState();
 }
 
-class _MarcadoresLugarSectionState extends State<MarcadoresLugarSection> {
+class _InformacionRaGeoSectionState extends State<InformacionRaGeoSection> {
   final _form = GlobalKey<FormState>();
-  late final _nombre = TextEditingController(text: '${slugDe(widget.lugar.nombre)}_01');
-  late final _titulo = TextEditingController(text: widget.lugar.nombre);
-  final _texto = TextEditingController();
-  final _ancho = TextEditingController();
-  PlatformFile? _imagen;
-
-  List<ArMarcador>? _marcadores;
-  bool _ocupado = false;
-  bool _mostrarForm = false;
+  late final _detalle = TextEditingController(text: widget.lugar.detalle);
+  bool _guardando = false;
   String? _error;
 
-  ExperienciaInfo get _info => ExperienciaInfo.of(ExperienciaTipo.arMarcador);
-
-  @override
-  void initState() {
-    super.initState();
-    _cargar();
-  }
+  Color get _color => ExperienciaInfo.of(ExperienciaTipo.arGeo).color;
 
   @override
   void dispose() {
-    _nombre.dispose();
-    _titulo.dispose();
-    _texto.dispose();
-    _ancho.dispose();
+    _detalle.dispose();
     super.dispose();
   }
 
-  Future<void> _cargar() async {
-    final token = SessionStorage.token;
-    if (token == null) return;
-    try {
-      final todos = await widget.arService.listMarcadores(token);
-      if (mounted) setState(() => _marcadores = todos.where((m) => m.negocioId == widget.lugar.id).toList());
-    } catch (err) {
-      if (mounted) setState(() => _error = _mensaje(err, 'No se pudieron cargar los marcadores'));
-    }
-  }
-
-  Future<void> _elegirImagen() async {
-    final r = await FilePicker.platform.pickFiles(allowCompression: false, compressionQuality: 0, type: FileType.custom, allowedExtensions: ['jpg', 'jpeg', 'png'], withData: true);
-    final f = r?.files.single;
-    if (f != null && f.bytes != null) setState(() => _imagen = f);
-  }
-
-  Future<void> _ejecutar(Future<void> Function(String token) accion, String error) async {
+  Future<void> _guardar() async {
+    if (!(_form.currentState?.validate() ?? false)) return;
     final token = SessionStorage.token;
     if (token == null) return;
     setState(() {
-      _ocupado = true;
+      _guardando = true;
       _error = null;
     });
     try {
-      await accion(token);
-      widget.onCambio?.call();
-    } catch (err) {
-      if (mounted) setState(() => _error = _mensaje(err, error));
-    } finally {
-      if (mounted) setState(() => _ocupado = false);
-    }
-  }
-
-  Future<void> _crear() async {
-    if (!(_form.currentState?.validate() ?? false)) return;
-    if (_imagen == null) {
-      setState(() => _error = 'Elige la imagen que reconocerá la cámara');
-      return;
-    }
-    await _ejecutar((token) async {
-      final m = await widget.arService.createMarcador(
-        token,
-        imagen: _imagen!.bytes!,
-        filename: _imagen!.name,
-        nombre: _nombre.text.trim().toLowerCase(),
-        titulo: _titulo.text.trim(),
-        texto: _texto.text.trim(),
-        anchoMetros: double.tryParse(_ancho.text.trim().replaceAll(',', '.')),
-        negocioId: widget.lugar.id,
-      );
+      final texto = _detalle.text.trim();
+      final g = await widget.authService
+          .adminActualizarLugar(token, widget.lugar.id, {'detalle': texto.isEmpty ? null : texto});
       if (!mounted) return;
-      setState(() {
-        _marcadores = [...?_marcadores, m];
-        _imagen = null;
-        _texto.clear();
-        _ancho.clear();
-        _nombre.text = '${slugDe(widget.lugar.nombre)}_${(_marcadores!.length + 1).toString().padLeft(2, '0')}';
-        _mostrarForm = false;
-      });
-    }, 'No se pudo crear el marcador');
-  }
-
-  Future<void> _activar(ArMarcador m, bool activo) => _ejecutar((token) async {
-        final nuevo = await widget.arService.updateMarcador(token, m.id, {'activo': activo});
-        if (mounted) setState(() => _marcadores = [for (final x in _marcadores!) x.id == m.id ? nuevo : x]);
-      }, 'No se pudo actualizar el marcador');
-
-  Future<void> _eliminar(ArMarcador m) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.panelNavySoft,
-        title: Text('Eliminar marcador', style: TextStyle(color: AppColors.textPrimary)),
-        content: Text('"${m.titulo}" dejará de reconocerse en la app.', style: TextStyle(color: AppColors.textSecondary)),
-        actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(false), child: Text('Cancelar', style: TextStyle(color: AppColors.slate400))),
-          TextButton(onPressed: () => Navigator.of(context).pop(true), child: Text('Eliminar', style: TextStyle(color: AppColors.errorRed))),
-        ],
-      ),
-    );
-    if (ok != true) return;
-    await _ejecutar((token) async {
-      await widget.arService.deleteMarcador(token, m.id);
-      if (mounted) setState(() => _marcadores = _marcadores!.where((x) => x.id != m.id).toList());
-    }, 'No se pudo eliminar el marcador');
+      widget.onGuardado(g);
+      ScaffoldMessenger.of(context).showSnackBar(aviso('Información guardada'));
+    } catch (err) {
+      if (mounted) setState(() => _error = _mensaje(err, 'No se pudo guardar la información'));
+    } finally {
+      if (mounted) setState(() => _guardando = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final color = _info.color;
-    final lista = _marcadores;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                lista == null
-                    ? ''
-                    : lista.isEmpty
-                        ? 'Sin marcadores.'
-                        : '${lista.length} ${lista.length == 1 ? 'marcador' : 'marcadores'}',
-                style: AppTypography.bodySmall,
-              ),
-            ),
-            if (!_mostrarForm)
-              DsButton(
-                label: 'Nuevo marcador',
-                icon: Icons.add,
-                size: DsButtonSize.sm,
-                variant: DsButtonVariant.primary,
-                accent: color,
-                onPressed: () => setState(() => _mostrarForm = true),
-              ),
+    final resumen = widget.lugar.descripcion?.trim() ?? '';
+    return Form(
+      key: _form,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text('Lo que ve el visitante en la cámara', style: AppTypography.h3.copyWith(fontSize: 15)),
+          const SizedBox(height: 4),
+          Text(
+            'Desde lejos: el resumen del lugar${resumen.isEmpty ? ' (todavía no tiene; agrégalo en "Datos del lugar")' : ''}. '
+            'Al llegar: la información detallada de aquí abajo.',
+            style: AppTypography.bodySmall,
+          ),
+          const SizedBox(height: AppSpacing.md),
+          AppTextField(
+            label: 'Información detallada (se despliega al llegar)',
+            icon: Icons.tips_and_updates_outlined,
+            controller: _detalle,
+            maxLines: 9,
+            hintText: 'Datos curiosos, qué hacer, horarios, recomendaciones…',
+            accentColor: _color,
+            validator: (v) => (v?.trim().length ?? 0) > 5000 ? 'Máximo 5000 caracteres' : null,
+          ),
+          if (_error != null) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Text(_error!, style: TextStyle(color: AppColors.errorRed, fontSize: 14)),
           ],
-        ),
-        const SizedBox(height: AppSpacing.md),
-        if (lista == null && _error == null)
-          const Center(child: Padding(padding: EdgeInsets.all(AppSpacing.md), child: CircularProgressIndicator()))
-        else
-          for (final m in lista ?? const <ArMarcador>[])
-            Padding(
-              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-              child: DsCard(
-                padding: const EdgeInsets.all(AppSpacing.sm),
-                child: Row(
-                  children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(6),
-                      child: Image.network(m.imagenUrl, width: 56, height: 56, fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => Icon(Icons.broken_image_outlined, color: AppColors.slate500)),
-                    ),
-                    const SizedBox(width: AppSpacing.md),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(m.titulo,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
-                          Text('${m.nombre} · ${m.escaneos} escaneos', style: AppTypography.caption),
-                        ],
-                      ),
-                    ),
-                    Tooltip(
-                      message: m.activo ? 'Visible en la app' : 'Oculto',
-                      child: Switch(value: m.activo, onChanged: _ocupado ? null : (v) => _activar(m, v)),
-                    ),
-                    IconButton(
-                      tooltip: 'Eliminar',
-                      onPressed: _ocupado ? null : () => _eliminar(m),
-                      icon: Icon(Icons.delete_outline, size: 18, color: AppColors.errorRed),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-        if (_mostrarForm)
-          DsCard(
-            background: color.withValues(alpha: 0.05),
-            child: Form(
-              key: _form,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text('Nuevo marcador', style: AppTypography.h3),
-                  const SizedBox(height: AppSpacing.md),
-                  InkWell(
-                    onTap: _ocupado ? null : _elegirImagen,
-                    borderRadius: BorderRadius.circular(AppRadius.button),
-                    child: Container(
-                      height: 140,
-                      decoration: BoxDecoration(
-                        color: color.withValues(alpha: 0.06),
-                        borderRadius: BorderRadius.circular(AppRadius.button),
-                        border: Border.all(color: color.withValues(alpha: 0.4)),
-                      ),
-                      clipBehavior: Clip.antiAlias,
-                      child: _imagen == null
-                          ? Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.add_photo_alternate_outlined, color: color),
-                                const SizedBox(height: 4),
-                                Text('Elegir imagen', style: AppTypography.caption),
-                              ],
-                            )
-                          : Image.memory(_imagen!.bytes!, fit: BoxFit.contain),
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  AppTextField(
-                    label: 'Identificador',
-                    icon: Icons.label_outline,
-                    controller: _nombre,
-                    hintText: 'Ej. audiencia_letrero_01',
-                    accentColor: color,
-                    validator: (v) {
-                      final t = v?.trim().toLowerCase() ?? '';
-                      if (t.isEmpty) return 'Campo requerido';
-                      if (t.length > 60) return 'Máximo 60 caracteres';
-                      return RegExp(r'^[a-z0-9_-]+$').hasMatch(t) ? null : 'Solo minúsculas, números, _ o -';
-                    },
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  AppTextField(
-                    label: 'Título',
-                    icon: Icons.title,
-                    controller: _titulo,
-                    accentColor: color,
-                    validator: (v) => (v?.trim().isEmpty ?? true) ? 'Campo requerido' : ((v!.trim().length > 80) ? 'Máximo 80 caracteres' : null),
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  AppTextField(
-                    label: 'Información que aparece encima',
-                    icon: Icons.notes,
-                    controller: _texto,
-                    maxLines: 3,
-                    hintText: 'Ej. Playa La Audiencia: bahía de aguas tranquilas rodeada de palapas.',
-                    accentColor: color,
-                    validator: (v) => (v?.trim().isEmpty ?? true) ? 'Campo requerido' : ((v!.trim().length > 500) ? 'Máximo 500 caracteres' : null),
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  AppTextField(
-                    label: 'Ancho real impreso, en metros (opcional)',
-                    icon: Icons.straighten,
-                    controller: _ancho,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    hintText: 'Ej. 0.30',
-                    accentColor: color,
-                    validator: (v) {
-                      final t = v?.trim().replaceAll(',', '.') ?? '';
-                      if (t.isEmpty) return null;
-                      final n = double.tryParse(t);
-                      return n == null || n <= 0 || n > 20 ? 'Entre 0 y 20 metros' : null;
-                    },
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  Wrap(
-                    alignment: WrapAlignment.end,
-                    spacing: AppSpacing.sm,
-                    children: [
-                      DsButton(
-                        label: 'Cancelar',
-                        variant: DsButtonVariant.ghost,
-                        onPressed: _ocupado ? null : () => setState(() => _mostrarForm = false),
-                      ),
-                      DsButton(
-                        label: _ocupado ? 'Guardando…' : 'Agregar marcador',
-                        icon: Icons.add,
-                        variant: DsButtonVariant.primary,
-                        accent: color,
-                        onPressed: _ocupado ? null : _crear,
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+          const SizedBox(height: AppSpacing.md),
+          Align(
+            alignment: Alignment.centerRight,
+            child: DsButton(
+              label: _guardando ? 'Guardando…' : 'Guardar información',
+              icon: Icons.check,
+              variant: DsButtonVariant.primary,
+              accent: _color,
+              onPressed: _guardando ? null : _guardar,
             ),
           ),
-        if (_error != null) ...[
-          const SizedBox(height: AppSpacing.md),
-          Text(_error!, style: TextStyle(color: AppColors.errorRed, fontSize: 14)),
         ],
-      ],
+      ),
     );
   }
 }

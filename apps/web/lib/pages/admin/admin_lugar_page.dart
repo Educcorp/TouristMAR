@@ -5,7 +5,6 @@ import '../../models/lugar.dart';
 import '../../navegacion/rutas.dart';
 import '../../services/ar_service.dart';
 import '../../services/auth_service.dart';
-import '../../services/ra_geo_service.dart';
 import '../../services/recorridos_service.dart';
 import '../../services/session_storage.dart';
 import '../../theme/app_theme.dart';
@@ -15,7 +14,7 @@ import '../../widgets/admin/ds_card.dart';
 import '../../widgets/admin/ds_states.dart';
 import '../../widgets/admin/seccion_desplegable.dart';
 import 'admin_lugar_widgets.dart';
-import 'admin_ra_geo_widgets.dart';
+import 'admin_ar_page.dart';
 import 'admin_recorridos_page.dart';
 import '../../widgets/aviso.dart';
 
@@ -64,7 +63,7 @@ class _AdminLugarPageState extends State<AdminLugarPage> {
     Future<ConteoExperiencia?> intentar(Future<ConteoExperiencia> Function() f) => f().then<ConteoExperiencia?>((c) => c).catchError((_) => null);
     final resultados = await Future.wait([
       intentar(() async => contar((await ArService().listMarcadores(token)).where((m) => m.negocioId == id).map((m) => m.activo))),
-      intentar(() async => contar((await RaGeoService().listar(token, id)).map((p) => p.activo))),
+      Future.value(null),
       intentar(() async => contar((await RecorridosService().listRecorridos(token)).where((r) => r.negocioId == id).map((r) => r.activo))),
     ]);
     if (!mounted) return;
@@ -152,7 +151,7 @@ class _AdminLugarPageState extends State<AdminLugarPage> {
             TextButton.icon(
               onPressed: _volver,
               icon: Icon(Icons.arrow_back, size: 16, color: AppColors.slate300),
-              label: Text('Mapa y RA', style: TextStyle(color: AppColors.slate300)),
+              label: Text('Lugares y experiencias', style: TextStyle(color: AppColors.slate300)),
             ),
             const SizedBox(height: AppSpacing.sm),
             if (_loading)
@@ -203,7 +202,12 @@ class _AdminLugarPageState extends State<AdminLugarPage> {
         ],
       ),
       const SizedBox(height: AppSpacing.xl),
-      _ResumenExperiencias(conteos: _conteos, onConfigurar: _configurar, onRefrescar: _cargarConteos),
+      _ResumenExperiencias(
+        // La RA por geolocalización funciona con el pin del lugar (y su texto).
+        conteos: {..._conteos, ExperienciaTipo.arGeo: n.tieneUbicacion ? (visibles: 1, total: 1) : (visibles: 0, total: 0)},
+        onConfigurar: _configurar,
+        onRefrescar: _cargarConteos,
+      ),
       const SizedBox(height: AppSpacing.xl),
       SeccionDesplegable(
         key: const ValueKey('datos'),
@@ -239,8 +243,12 @@ class _AdminLugarPageState extends State<AdminLugarPage> {
               padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
               child: Divider(color: AppColors.borderSubtle, height: 1),
             ),
-            // Se vuelve a crear al mover el pin del lugar (el mapa se centra ahí).
-            PuntosRaGeoSection(key: ValueKey('puntos-${n.latitud}-${n.longitud}'), lugar: n),
+            InformacionRaGeoSection(
+              key: ValueKey('info-${n.id}'),
+              lugar: n,
+              authService: widget.authService,
+              onGuardado: (g) => setState(() => _lugar = g),
+            ),
           ],
         ),
       ),
@@ -260,7 +268,9 @@ class _AdminLugarPageState extends State<AdminLugarPage> {
         icon: marcador.icon,
         color: marcador.color,
         titulo: marcador.titulo,
-        child: MarcadoresLugarSection(lugar: n),
+        // El gestor completo de marcadores (imagen, historia, vista previa,
+        // impresión), solo con los de este lugar.
+        child: AdminArPage(key: ValueKey('marcadores-${n.id}'), lugar: n, authService: widget.authService),
       ),
     ];
   }
@@ -304,8 +314,8 @@ class _ResumenExperiencias extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            'Una experiencia está activa cuando tiene al menos un elemento visible. Cada marcador, punto de RA '
-            'o recorrido tiene su propio interruptor "Visible / Oculto" dentro de su sección.',
+            'La RA por geolocalización se activa con el pin del lugar. El recorrido 360° y la RA con marcador '
+            'están activos cuando tienen al menos un elemento visible (cada uno tiene su interruptor "Visible / Oculto").',
             style: AppTypography.bodySmall,
           ),
           const SizedBox(height: AppSpacing.lg),
@@ -332,13 +342,18 @@ class _ResumenExperiencias extends StatelessWidget {
   Widget _tile(ExperienciaTipo tipo) {
     final info = ExperienciaInfo.of(tipo);
     final conteo = conteos[tipo];
-    final (estado, color, detalle) = switch (conteo) {
+    var (estado, color, detalle) = switch (conteo) {
       null => ('Cargando…', AppColors.slate400, ''),
       (total: 0, visibles: _) => ('Sin configurar', AppColors.slate400, 'Todavía no tiene ningún elemento.'),
       (visibles: 0, total: final t) => ('Oculta', AppColors.amarilloTexto, '$t ${_unidad(tipo, t)}, ninguno visible.'),
       (visibles: final v, total: final t) =>
         ('Activa', AppColors.emerald, '$v de $t ${_unidad(tipo, t)} visibles en la app.'),
     };
+    if (tipo == ExperienciaTipo.arGeo && conteo != null) {
+      detalle = conteo.total == 0
+          ? 'Falta poner el pin del lugar.'
+          : 'Usa el pin, el resumen y la información detallada del lugar.';
+    }
     // Fondo neutro: el color de la experiencia ya va en su ícono, y el
     // fondo tintado hacía que "Sin configurar" en rojo pareciera un error.
     return Container(
